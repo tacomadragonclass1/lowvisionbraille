@@ -24,13 +24,18 @@ Audio starts on the student's first touch (browsers require a gesture).
 
 | Event | Sound |
 | --- | --- |
-| Finger on the letter guide | A low buzz, continuous while tracing |
+| Finger on the letter guide | A brush-stroke swoosh, continuous while tracing |
 | Finger off the guide, or lifted | Buzz stops immediately |
 | Braille dot touched | That dot's fixed tone |
 | Shape touched in the minigame | A pop, then one note of the tune |
 
-The buzz follows the **finger**, not the gesture: wander off the guide and it
+The brush follows the **finger**, not the gesture: wander off the guide and it
 drops out, come back and it returns, with no restart gap.
+
+It is pink noise through a bandpass that **opens as the finger moves faster** —
+a slow careful trace is a dark quiet whisper (~700 Hz), a confident sweep is a
+bright loud swoosh (~3300 Hz). Resting a finger on the line settles it to a
+quiet hiss rather than cutting out, so he can still hear that he is on the line.
 
 ### Braille dot tones — C major, one tone per position
 

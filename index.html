@@ -110,8 +110,13 @@
       if (!Ctor) return null;
       try { audioCtx=new Ctor(); } catch { return null; }
       masterGain=audioCtx.createGain();
-      masterGain.gain.value=.9;
-      masterGain.connect(audioCtx.destination);
+      masterGain.gain.value=1;
+      // The brush is loud and the tones stack on top of it; a gentle compressor
+      // keeps the sum from clipping into harshness on a tablet speaker.
+      const limiter=audioCtx.createDynamicsCompressor();
+      limiter.threshold.value=-12; limiter.knee.value=18; limiter.ratio.value=4;
+      limiter.attack.value=.004; limiter.release.value=.18;
+      masterGain.connect(limiter); limiter.connect(audioCtx.destination);
     }
     if (audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
     return audioCtx;
@@ -158,41 +163,77 @@
     src.start();
   }
 
-  // The tracing buzz. Oscillators run for the whole session; only the output
-  // gain moves, so starting and stopping is instant and click-free.
-  const BUZZ_LEVEL=.22;
-  let buzzNodes=null, buzzAudible=false;
-  function buildBuzz() {
-    if (buzzNodes) return buzzNodes;
+  // The tracing sound: a brush stroke, not a buzz. Pink noise through a bandpass
+  // that opens as the finger moves faster, so careful tracing whispers and a
+  // confident sweep swooshes. The noise source loops for the whole session and
+  // only the output gain moves, so starting and stopping stays click-free.
+  const BRUSH_LEVEL=.62;
+  let brushNodes=null, brushAudible=false, brushIdle=null;
+
+  // Pink (1/f) rather than white: white noise reads as radio static, pink has
+  // the low-end weight that makes it sound like bristles on paper.
+  // Paul Kellet's refined approximation.
+  function pinkNoiseBuffer(ac,seconds) {
+    const n=Math.floor(ac.sampleRate*seconds);
+    const buf=ac.createBuffer(1,n,ac.sampleRate), d=buf.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i=0;i<n;i++) {
+      const w=Math.random()*2-1;
+      b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.96900*b2+w*.1538520;
+      b3=.86650*b3+w*.3104856; b4=.55000*b4+w*.5329522; b5=-.7616*b5-w*.0168980;
+      d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;
+      b6=w*.115926;
+    }
+    return buf;
+  }
+
+  function buildBrush() {
+    if (brushNodes) return brushNodes;
     const ac=audio(); if (!ac) return null;
     const out=ac.createGain(); out.gain.value=0; out.connect(masterGain);
-    const trem=ac.createGain(); trem.gain.value=.72; trem.connect(out);
-    const lpf=ac.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=560; lpf.Q.value=.7;
-    lpf.connect(trem);
-    const low=ac.createOscillator(); low.type='sawtooth'; low.frequency.value=92; low.connect(lpf);
-    const sub=ac.createOscillator(), subGain=ac.createGain();
-    sub.type='square'; sub.frequency.value=46; subGain.gain.value=.4;
-    sub.connect(subGain).connect(lpf);
-    // Tremolo rides on trem.gain, not out.gain, so "off" is truly silent.
-    const lfo=ac.createOscillator(), lfoGain=ac.createGain();
-    lfo.type='sine'; lfo.frequency.value=18; lfoGain.gain.value=.3;
-    lfo.connect(lfoGain).connect(trem.gain);
-    low.start(); sub.start(); lfo.start();
-    buzzNodes={out};
-    return buzzNodes;
+    // Lowpass shaves the top hiss that would read as static; the bandpass is the
+    // moving part, and some unfiltered body underneath keeps it from sounding
+    // thin through a tablet speaker.
+    const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=6500; lp.Q.value=.5;
+    lp.connect(out);
+    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=900; bp.Q.value=.75;
+    bp.connect(lp);
+    const body=ac.createGain(); body.gain.value=.38; body.connect(lp);
+    const src=ac.createBufferSource();
+    src.buffer=pinkNoiseBuffer(ac,4); src.loop=true;
+    src.connect(bp); src.connect(body);
+    src.start();
+    brushNodes={out,bp};
+    return brushNodes;
   }
-  function buzzOn() {
-    if (buzzAudible) return;
-    const n=buildBuzz(); if (!n) return;
-    buzzAudible=true;
+
+  function brushOn() {
+    if (brushAudible) return;
+    const n=buildBrush(); if (!n) return;
+    brushAudible=true;
     n.out.gain.cancelScheduledValues(audioCtx.currentTime);
-    n.out.gain.setTargetAtTime(BUZZ_LEVEL,audioCtx.currentTime,.012);
+    n.out.gain.setTargetAtTime(BRUSH_LEVEL,audioCtx.currentTime,.015);
   }
-  function buzzOff() {
-    if (!buzzNodes || !buzzAudible) { buzzAudible=false; return; }
-    buzzAudible=false;
-    buzzNodes.out.gain.cancelScheduledValues(audioCtx.currentTime);
-    buzzNodes.out.gain.setTargetAtTime(0,audioCtx.currentTime,.02);
+  function brushOff() {
+    clearTimeout(brushIdle); brushIdle=null;
+    if (!brushNodes || !brushAudible) { brushAudible=false; return; }
+    brushAudible=false;
+    brushNodes.out.gain.cancelScheduledValues(audioCtx.currentTime);
+    brushNodes.out.gain.setTargetAtTime(0,audioCtx.currentTime,.03);
+  }
+
+  // Finger speed in px/ms both brightens the filter and pushes the level.
+  // A stroke that stops moving settles to a quiet hiss rather than cutting out,
+  // so the student still hears that he is on the line.
+  function brushSpeed(pxPerMs) {
+    if (!brushNodes || !brushAudible) return;
+    const norm=Math.max(0,Math.min(1,pxPerMs/1.6));
+    const t=audioCtx.currentTime;
+    brushNodes.bp.frequency.setTargetAtTime(700+norm*2600,t,.05);
+    brushNodes.out.gain.setTargetAtTime(BRUSH_LEVEL*(.5+norm*.5),t,.05);
+    // No pointermove fires while a finger rests, so decay the stroke ourselves.
+    clearTimeout(brushIdle);
+    brushIdle=setTimeout(()=>brushSpeed(0),90);
   }
 
   // Verified standard English braille alphabet: left column 1-2-3, right column 4-5-6.
@@ -261,6 +302,7 @@
   let touchedBraille=new Set();
   let markerSegments=[];
   let drawing=false;
+  let lastMoveTime=0;
   let advancing=false;
   let currentPointer=null;
   let lastPointerScreen=null;
@@ -378,7 +420,7 @@
     return Math.max(42,Math.min(canvas.clientWidth,canvas.clientHeight)*.105);
   }
 
-  // Is the finger on the guide right now? Drives the buzz, and is intentionally
+  // Is the finger on the guide right now? Drives the brush, and is intentionally
   // the SAME halo the coverage test uses, so the sound reports exactly what counts.
   function onGuide(x,y,geometry=currentGeometry()) {
     const r2=coverageRadius()**2;
@@ -428,25 +470,34 @@
     try { canvas.setPointerCapture(ev.pointerId); } catch {}
     const p=canvasPoint(ev);
     lastPointerScreen=p;
+    lastMoveTime=performance.now();
     markerSegments.push([screenToLocal(p)]);
     applyCoverage(p[0],p[1]); draw();
-    if (onGuide(p[0],p[1])) buzzOn(); else buzzOff();
+    // Touching down counts as a stroke starting: open the filter a little so
+    // the first contact is heard, rather than fading up from silence.
+    if (onGuide(p[0],p[1])) { brushOn(); brushSpeed(.5); } else brushOff();
   });
   canvas.addEventListener('pointermove',ev=>{
     if (!drawing || ev.pointerId!==currentPointer) return;
     ev.preventDefault();
     const p=canvasPoint(ev), seg=markerSegments[markerSegments.length-1];
+    const now=performance.now();
+    // Floor the interval: a 1 ms gap on a 120 Hz digitiser would otherwise
+    // report an absurd speed and spike the filter.
+    const speed=Math.hypot(p[0]-lastPointerScreen[0],p[1]-lastPointerScreen[1])
+                /Math.max(6,now-lastMoveTime);
+    lastMoveTime=now;
     addInterpolatedPoints(seg,lastPointerScreen,p);
     lastPointerScreen=p;
     draw();
-    // Re-checked on every move: wander off the guide and the buzz drops out,
-    // come back onto it and the buzz returns. No restart cost either way.
-    if (onGuide(p[0],p[1])) buzzOn(); else buzzOff();
+    // Re-checked on every move: wander off the guide and the brush drops out,
+    // come back onto it and it returns. No restart cost either way.
+    if (onGuide(p[0],p[1])) { brushOn(); brushSpeed(speed); } else brushOff();
   });
   function stopDrawing(ev) {
     if (ev && currentPointer!==null && ev.pointerId!==currentPointer) return;
     drawing=false; currentPointer=null; lastPointerScreen=null;
-    buzzOff();
+    brushOff();
   }
   canvas.addEventListener('pointerup',stopDrawing);
   canvas.addEventListener('pointercancel',stopDrawing);
@@ -501,7 +552,7 @@
   function minigameActive() { return minigame.classList.contains('on'); }
 
   function startMinigame(onFinish) {
-    buzzOff();
+    brushOff();
     mgOnFinish=onFinish;
     mgStep=0; mgBusy=false;
     // Shapes and colours are redrawn every round; the note order never is.
@@ -571,7 +622,7 @@
     if (advancing || !traceDone) return;
     if (!BRAILLE[letter].every(n=>touchedBraille.has(n))) return;
     advancing=true;
-    buzzOff();
+    brushOff();
     success.animate([{opacity:0},{opacity:.30},{opacity:0}],{duration:430,easing:'ease-out'});
     setTimeout(()=>{
       orderIndex++;
