@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>Trace + Braille Alphabet v5</title>
+<title>Trace + Braille Alphabet</title>
 <style>
   :root { --bg:#000; --letter:#ff453a; --trace:#30d158; --inactive:#505050; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
@@ -39,16 +39,25 @@
   #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
     color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
   #exit {
-    position:absolute; z-index:20; top:max(3px,env(safe-area-inset-top)); right:3px;
+    position:absolute; z-index:60; top:max(3px,env(safe-area-inset-top)); right:3px;
     width:24px; height:20px; padding:0; border:0; border-radius:4px;
     background:#121212; color:#555; opacity:.48; font:bold 10px/20px Arial,sans-serif;
     touch-action:manipulation;
   }
   #success { position:absolute; inset:0; z-index:12; pointer-events:none; background:white; opacity:0; }
   #exitMessage {
-    display:none; position:absolute; inset:0; z-index:50; place-items:center;
+    display:none; position:absolute; inset:0; z-index:70; place-items:center;
     background:#000; color:#fff; font:700 clamp(28px,8vw,70px)/1 Arial,sans-serif;
   }
+  /* Minigame: one shape at a time, left to right. Opaque so it absorbs every
+     stray touch meant for the canvas or the braille cell underneath. */
+  #minigame { display:none; position:absolute; inset:0; z-index:30; background:#000; touch-action:none; }
+  #minigame.on { display:block; }
+  .mgShape {
+    position:absolute; transform:translate(-50%,-50%);
+    display:block; touch-action:none; will-change:transform,opacity;
+  }
+  .mgShape svg { display:block; width:100%; height:100%; overflow:visible; }
   @media (orientation:landscape) {
     #app { grid-template-columns:minmax(0,76fr) minmax(0,24fr); grid-template-rows:100%; }
     #traceWrap { grid-column:1; grid-row:1; }
@@ -77,6 +86,7 @@
   <div id="fullscreenStatus" role="status"></div>
   <button id="exit" aria-label="Double tap to exit">×</button>
   <div id="success"></div>
+  <div id="minigame" aria-hidden="true"></div>
   <div id="exitMessage">Exited</div>
 </div>
 <script>
@@ -88,6 +98,102 @@
   const exitBtn = document.getElementById('exit');
   const success = document.getElementById('success');
   const exitMessage = document.getElementById('exitMessage');
+  const minigame = document.getElementById('minigame');
+
+  // ---------------------------------------------------------------- audio ---
+  // One shared context, unlocked by the student's first touch anywhere.
+  // Every sound hangs off masterGain so a single node controls overall level.
+  let audioCtx=null, masterGain=null;
+  function audio() {
+    if (!audioCtx) {
+      const Ctor=window.AudioContext||window.webkitAudioContext;
+      if (!Ctor) return null;
+      try { audioCtx=new Ctor(); } catch { return null; }
+      masterGain=audioCtx.createGain();
+      masterGain.gain.value=.9;
+      masterGain.connect(audioCtx.destination);
+    }
+    if (audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
+    return audioCtx;
+  }
+  document.addEventListener('pointerdown',audio,{capture:true,passive:true});
+
+  // Equal-tempered C major, one tone per braille dot position.
+  // Left column top-to-bottom = C D E, right column top-to-bottom = F G A.
+  // The mapping NEVER changes: dot position is what the student learns to hear.
+  const DOT_TONE = { 1:261.63, 2:293.66, 3:329.63, 4:349.23, 5:392.00, 6:440.00 };
+
+  function playTone(freq,{dur=.6,vol=.3,type='triangle',octave=true}={}) {
+    const ac=audio(); if (!ac) return;
+    const t0=ac.currentTime;
+    const env=ac.createGain();
+    env.gain.setValueAtTime(0,t0);
+    env.gain.linearRampToValueAtTime(vol,t0+.014);
+    env.gain.exponentialRampToValueAtTime(.0008,t0+dur);
+    env.connect(masterGain);
+    const osc=ac.createOscillator();
+    osc.type=type; osc.frequency.value=freq;
+    osc.connect(env); osc.start(t0); osc.stop(t0+dur+.05);
+    if (octave) { // a touch of second harmonic keeps it bell-like, not buzzy
+      const hi=ac.createOscillator(), hiGain=ac.createGain();
+      hi.type='sine'; hi.frequency.value=freq*2; hiGain.gain.value=.26;
+      hi.connect(hiGain).connect(env); hi.start(t0); hi.stop(t0+dur+.05);
+    }
+  }
+
+  // Short filtered noise transient: the "pop" of a shape bursting.
+  let popBuffer=null;
+  function playPop() {
+    const ac=audio(); if (!ac) return;
+    if (!popBuffer) {
+      const n=Math.floor(ac.sampleRate*.07);
+      popBuffer=ac.createBuffer(1,n,ac.sampleRate);
+      const d=popBuffer.getChannelData(0);
+      for (let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.5);
+    }
+    const src=ac.createBufferSource(); src.buffer=popBuffer;
+    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1400; bp.Q.value=.9;
+    const g=ac.createGain(); g.gain.value=.22;
+    src.connect(bp).connect(g).connect(masterGain);
+    src.start();
+  }
+
+  // The tracing buzz. Oscillators run for the whole session; only the output
+  // gain moves, so starting and stopping is instant and click-free.
+  const BUZZ_LEVEL=.22;
+  let buzzNodes=null, buzzAudible=false;
+  function buildBuzz() {
+    if (buzzNodes) return buzzNodes;
+    const ac=audio(); if (!ac) return null;
+    const out=ac.createGain(); out.gain.value=0; out.connect(masterGain);
+    const trem=ac.createGain(); trem.gain.value=.72; trem.connect(out);
+    const lpf=ac.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=560; lpf.Q.value=.7;
+    lpf.connect(trem);
+    const low=ac.createOscillator(); low.type='sawtooth'; low.frequency.value=92; low.connect(lpf);
+    const sub=ac.createOscillator(), subGain=ac.createGain();
+    sub.type='square'; sub.frequency.value=46; subGain.gain.value=.4;
+    sub.connect(subGain).connect(lpf);
+    // Tremolo rides on trem.gain, not out.gain, so "off" is truly silent.
+    const lfo=ac.createOscillator(), lfoGain=ac.createGain();
+    lfo.type='sine'; lfo.frequency.value=18; lfoGain.gain.value=.3;
+    lfo.connect(lfoGain).connect(trem.gain);
+    low.start(); sub.start(); lfo.start();
+    buzzNodes={out};
+    return buzzNodes;
+  }
+  function buzzOn() {
+    if (buzzAudible) return;
+    const n=buildBuzz(); if (!n) return;
+    buzzAudible=true;
+    n.out.gain.cancelScheduledValues(audioCtx.currentTime);
+    n.out.gain.setTargetAtTime(BUZZ_LEVEL,audioCtx.currentTime,.012);
+  }
+  function buzzOff() {
+    if (!buzzNodes || !buzzAudible) { buzzAudible=false; return; }
+    buzzAudible=false;
+    buzzNodes.out.gain.cancelScheduledValues(audioCtx.currentTime);
+    buzzNodes.out.gain.setTargetAtTime(0,audioCtx.currentTime,.02);
+  }
 
   // Verified standard English braille alphabet: left column 1-2-3, right column 4-5-6.
   const BRAILLE = {
@@ -218,6 +324,8 @@
     canvas.height=Math.max(1,Math.round(r.height*dpr));
     ctx.setTransform(dpr,0,0,dpr,0,0);
     draw();
+    // A rotation mid-minigame would otherwise leave the live shape off-screen.
+    if (minigameActive() && !mgBusy) spawnShape();
   }
 
   function setupLetter() {
@@ -265,10 +373,27 @@
     return [ev.clientX-r.left, ev.clientY-r.top];
   }
 
+  // Deliberately generous motor-accessibility halo around the thick guide.
+  function coverageRadius() {
+    return Math.max(42,Math.min(canvas.clientWidth,canvas.clientHeight)*.105);
+  }
+
+  // Is the finger on the guide right now? Drives the buzz, and is intentionally
+  // the SAME halo the coverage test uses, so the sound reports exactly what counts.
+  function onGuide(x,y,geometry=currentGeometry()) {
+    const r2=coverageRadius()**2;
+    for (const stroke of geometry) {
+      for (const p of stroke) {
+        const dx=x-p[0], dy=y-p[1];
+        if (dx*dx+dy*dy<=r2) return true;
+      }
+    }
+    return false;
+  }
+
   function applyCoverage(x,y) {
     const geometry=currentGeometry();
-    // Deliberately generous motor-accessibility halo around the thick guide.
-    const radius=Math.max(42,Math.min(canvas.clientWidth,canvas.clientHeight)*.105);
+    const radius=coverageRadius();
     const r2=radius*radius;
     for (let s=0;s<geometry.length;s++) {
       for (let i=0;i<geometry[s].length;i++) {
@@ -305,6 +430,7 @@
     lastPointerScreen=p;
     markerSegments.push([screenToLocal(p)]);
     applyCoverage(p[0],p[1]); draw();
+    if (onGuide(p[0],p[1])) buzzOn(); else buzzOff();
   });
   canvas.addEventListener('pointermove',ev=>{
     if (!drawing || ev.pointerId!==currentPointer) return;
@@ -313,10 +439,14 @@
     addInterpolatedPoints(seg,lastPointerScreen,p);
     lastPointerScreen=p;
     draw();
+    // Re-checked on every move: wander off the guide and the buzz drops out,
+    // come back onto it and the buzz returns. No restart cost either way.
+    if (onGuide(p[0],p[1])) buzzOn(); else buzzOff();
   });
   function stopDrawing(ev) {
     if (ev && currentPointer!==null && ev.pointerId!==currentPointer) return;
     drawing=false; currentPointer=null; lastPointerScreen=null;
+    buzzOff();
   }
   canvas.addEventListener('pointerup',stopDrawing);
   canvas.addEventListener('pointercancel',stopDrawing);
@@ -324,7 +454,11 @@
   for (const d of dots) {
     d.addEventListener('pointerdown',ev=>{
       ev.preventDefault();
+      if (advancing) return;
       const n=Number(d.dataset.dot);
+      // Every dot sounds its own fixed tone, required or not: the position/pitch
+      // pairing is the thing being taught, so exploring the cell must be audible.
+      playTone(DOT_TONE[n],{dur:.62,vol:.3});
       if (!BRAILLE[letter].includes(n)) return;
       touchedBraille.add(n);
       d.classList.add('hit');
@@ -332,15 +466,119 @@
     });
   }
 
+  // ------------------------------------------------------- shape minigame ---
+  // "Mary Had a Little Lamb", first seven notes: E D C D E E E (mi re do re mi mi mi).
+  // One octave above the braille dot tones so the tune never muddles the dot drill.
+  const MARY = [659.26, 587.33, 523.25, 587.33, 659.26, 659.26, 659.26];
+
+  // Standard kindergarten shapes, drawn in a 0 0 100 100 box.
+  const SHAPES = {
+    circle:    '<circle cx="50" cy="50" r="47"/>',
+    square:    '<rect x="4" y="4" width="92" height="92" rx="7"/>',
+    triangle:  '<polygon points="50,4 96,93 4,93"/>',
+    rectangle: '<rect x="2" y="21" width="96" height="58" rx="7"/>',
+    oval:      '<ellipse cx="50" cy="50" rx="47" ry="33"/>',
+    diamond:   '<polygon points="50,2 98,50 50,98 2,50"/>',
+    star:      '<polygon points="50,2 61.5,34.2 95.7,35.2 68.6,56 78.2,88.8 50,69.5 21.8,88.8 31.4,56 4.3,35.2 38.5,34.2"/>',
+    heart:     '<path d="M50 90 C50 90 5 60 5 31 C5 13 19 5 32 5 C42 5 50 13 50 22 C50 13 58 5 68 5 C81 5 95 13 95 31 C95 60 50 90 50 90 Z"/>',
+    hexagon:   '<polygon points="98,50 74,91.6 26,91.6 2,50 26,8.4 74,8.4"/>'
+  };
+  const SHAPE_NAMES = Object.keys(SHAPES);
+  const SHAPE_COLORS = ['#ff453a','#ff9f0a','#ffd60a','#32d74b','#0a84ff',
+                        '#bf5af2','#ff375f','#64d2ff','#a8ff3e','#ff6b35'];
+
+  function sample(list,count) { // Fisher-Yates on a copy; no repeats within a round.
+    const pool=[...list];
+    for (let i=pool.length-1;i>0;i--) {
+      const j=Math.floor(Math.random()*(i+1));
+      [pool[i],pool[j]]=[pool[j],pool[i]];
+    }
+    return pool.slice(0,count);
+  }
+
+  let mgRound=[], mgStep=0, mgOnFinish=null, mgBusy=false;
+
+  function minigameActive() { return minigame.classList.contains('on'); }
+
+  function startMinigame(onFinish) {
+    buzzOff();
+    mgOnFinish=onFinish;
+    mgStep=0; mgBusy=false;
+    // Shapes and colours are redrawn every round; the note order never is.
+    const shapes=sample(SHAPE_NAMES,MARY.length);
+    const colors=sample(SHAPE_COLORS,MARY.length);
+    mgRound=shapes.map((name,i)=>({name,color:colors[i]}));
+    minigame.textContent='';
+    minigame.classList.add('on');
+    minigame.setAttribute('aria-hidden','false');
+    spawnShape();
+  }
+
+  function spawnShape() {
+    if (mgStep>=mgRound.length) { endMinigame(); return; }
+    minigame.textContent=''; // idempotent: also lets a resize re-lay-out the live shape
+    const {name,color}=mgRound[mgStep];
+    const w=minigame.clientWidth, h=minigame.clientHeight;
+    // Strictly left to right: slot i sits at a fixed fraction across the screen,
+    // inset far enough that a big shape never clips an edge.
+    const frac=mgRound.length===1 ? .5 : mgStep/(mgRound.length-1);
+    const size=Math.max(80,Math.min(w*.23,h*.52));
+    const left=w*.13+frac*(w*.74);
+
+    const el=document.createElement('div');
+    el.className='mgShape';
+    el.style.width=el.style.height=size+'px';
+    el.style.left=left+'px';
+    el.style.top=(h/2)+'px';
+    el.innerHTML='<svg viewBox="0 0 100 100" fill="'+color+
+                 '" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">'+
+                 SHAPES[name]+'</svg>';
+    minigame.appendChild(el);
+    el.animate(
+      [{transform:'translate(-50%,-50%) scale(.3)',opacity:0},
+       {transform:'translate(-50%,-50%) scale(1.12)',opacity:1,offset:.7},
+       {transform:'translate(-50%,-50%) scale(1)',opacity:1}],
+      {duration:300,easing:'ease-out'});
+
+    let popped=false;
+    el.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();
+      if (popped || mgBusy) return;
+      popped=true; mgBusy=true;
+      playPop();
+      playTone(MARY[mgStep],{dur:.7,vol:.32});
+      el.animate(
+        [{transform:'translate(-50%,-50%) scale(1)',opacity:1},
+         {transform:'translate(-50%,-50%) scale(1.55)',opacity:0}],
+        {duration:260,easing:'ease-out'});
+      setTimeout(()=>{ el.remove(); mgStep++; mgBusy=false; spawnShape(); },300);
+    });
+  }
+
+  function endMinigame() {
+    minigame.classList.remove('on');
+    minigame.setAttribute('aria-hidden','true');
+    minigame.textContent='';
+    mgRound=[]; mgStep=0;
+    const done=mgOnFinish; mgOnFinish=null;
+    if (done) done();
+  }
+
+  // ----------------------------------------------------------- progression ---
+  let lettersDone=0;
+
   function checkCompletion() {
     if (advancing || !traceDone) return;
     if (!BRAILLE[letter].every(n=>touchedBraille.has(n))) return;
     advancing=true;
+    buzzOff();
     success.animate([{opacity:0},{opacity:.30},{opacity:0}],{duration:430,easing:'ease-out'});
     setTimeout(()=>{
       orderIndex++;
       if (orderIndex>=order.length) shuffleAlphabet();
-      setupLetter(); advancing=false;
+      lettersDone++;
+      const advance=()=>{ setupLetter(); advancing=false; };
+      if (lettersDone%4===0) startMinigame(advance); else advance();
     },500);
   }
 
