@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Trace + Braille Alphabet v5</title>
+<style>
+  :root { --bg:#000; --letter:#ff453a; --trace:#30d158; --inactive:#505050; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); overscroll-behavior:none; }
+  body { font-family:Arial,Helvetica,sans-serif; touch-action:none; }
+  #app {
+    position:fixed; inset:0; width:100vw; height:100dvh; overflow:hidden; background:var(--bg);
+    display:grid; grid-template-rows:minmax(0, 73fr) minmax(0, 27fr);
+  }
+  #traceWrap { position:relative; min-width:0; min-height:0; overflow:hidden; }
+  #traceCanvas { display:block; width:100%; height:100%; touch-action:none; }
+  #braille {
+    min-height:0; display:flex; align-items:center; justify-content:center;
+    gap:clamp(34px,9vw,78px); padding:0 5vw max(1vh,8px);
+  }
+  .brailleCol { display:flex; flex-direction:column; gap:clamp(12px,2vh,22px); }
+  .dot {
+    width:clamp(54px,15vw,108px); aspect-ratio:1; border-radius:50%;
+    border:clamp(5px,1.5vw,12px) solid var(--inactive); background:#090909;
+    transition:transform .08s ease, background .08s ease, border-color .08s ease;
+    touch-action:none;
+  }
+  .dot.required { border-color:var(--letter); background:#090909; }
+  .dot.hit { border-color:var(--trace); background:var(--trace); transform:scale(1.08); }
+  #fullscreen {
+    position:absolute; z-index:20; left:max(12px,env(safe-area-inset-left));
+    bottom:max(12px,env(safe-area-inset-bottom)); min-height:44px;
+    padding:10px 14px; border:1px solid #888; border-radius:8px;
+    background:#171717; color:#eee; font:600 15px Arial,sans-serif;
+    touch-action:manipulation;
+  }
+  #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
+    color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
+  #exit {
+    position:absolute; z-index:20; top:max(3px,env(safe-area-inset-top)); right:3px;
+    width:24px; height:20px; padding:0; border:0; border-radius:4px;
+    background:#121212; color:#555; opacity:.48; font:bold 10px/20px Arial,sans-serif;
+    touch-action:manipulation;
+  }
+  #success { position:absolute; inset:0; z-index:12; pointer-events:none; background:white; opacity:0; }
+  #exitMessage {
+    display:none; position:absolute; inset:0; z-index:50; place-items:center;
+    background:#000; color:#fff; font:700 clamp(28px,8vw,70px)/1 Arial,sans-serif;
+  }
+  @media (orientation:landscape) {
+    #app { grid-template-columns:minmax(0,76fr) minmax(0,24fr); grid-template-rows:100%; }
+    #traceWrap { grid-column:1; grid-row:1; }
+    #braille { grid-column:2; grid-row:1; padding:4vh 1vw 3vh; gap:clamp(22px,3vw,48px); }
+    .brailleCol { gap:clamp(10px,3vh,24px); }
+    .dot { width:clamp(48px,11vh,94px); border-width:clamp(5px,1.35vh,11px); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="traceWrap"><canvas id="traceCanvas"></canvas></div>
+  <div id="braille" aria-label="Braille cell">
+    <div class="brailleCol">
+      <div class="dot" data-dot="1"></div>
+      <div class="dot" data-dot="2"></div>
+      <div class="dot" data-dot="3"></div>
+    </div>
+    <div class="brailleCol">
+      <div class="dot" data-dot="4"></div>
+      <div class="dot" data-dot="5"></div>
+      <div class="dot" data-dot="6"></div>
+    </div>
+  </div>
+  <button id="fullscreen" type="button">⛶ Full screen</button>
+  <div id="fullscreenStatus" role="status"></div>
+  <button id="exit" aria-label="Double tap to exit">×</button>
+  <div id="success"></div>
+  <div id="exitMessage">Exited</div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('traceCanvas');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const dots = [...document.querySelectorAll('.dot')];
+  const exitBtn = document.getElementById('exit');
+  const success = document.getElementById('success');
+  const exitMessage = document.getElementById('exitMessage');
+
+  // Verified standard English braille alphabet: left column 1-2-3, right column 4-5-6.
+  const BRAILLE = {
+    a:[1], b:[1,2], c:[1,4], d:[1,4,5], e:[1,5],
+    f:[1,2,4], g:[1,2,4,5], h:[1,2,5], i:[2,4], j:[2,4,5],
+    k:[1,3], l:[1,2,3], m:[1,3,4], n:[1,3,4,5], o:[1,3,5],
+    p:[1,2,3,4], q:[1,2,3,4,5], r:[1,2,3,5], s:[2,3,4], t:[2,3,4,5],
+    u:[1,3,6], v:[1,2,3,6], w:[2,4,5,6], x:[1,3,4,6], y:[1,3,4,5,6], z:[1,3,5,6]
+  };
+
+  const COLOR_PAIRS = [
+    ['#ff453a','#30d158'], // red / green
+    ['#ffd60a','#0a84ff'], // yellow / blue
+    ['#ff9f0a','#5e5ce6'], // orange / indigo
+    ['#ff375f','#40c8e0'], // pink / cyan
+    ['#bf5af2','#a8ff3e'], // purple / lime
+    ['#64d2ff','#ff453a']  // cyan / red
+  ];
+
+  // Smooth school-print centerlines: x-height 70, ascenders 100, descenders 30.
+  // SVG curves are sampled by distance for the existing coverage logic.
+  const PATHS = {
+    a:['M60 30 C60 12 48 0 30 0 C10 0 0 15 0 35 C0 55 10 70 30 70 C48 70 60 58 60 40','M60 0 L60 70'],
+    b:['M0 -30 L0 70','M0 30 C0 12 12 0 30 0 C50 0 60 15 60 35 C60 55 50 70 30 70 C12 70 0 58 0 40'],
+    c:['M57 10 C49 3 40 0 30 0 C10 0 0 15 0 35 C0 55 10 70 30 70 C40 70 49 67 57 60'],
+    d:['M60 30 C60 12 48 0 30 0 C10 0 0 15 0 35 C0 55 10 70 30 70 C48 70 60 58 60 40','M60 -30 L60 70'],
+    e:['M0 33 L60 33 C60 12 48 0 30 0 C10 0 0 15 0 35 C0 55 12 70 32 70 C43 70 52 66 59 60'],
+    f:['M45 -25 C26 -38 15 -24 15 -8 L15 70','M0 8 L38 8'],
+    g:['M60 30 C60 12 48 0 30 0 C10 0 0 15 0 35 C0 55 10 70 30 70 C48 70 60 58 60 40','M60 0 L60 76 C60 105 26 110 7 94'],
+    h:['M0 -30 L0 70','M0 29 C0 10 13 0 29 0 C46 0 55 11 55 28 L55 70'],
+    i:['M0 -24 L0 -23.9','M0 0 L0 70'],
+    j:['M25 -24 L25 -23.9','M25 0 L25 78 C25 96 14 103 0 96'],
+    k:['M0 -30 L0 70','M53 0 L0 38 L56 70'],
+    l:['M0 -30 L0 70'],
+    m:['M0 0 L0 70','M0 25 C0 -8 44 -8 44 25 L44 70','M44 25 C44 -8 88 -8 88 25 L88 70'],
+    n:['M0 0 L0 70','M0 29 C0 10 13 0 29 0 C46 0 55 11 55 28 L55 70'],
+    o:['M60 35 C60 14 49 0 30 0 C11 0 0 14 0 35 C0 56 11 70 30 70 C49 70 60 56 60 35'],
+    p:['M0 0 L0 100','M0 30 C0 12 12 0 30 0 C50 0 60 15 60 35 C60 55 50 70 30 70 C12 70 0 58 0 40'],
+    q:['M60 30 C60 12 48 0 30 0 C10 0 0 15 0 35 C0 55 10 70 30 70 C48 70 60 58 60 40','M60 0 L60 100'],
+    r:['M0 0 L0 70','M0 30 C0 7 17 -4 36 3'],
+    s:['M53 8 C42 -2 15 -5 6 10 C-8 36 57 29 57 52 C57 75 20 77 1 62'],
+    t:['M23 -25 L23 70','M0 0 L48 0'],
+    u:['M0 0 L0 42 C0 61 9 70 26 70 C44 70 55 58 55 40','M55 0 L55 70'],
+    v:['M0 0 L30 70 L60 0'],
+    w:['M0 0 L22 70 L44 8 L66 70 L88 0'],
+    x:['M0 0 L60 70','M60 0 L0 70'],
+    y:['M0 0 L30 63','M60 0 L15 100'],
+    z:['M0 0 L60 0 L0 70 L60 70']
+  };
+  const GLYPHS = Object.fromEntries(Object.entries(PATHS).map(([ch,paths]) => [ch,paths.map(d => {
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d);
+    const length=path.getTotalLength(), count=Math.max(1,Math.ceil(length/2));
+    return Array.from({length:count+1},(_,i)=>{
+      const p=path.getPointAtLength(length*i/count); return [p.x,-p.y];
+    });
+  })]));
+
+  let order=[];
+  let orderIndex=0;
+  let letter='a';
+  let colorPair=COLOR_PAIRS[0];
+  let coverage=[];
+  let traceDone=false;
+  let touchedBraille=new Set();
+  let markerSegments=[];
+  let drawing=false;
+  let advancing=false;
+  let currentPointer=null;
+  let lastPointerScreen=null;
+
+  function shuffleAlphabet() {
+    const forced=(new URLSearchParams(location.search).get('letter')||'').toLowerCase();
+    if (/^[a-z]$/.test(forced)) { order=[forced]; orderIndex=0; return; }
+    order='abcdefghijklmnopqrstuvwxyz'.split('');
+    for (let i=order.length-1;i>0;i--) {
+      const j=Math.floor(Math.random()*(i+1));
+      [order[i],order[j]]=[order[j],order[i]];
+    }
+    orderIndex=0;
+  }
+
+  function cssVar(name,value) { document.documentElement.style.setProperty(name,value); }
+
+  const GLYPH_BOUNDS = Object.fromEntries(Object.entries(GLYPHS).map(([ch,strokes])=>{
+    const pts=strokes.flat();
+    const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+    return [ch,{minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys)}];
+  }));
+
+  function currentTransform() {
+    const w=canvas.clientWidth, h=canvas.clientHeight;
+    const b=GLYPH_BOUNDS[letter];
+    const glyphW=Math.max(1,b.maxX-b.minX), glyphH=Math.max(1,b.maxY-b.minY);
+    // Uniform scaling is critical: never stretch a glyph differently in portrait and landscape.
+    // 1.25 CSS inches above ALL guide ink; extra allowance for reaching fingers.
+    // CSS inches cannot guarantee a physical inch on every tablet/display.
+    const landscape=w>h || matchMedia('(orientation:landscape)').matches;
+    const top=landscape ? 120 : 32, bottom=landscape ? 76 : 24;
+    const padX=Math.max(28,w*.07), strokeUnits=10;
+    const availableH=Math.max(20,h-top-bottom);
+    const scale=Math.max(.05,Math.min((w-2*padX)/(glyphW+strokeUnits),availableH/(glyphH+strokeUnits)));
+    return {
+      w,h,scale, guideWidth:strokeUnits*scale,
+      cx:(b.minX+b.maxX)/2, cy:(b.minY+b.maxY)/2,
+      screenX:w/2, screenY:top+availableH/2
+    };
+  }
+
+  function localToScreen([x,y],t=currentTransform()) {
+    return [t.screenX+(x-t.cx)*t.scale, t.screenY-(y-t.cy)*t.scale];
+  }
+
+  function screenToLocal([x,y],t=currentTransform()) {
+    return [t.cx+(x-t.screenX)/t.scale, t.cy-(y-t.screenY)/t.scale];
+  }
+
+  function currentGeometry() {
+    const t=currentTransform();
+    return GLYPHS[letter].map(stroke=>stroke.map(p=>localToScreen(p,t)));
+  }
+
+  function resizeCanvas() {
+    stopDrawing();
+    const r=canvas.getBoundingClientRect();
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.max(1,Math.round(r.width*dpr));
+    canvas.height=Math.max(1,Math.round(r.height*dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+
+  function setupLetter() {
+    stopDrawing();
+    letter=order[orderIndex];
+    colorPair=COLOR_PAIRS[Math.floor(Math.random()*COLOR_PAIRS.length)];
+    cssVar('--letter',colorPair[0]); cssVar('--trace',colorPair[1]);
+    coverage=GLYPHS[letter].map(stroke=>new Array(stroke.length).fill(false));
+    markerSegments=[];
+    traceDone=false;
+    touchedBraille.clear();
+    const required=BRAILLE[letter];
+    for (const d of dots) {
+      const n=Number(d.dataset.dot);
+      d.classList.toggle('required',required.includes(n));
+      d.classList.remove('hit');
+    }
+    draw();
+  }
+
+  function drawPolyline(points,color,width,alpha=1) {
+    if (!points.length) return;
+    ctx.globalAlpha=alpha; ctx.strokeStyle=color; ctx.lineWidth=width;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(points[0][0],points[0][1]);
+    for (let i=1;i<points.length;i++) ctx.lineTo(points[i][0],points[i][1]);
+    ctx.stroke();
+  }
+
+  function draw() {
+    const w=canvas.clientWidth,h=canvas.clientHeight;
+    ctx.globalAlpha=1; ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
+    if (!GLYPHS[letter]) return;
+    const geometry=currentGeometry();
+    const guideWidth=currentTransform().guideWidth;
+    const markerWidth=guideWidth*.76;
+    for (const stroke of geometry) drawPolyline(stroke,colorPair[0],guideWidth,.96);
+    const t=currentTransform();
+    for (const segment of markerSegments) drawPolyline(segment.map(p=>localToScreen(p,t)),colorPair[1],markerWidth,1);
+    ctx.globalAlpha=1;
+  }
+
+  function canvasPoint(ev) {
+    const r=canvas.getBoundingClientRect();
+    return [ev.clientX-r.left, ev.clientY-r.top];
+  }
+
+  function applyCoverage(x,y) {
+    const geometry=currentGeometry();
+    // Deliberately generous motor-accessibility halo around the thick guide.
+    const radius=Math.max(42,Math.min(canvas.clientWidth,canvas.clientHeight)*.105);
+    const r2=radius*radius;
+    for (let s=0;s<geometry.length;s++) {
+      for (let i=0;i<geometry[s].length;i++) {
+        const p=geometry[s][i], dx=x-p[0], dy=y-p[1];
+        if (dx*dx+dy*dy<=r2) coverage[s][i]=true;
+      }
+    }
+    // Every separately defined stroke has to be substantially covered.
+    // For i/j, the first disconnected stroke is the dot: a deliberate touch counts; the stem still needs tracing.
+    traceDone=coverage.every((bits,strokeIndex)=>{
+      const ratio=bits.filter(Boolean).length/bits.length;
+      const isDot=(letter==='i'||letter==='j') && strokeIndex===0;
+      return ratio >= (isDot ? .18 : .70);
+    });
+    checkCompletion();
+  }
+
+  function addInterpolatedPoints(segment,from,to) {
+    const dist=Math.hypot(to[0]-from[0],to[1]-from[1]);
+    const steps=Math.max(1,Math.ceil(dist/8));
+    const t=currentTransform();
+    for (let i=1;i<=steps;i++) {
+      const p=[from[0]+(to[0]-from[0])*i/steps, from[1]+(to[1]-from[1])*i/steps];
+      segment.push(screenToLocal(p,t)); applyCoverage(p[0],p[1]);
+    }
+  }
+
+  canvas.addEventListener('pointerdown',ev=>{
+    ev.preventDefault();
+    if (advancing || drawing) return;
+    drawing=true; currentPointer=ev.pointerId;
+    try { canvas.setPointerCapture(ev.pointerId); } catch {}
+    const p=canvasPoint(ev);
+    lastPointerScreen=p;
+    markerSegments.push([screenToLocal(p)]);
+    applyCoverage(p[0],p[1]); draw();
+  });
+  canvas.addEventListener('pointermove',ev=>{
+    if (!drawing || ev.pointerId!==currentPointer) return;
+    ev.preventDefault();
+    const p=canvasPoint(ev), seg=markerSegments[markerSegments.length-1];
+    addInterpolatedPoints(seg,lastPointerScreen,p);
+    lastPointerScreen=p;
+    draw();
+  });
+  function stopDrawing(ev) {
+    if (ev && currentPointer!==null && ev.pointerId!==currentPointer) return;
+    drawing=false; currentPointer=null; lastPointerScreen=null;
+  }
+  canvas.addEventListener('pointerup',stopDrawing);
+  canvas.addEventListener('pointercancel',stopDrawing);
+
+  for (const d of dots) {
+    d.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();
+      const n=Number(d.dataset.dot);
+      if (!BRAILLE[letter].includes(n)) return;
+      touchedBraille.add(n);
+      d.classList.add('hit');
+      checkCompletion();
+    });
+  }
+
+  function checkCompletion() {
+    if (advancing || !traceDone) return;
+    if (!BRAILLE[letter].every(n=>touchedBraille.has(n))) return;
+    advancing=true;
+    success.animate([{opacity:0},{opacity:.30},{opacity:0}],{duration:430,easing:'ease-out'});
+    setTimeout(()=>{
+      orderIndex++;
+      if (orderIndex>=order.length) shuffleAlphabet();
+      setupLetter(); advancing=false;
+    },500);
+  }
+
+  // Browser prototype: double-tap the tiny button. The APK can later use true immersive/kiosk-like behavior.
+  let lastExitTap=0;
+  exitBtn.addEventListener('pointerup',ev=>{
+    ev.preventDefault();
+    const now=performance.now();
+    if (now-lastExitTap<650) {
+      try { document.exitFullscreen?.(); } catch {}
+      exitMessage.style.display='grid';
+    }
+    lastExitTap=now;
+  });
+
+  const fullscreenBtn=document.getElementById('fullscreen');
+  const fullscreenStatus=document.getElementById('fullscreenStatus');
+  const isFullscreen=()=>Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+  fullscreenBtn.addEventListener('click',async()=>{
+    fullscreenStatus.textContent='';
+    try {
+      if (isFullscreen()) {
+        const leave=document.exitFullscreen || document.webkitExitFullscreen;
+        if (leave) await leave.call(document);
+      } else {
+        const enter=document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+        if (!enter) throw new Error('unavailable');
+        await enter.call(document.documentElement);
+      }
+    } catch {
+      fullscreenStatus.textContent='Full screen is unavailable here. Open this file directly in your browser and try again.';
+    }
+  });
+  function fullscreenChanged() {
+    fullscreenBtn.textContent=isFullscreen() ? '⛶ Exit full screen' : '⛶ Full screen';
+    requestAnimationFrame(resizeCanvas);
+  }
+  document.addEventListener('fullscreenchange',fullscreenChanged);
+  document.addEventListener('webkitfullscreenchange',fullscreenChanged);
+  window.addEventListener('resize',resizeCanvas);
+  window.visualViewport?.addEventListener('resize',resizeCanvas);
+  new ResizeObserver(resizeCanvas).observe(document.getElementById('traceWrap'));
+  window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,120));
+
+  shuffleAlphabet();
+  setupLetter();
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>
