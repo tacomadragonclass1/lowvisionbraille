@@ -18,9 +18,17 @@ Designed for a tablet in landscape, full screen, held in two hands.
 3. **Both** are required to advance — a traced letter alone will not move on,
    and neither will the dots alone.
 
-## Sound
+## Starting a session
 
-Audio starts on the student's first touch (browsers require a gesture).
+The app opens on a **Tap to start** screen: a large pulsing yellow circle on
+black. Tapping anywhere answers with a rising C-E-G chime and begins.
+
+This is not decoration. Browsers refuse to start audio without a user gesture,
+so without the gate the first dot or stroke of a session would be silent and
+read as broken. The splash absorbs that unlocking touch, and the chime doubles
+as proof to the adult in the room that sound is working.
+
+## Sound
 
 | Event | Sound |
 | --- | --- |

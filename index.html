@@ -58,6 +58,22 @@
     display:block; touch-action:none; will-change:transform,opacity;
   }
   .mgShape svg { display:block; width:100%; height:100%; overflow:visible; }
+  /* Tap-to-start gate. Covers everything so the first touch of a session lands
+     here and nowhere else, whichever part of the screen he reaches for. */
+  #splash {
+    position:absolute; inset:0; z-index:80; background:#000;
+    display:grid; place-items:center; touch-action:none;
+  }
+  #splash.gone { display:none; }
+  #splashInner { display:flex; flex-direction:column; align-items:center; gap:clamp(18px,5vh,46px); }
+  #splashDot {
+    width:clamp(110px,24vh,240px); aspect-ratio:1; border-radius:50%;
+    background:#ffd60a; box-shadow:0 0 0 clamp(7px,1.5vh,15px) #fff;
+    animation:splashPulse 1.6s ease-in-out infinite;
+  }
+  #splashText { color:#fff; font:700 clamp(26px,7vh,62px)/1 Arial,sans-serif; }
+  @keyframes splashPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.11); } }
+  @media (prefers-reduced-motion:reduce) { #splashDot { animation:none; } }
   @media (orientation:landscape) {
     #app { grid-template-columns:minmax(0,76fr) minmax(0,24fr); grid-template-rows:100%; }
     #traceWrap { grid-column:1; grid-row:1; }
@@ -87,6 +103,12 @@
   <button id="exit" aria-label="Double tap to exit">×</button>
   <div id="success"></div>
   <div id="minigame" aria-hidden="true"></div>
+  <div id="splash" role="button" tabindex="0" aria-label="Tap anywhere to start">
+    <div id="splashInner">
+      <div id="splashDot"></div>
+      <div id="splashText">Tap to start</div>
+    </div>
+  </div>
   <div id="exitMessage">Exited</div>
 </div>
 <script>
@@ -128,9 +150,9 @@
   // The mapping NEVER changes: dot position is what the student learns to hear.
   const DOT_TONE = { 1:261.63, 2:293.66, 3:329.63, 4:349.23, 5:392.00, 6:440.00 };
 
-  function playTone(freq,{dur=.6,vol=.3,type='triangle',octave=true}={}) {
+  function playTone(freq,{dur=.6,vol=.3,type='triangle',octave=true,delay=0}={}) {
     const ac=audio(); if (!ac) return;
-    const t0=ac.currentTime;
+    const t0=ac.currentTime+delay;
     const env=ac.createGain();
     env.gain.setValueAtTime(0,t0);
     env.gain.linearRampToValueAtTime(vol,t0+.014);
@@ -673,6 +695,41 @@
   window.visualViewport?.addEventListener('resize',resizeCanvas);
   new ResizeObserver(resizeCanvas).observe(document.getElementById('traceWrap'));
   window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,120));
+
+  // ---------------------------------------------------------- tap to start ---
+  // Browsers refuse to start audio without a user gesture, so without this gate
+  // the first dot or stroke of a session would be silent and read as broken.
+  // The splash absorbs that unlocking touch and answers with a rising C-E-G,
+  // which doubles as proof to the adult in the room that sound is working.
+  const splash=document.getElementById('splash');
+  let splashDone=false;
+  function dismissSplash() {
+    if (splashDone) return;
+    splashDone=true;
+    splash.style.pointerEvents='none'; // before the fade, so it can't eat a second touch
+    const chime=()=>{
+      playTone(523.25,{dur:.5,vol:.26});
+      playTone(659.26,{dur:.5,vol:.26,delay:.11});
+      playTone(783.99,{dur:.8,vol:.3,delay:.22});
+    };
+    const ac=audio();
+    // resume() settles after the context is really running; chime either way.
+    if (ac && ac.state!=='running') ac.resume().then(chime,chime); else chime();
+    // fill:'forwards' is load-bearing. Without it the animation reverts to the
+    // base style when it ends, so if `finished` is slow to settle - which it is
+    // whenever rAF is throttled, e.g. the tab was backgrounded - the splash
+    // springs back to full opacity over the letter. It stays click-through, so
+    // the failure is purely visual, which on a tablet is the worst kind.
+    const fade=splash.animate([{opacity:1},{opacity:0}],
+                              {duration:280,easing:'ease-out',fill:'forwards'});
+    const hide=()=>splash.classList.add('gone');
+    fade.finished.then(hide,hide);
+    setTimeout(hide,400); // belt and braces if `finished` never settles at all
+  }
+  splash.addEventListener('pointerdown',ev=>{ ev.preventDefault(); dismissSplash(); });
+  splash.addEventListener('keydown',ev=>{
+    if (ev.key===' '||ev.key==='Enter') { ev.preventDefault(); dismissSplash(); }
+  });
 
   shuffleAlphabet();
   setupLetter();
