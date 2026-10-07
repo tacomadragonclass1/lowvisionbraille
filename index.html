@@ -529,10 +529,11 @@
       ev.preventDefault();
       if (advancing) return;
       const n=Number(d.dataset.dot);
-      // Every dot sounds its own fixed tone, required or not: the position/pitch
-      // pairing is the thing being taught, so exploring the cell must be audible.
-      playTone(DOT_TONE[n],{dur:.62,vol:.3});
+      // Only the dots this letter needs make a sound. Sounding the ghosted ones
+      // too - the original design - turned the cell into a noise toy: he hit
+      // them for the tone instead of reading the letter. Silence is the signal.
       if (!BRAILLE[letter].includes(n)) return;
+      playTone(DOT_TONE[n],{dur:.62,vol:.3});
       touchedBraille.add(n);
       d.classList.add('hit');
       checkCompletion();

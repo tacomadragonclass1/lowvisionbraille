@@ -34,7 +34,8 @@ as proof to the adult in the room that sound is working.
 | --- | --- |
 | Finger on the letter guide | A brush-stroke swoosh, continuous while tracing |
 | Finger off the guide, or lifted | Buzz stops immediately |
-| Braille dot touched | That dot's fixed tone |
+| A **required** braille dot touched | That dot's fixed tone |
+| A ghosted (not required) dot touched | Nothing — silent |
 | Shape touched in the minigame | A pop, then one note of the tune |
 
 The brush follows the **finger**, not the gesture: wander off the guide and it
@@ -54,7 +55,10 @@ The mapping never changes. Position is what the student learns to hear.
 | Note | C4 | D4 | E4 | F4 | G4 | A4 |
 
 Left column top-to-bottom is C–D–E; right column top-to-bottom is F–G–A.
-Every dot sounds, required or not, so exploring the cell is always audible.
+**Only the dots the current letter needs make a sound.** Ghosted dots are
+silent. The app originally sounded every dot so that exploring the cell was
+audible; in use that turned the cell into a noise toy — he hit the ghosted dots
+for the tone instead of reading the letter. Do not restore it.
 
 ## The shape minigame
 
