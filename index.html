@@ -38,12 +38,25 @@
   }
   #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
     color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
+  /* Findable by the adult in the room, still not a target for him. The old one
+     was 24x20 of #555 on #121212 at 48% opacity - black on black at arm's
+     length, and Milo could not find it at all. It is legible grey on a bordered
+     pill now, but still small, still jammed in the corner, and still double-tap,
+     which is the part that actually stops a stray palm from leaving the
+     activity. The exit X below stays dim ON PURPOSE: going back to the menu is
+     routine, quitting the app is not. */
   #home {
     position:absolute; z-index:60; top:max(3px,env(safe-area-inset-top)); left:3px;
-    width:24px; height:20px; padding:0; border:0; border-radius:4px;
-    background:#121212; color:#555; opacity:.48; font:bold 12px/20px Arial,sans-serif;
+    width:40px; height:32px; padding:0;
+    border:1px solid #4a4a4a; border-radius:6px;
+    background:#1c1c1c; color:#b4b4b4; font:bold 18px/30px Arial,sans-serif;
     touch-action:manipulation;
+    transition:background .12s linear, color .12s linear, border-color .12s linear;
   }
+  /* The first tap of the pair lights it up, so an adult who taps once can see
+     that it registered and that a second tap is wanted. Without this the
+     double-tap is indistinguishable from a dead button. */
+  #home.armed { background:#3f3f3f; color:#fff; border-color:#8f8f8f; }
   #home[hidden] { display:none; }
   #exit {
     position:absolute; z-index:60; top:max(3px,env(safe-area-inset-top)); right:3px;
@@ -1268,15 +1281,23 @@
   // same shape as the exit button, for the same reason: it is for the adult in
   // the room, and he must not be able to find it by flailing at the screen.
   const homeBtn=document.getElementById('home');
-  let lastHomeTap=0;
+  let lastHomeTap=0, homeArmTimer=null;
+  function disarmHome() {
+    clearTimeout(homeArmTimer); homeArmTimer=null;
+    lastHomeTap=0; homeBtn.classList.remove('armed');
+  }
   homeBtn.addEventListener('pointerup',ev=>{
     ev.preventDefault();
     const now=performance.now();
-    if (now-lastHomeTap<650) goHome();
+    if (now-lastHomeTap<650) { disarmHome(); goHome(); return; }
     lastHomeTap=now;
+    homeBtn.classList.add('armed');
+    clearTimeout(homeArmTimer);
+    homeArmTimer=setTimeout(disarmHome,650);
   });
 
   function goHome() {
+    disarmHome();
     runId++;
     advancing=false;
     brushOff();

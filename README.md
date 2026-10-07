@@ -264,12 +264,19 @@ school-print writing order.
   activity menu. `?mode=words&vowel=i` locks one vowel family.
 - `?letter=k` — lock to a single letter for targeted practice.
 - The *Full screen* button hides browser chrome.
-- The small `⌂` at the top **left** returns to the activity menu on a **double
-  tap**. The `×` at the top right exits, also on a double tap. Both are tiny and
-  dim on purpose: they are for the adult in the room, and he must not be able to
-  find either by flailing at the screen. Going home mid-word, mid-reward-round
-  or mid-brain-break is safe — a session counter invalidates any timer still in
-  flight, so nothing advances behind the menu.
+- The `⌂` at the top **left** returns to the activity menu on a **double tap**.
+  The **first** tap lights the button up and nothing else happens; a second tap
+  inside 650ms goes back. It is 40×32 in the very corner — small, but legible
+  grey on a bordered pill, because **an adult has to be able to find it**. It
+  was `#555` on `#121212` at 48% opacity until 2026-10-06 and was effectively
+  invisible at arm's length; don't dim it again. The **double tap is what
+  protects the activity**, not the camouflage.
+- The `×` at the top right exits, also on a double tap, and **stays dim on
+  purpose.** The asymmetry is deliberate: going back to the menu is routine,
+  quitting the app is not.
+- Going home mid-word, mid-reward-round or mid-brain-break is safe — a session
+  counter invalidates any timer still in flight, so nothing advances behind the
+  menu, and the break's music and dance are torn down with it.
 
 ## Tuning dials
 
@@ -282,6 +289,7 @@ eye or ear:
 | Brush brightness range | `700+norm*2600` in `brushSpeed()` |
 | Reward frequency | `MINIGAME_EVERY` |
 | Brain break frequency | `BRAIN_BREAK_EVERY` |
+| Double-tap window on ⌂ / × | the `650` in their `pointerup` handlers |
 | Which tune each mode gets | `MODE_TUNE` / `TUNES` |
 | How big Carl is | `--carlH` |
 | How high Carl hops, how fast | `carlHop` keyframes |
