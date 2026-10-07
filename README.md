@@ -74,7 +74,7 @@ three must be done before it advances, then the number's name is spoken.
 | A braille cell completed | That letter's phoneme |
 | A CVC word completed | The whole word, spoken |
 | A number completed | The number's name, spoken |
-| Shape touched in the minigame | A pop, then one note of the tune |
+| Shape touched in the minigame | A pop, then that shape's beat of the music |
 
 The brush follows the **finger**, not the gesture: wander off the guide and it
 drops out, come back and it returns, with no restart gap. It is pink noise
@@ -108,6 +108,9 @@ off a USB stick — `fetch()` is blocked on `file://`, `<audio>` is not.
   non-profit educational permission granted for that project; see
   `phonicsfarm/docs/pronunciation-studio-permission.md`. All five short vowels
   are exactly what CVC needs: /a/ pan, /ɛ/ met, /ɪ/ tip, /ɒ/ lock, /ʌ/ fun.
+- `audio/treat/` — `musictreat.wav` cut into 13 beats, one per shape in the
+  reward round. Milo's own file; kept at its original 44.1 kHz stereo because
+  it is music, not speech.
 - `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
   Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
   highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
@@ -146,19 +149,43 @@ its clip with `tools/generate_words.py`.
 
 ## The shape minigame
 
-A reward round playing the first seven notes of *Twinkle Twinkle Little Star*
-(**C C G G A A G**). One bright shape appears at a time, each further right than
-the last; touching it pops it and plays its note. After the seventh note the app
-returns to the activity.
+A reward round built on Milo's own recording, `musictreat.wav` — **13 beats, 13
+shapes.** One bright shape appears at a time; touching it pops it and plays the
+next beat. Beats 1–7 run left to right across the top, then it **wraps back to
+the left** for beats 8–13 along the bottom, and the tune completes itself.
+
+It is deliberately **self-paced, not a rhythm game.** The music is cut into one
+clip per beat and handed out a touch at a time, so the tune assembles at
+whatever speed he works at rather than demanding he keep time with a track.
+Tapping during the pop animation is ignored, so a double-tap cannot skip a beat.
 
 Shapes and colours are redrawn at random every round from the standard
 kindergarten set — circle, square, triangle, rectangle, oval, diamond, star,
-heart, hexagon. **The flow and the notes never change:** always left to right,
-always the same seven notes.
+heart, hexagon. There are only 9 shapes and 10 colours for 13 beats, so a round
+must repeat some; `sample()` draws from reshuffled batches and never lets the
+same shape or colour land twice in a row. **The flow and the beats never
+change:** always left to right, always the same 13 beats in order.
+
+### Re-cutting the music
+
+`tools/slice_treat.py <source.wav>` writes `audio/treat/01.wav … 13.wav`.
+
+Finding the beats took two steps, because neither alone works. The source is a
+continuous texture, so naive onset detection finds every subdivision — 45 of
+them at ~0.175s — and none of them is "the beat". Fitting a regular 13-beat
+grid to the spectral flux recovers the real pulse (**91 BPM, 0.659s**). But a
+strict grid drifted off the final beat, which landed in the fade-out and gave
+the thirteenth shape a nearly silent clip, so each boundary is then snapped to
+the strongest transient within 90ms. **Nine of the thirteen move less than 6ms**
+— that is the evidence the fitted pulse is right; the snap only rescues the few
+that drifted.
+
+If an ear disagrees with the arithmetic, `--beats` takes 13 hand-chosen times in
+seconds and skips the fitting entirely.
 
 How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
 4th number, every **2nd** word — a CVC word is three cells of work, so it earns
-a reward twice as often as a single letter.
+a reward twice as often as a single letter. Where the row wraps is `TREAT_ROW1`.
 
 ## Tracing
 

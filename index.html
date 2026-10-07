@@ -840,9 +840,13 @@
   }
 
   // ------------------------------------------------------- shape minigame ---
-  // "Twinkle Twinkle Little Star", first seven notes: C C G G A A G.
-  // One octave above the braille dot tones so the tune never muddles the dot drill.
-  const TUNE = [523.25, 523.25, 783.99, 783.99, 880.00, 880.00, 783.99];
+  // The reward round is Milo's own recording, cut into one clip per beat by
+  // tools/slice_treat.py. Thirteen beats, thirteen shapes: each one hands out
+  // the next beat when it is touched, so the tune assembles itself at whatever
+  // pace he works at rather than demanding he keep time with a track.
+  const TREAT_BEATS = 13;
+  const TREAT_ROW1 = 7;   // then it wraps back to the left to finish
+  const treatSrc = beat => `audio/treat/${String(beat+1).padStart(2,'0')}.wav`;
 
   // Standard kindergarten shapes, drawn in a 0 0 100 100 box.
   const SHAPES = {
@@ -860,13 +864,28 @@
   const SHAPE_COLORS = ['#ff453a','#ff9f0a','#ffd60a','#32d74b','#0a84ff',
                         '#bf5af2','#ff375f','#64d2ff','#a8ff3e','#ff6b35'];
 
-  function sample(list,count) { // Fisher-Yates on a copy; no repeats within a round.
-    const pool=[...list];
-    for (let i=pool.length-1;i>0;i--) {
-      const j=Math.floor(Math.random()*(i+1));
-      [pool[i],pool[j]]=[pool[j],pool[i]];
+  // There are 9 shapes and 10 colours but 13 beats, so a round MUST repeat some.
+  // Drawing from reshuffled batches spreads the repeats out, and the adjacency
+  // check stops the same shape or colour appearing twice in a row - which would
+  // read as a bug rather than as a pattern. (Slicing one shuffled copy, as this
+  // did when a round was 7 long, silently returns fewer than asked for.)
+  function sample(list,count) {
+    const out=[];
+    while (out.length<count) {
+      const pool=[...list];
+      for (let i=pool.length-1;i>0;i--) {
+        const j=Math.floor(Math.random()*(i+1));
+        [pool[i],pool[j]]=[pool[j],pool[i]];
+      }
+      if (out.length && pool[0]===out[out.length-1] && pool.length>1) {
+        [pool[0],pool[1]]=[pool[1],pool[0]];
+      }
+      for (const item of pool) {
+        if (out.length>=count) break;
+        out.push(item);
+      }
     }
-    return pool.slice(0,count);
+    return out;
   }
 
   let mgRound=[], mgStep=0, mgOnFinish=null, mgBusy=false;
@@ -878,8 +897,11 @@
     mgOnFinish=onFinish;
     mgStep=0; mgBusy=false;
     // Shapes and colours are redrawn every round; the note order never is.
-    const shapes=sample(SHAPE_NAMES,TUNE.length);
-    const colors=sample(SHAPE_COLORS,TUNE.length);
+    const shapes=sample(SHAPE_NAMES,TREAT_BEATS);
+    const colors=sample(SHAPE_COLORS,TREAT_BEATS);
+    // Beat 1 is wanted the instant he touches the first shape; the rest have
+    // his own tapping speed as a head start.
+    clip(treatSrc(0));
     mgRound=shapes.map((name,i)=>({name,color:colors[i]}));
     minigame.textContent='';
     minigame.classList.add('on');
@@ -892,17 +914,25 @@
     minigame.textContent=''; // idempotent: also lets a resize re-lay-out the live shape
     const {name,color}=mgRound[mgStep];
     const w=minigame.clientWidth, h=minigame.clientHeight;
-    // Strictly left to right: slot i sits at a fixed fraction across the screen,
-    // inset far enough that a big shape never clips an edge.
-    const frac=mgRound.length===1 ? .5 : mgStep/(mgRound.length-1);
-    const size=Math.max(80,Math.min(w*.23,h*.52));
+    // Left to right across the top row, then back to the left for the bottom
+    // row - the wrap is the shape of the tune, seven beats then six.
+    const total=mgRound.length;
+    const twoRows=total>TREAT_ROW1;
+    const row=twoRows && mgStep>=TREAT_ROW1 ? 1 : 0;
+    const slot=row ? mgStep-TREAT_ROW1 : mgStep;
+    const slots=row ? total-TREAT_ROW1 : Math.min(TREAT_ROW1,total);
+    const frac=slots<=1 ? .5 : slot/(slots-1);
+    // Only one shape is ever on screen, so neighbouring slots may overlap; the
+    // height cap is what has to shrink to fit two rows.
+    const size=Math.max(80,Math.min(w*.23, twoRows ? h*.36 : h*.52));
     const left=w*.13+frac*(w*.74);
+    const top=twoRows ? h*(row ? .72 : .28) : h*.5;
 
     const el=document.createElement('div');
     el.className='mgShape';
     el.style.width=el.style.height=size+'px';
     el.style.left=left+'px';
-    el.style.top=(h/2)+'px';
+    el.style.top=top+'px';
     el.innerHTML='<svg viewBox="0 0 100 100" fill="'+color+
                  '" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">'+
                  SHAPES[name]+'</svg>';
@@ -919,7 +949,8 @@
       if (popped || mgBusy) return;
       popped=true; mgBusy=true;
       playPop();
-      playTone(TUNE[mgStep],{dur:.7,vol:.32});
+      playClip(treatSrc(mgStep));
+      if (mgStep+1<mgRound.length) clip(treatSrc(mgStep+1)); // warm the next beat
       el.animate(
         [{transform:'translate(-50%,-50%) scale(1)',opacity:1},
          {transform:'translate(-50%,-50%) scale(1.55)',opacity:0}],

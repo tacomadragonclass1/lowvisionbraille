@@ -1,0 +1,114 @@
+{
+  "source": "musictreat.wav",
+  "sample_rate": 44100,
+  "channels": 2,
+  "bpm": 91.05,
+  "period_seconds": 0.659,
+  "note": "One clip per beat. The minigame is self-paced, so each shape hands out the next beat when it is touched.",
+  "beats": [
+    {
+      "beat": 1,
+      "file": "01.wav",
+      "start": 0.0,
+      "seconds": 0.714,
+      "rms": 0.1928,
+      "peak": 0.5952
+    },
+    {
+      "beat": 2,
+      "file": "02.wav",
+      "start": 0.714,
+      "seconds": 0.7314,
+      "rms": 0.1337,
+      "peak": 0.8439
+    },
+    {
+      "beat": 3,
+      "file": "03.wav",
+      "start": 1.4454,
+      "seconds": 0.5863,
+      "rms": 0.1209,
+      "peak": 0.488
+    },
+    {
+      "beat": 4,
+      "file": "04.wav",
+      "start": 2.0317,
+      "seconds": 0.685,
+      "rms": 0.1359,
+      "peak": 0.8171
+    },
+    {
+      "beat": 5,
+      "file": "05.wav",
+      "start": 2.7167,
+      "seconds": 0.5457,
+      "rms": 0.143,
+      "peak": 0.8404
+    },
+    {
+      "beat": 6,
+      "file": "06.wav",
+      "start": 3.2624,
+      "seconds": 0.7488,
+      "rms": 0.1404,
+      "peak": 0.598
+    },
+    {
+      "beat": 7,
+      "file": "07.wav",
+      "start": 4.0112,
+      "seconds": 0.656,
+      "rms": 0.1503,
+      "peak": 0.6078
+    },
+    {
+      "beat": 8,
+      "file": "08.wav",
+      "start": 4.6672,
+      "seconds": 0.6618,
+      "rms": 0.1268,
+      "peak": 0.4881
+    },
+    {
+      "beat": 9,
+      "file": "09.wav",
+      "start": 5.329,
+      "seconds": 0.6618,
+      "rms": 0.1228,
+      "peak": 0.6257
+    },
+    {
+      "beat": 10,
+      "file": "10.wav",
+      "start": 5.9907,
+      "seconds": 0.656,
+      "rms": 0.1229,
+      "peak": 0.5175
+    },
+    {
+      "beat": 11,
+      "file": "11.wav",
+      "start": 6.6467,
+      "seconds": 0.6618,
+      "rms": 0.1201,
+      "peak": 0.591
+    },
+    {
+      "beat": 12,
+      "file": "12.wav",
+      "start": 7.3085,
+      "seconds": 0.5747,
+      "rms": 0.2008,
+      "peak": 0.8199
+    },
+    {
+      "beat": 13,
+      "file": "13.wav",
+      "start": 7.8832,
+      "seconds": 0.3886,
+      "rms": 0.0707,
+      "peak": 0.4274
+    }
+  ]
+}
