@@ -2,8 +2,8 @@
 
 An offline web app for a low-vision student learning print letter formation,
 the braille alphabet, CVC blending, and braille numbers. Open `index.html` —
-there is no build step and no network call. The only dependency is the
-`audio/` folder next to it.
+there is no build step and no network call. The dependencies are the `audio/`
+and `img/` folders next to it — **copy all three or nothing works.**
 
 **Live:** https://tacomadragonclass1.github.io/lowvisionbraille/
 
@@ -74,7 +74,8 @@ three must be done before it advances, then the number's name is spoken.
 | A braille cell completed | That letter's phoneme |
 | A CVC word completed | The whole word, spoken |
 | A number completed | The number's name, spoken |
-| Shape touched in the minigame | A pop, then that shape's beat of the music |
+| Shape touched in the minigame | A pop, then the next note of that mode's tune |
+| Every 4th completed task | Carl's music, while he dances across the screen |
 
 The brush follows the **finger**, not the gesture: wander off the guide and it
 drops out, come back and it returns, with no restart gap. It is pink noise
@@ -99,18 +100,26 @@ instead of reading the letter. Do not restore it.
 
 ### Recorded audio
 
-`audio/` is the one thing `index.html` needs beside it. It plays through plain
-`<audio>` rather than `decodeAudioData`, so the app still works opened straight
-off a USB stick — `fetch()` is blocked on `file://`, `<audio>` is not.
+`audio/` must travel with `index.html` (so must `img/`, which holds the single
+file `carl.png`). It plays through plain `<audio>` rather than
+`decodeAudioData`, so the app still works opened straight off a USB stick —
+`fetch()` is blocked on `file://`, `<audio>` is not.
 
 - `audio/phonemes/` — the 26 letter sounds. **Human recordings**, the same files
   Phonics Farm uses, from the Pronunciation Studio IPA chart. Used here under the
   non-profit educational permission granted for that project; see
   `phonicsfarm/docs/pronunciation-studio-permission.md`. All five short vowels
   are exactly what CVC needs: /a/ pan, /ɛ/ met, /ɪ/ tip, /ɒ/ lock, /ʌ/ fun.
-- `audio/treat/` — `musictreat.wav` cut into 13 beats, one per shape in the
-  reward round. Milo's own file; kept at its original 44.1 kHz stereo because
-  it is music, not speech.
+- `audio/brainbreak/carlwin.wav` — the brain break music, 10.23s, Milo's own
+  file. Kept at its original 44.1 kHz stereo because it is music, not speech.
+  It is also the **only clip whose length the UI depends on** — the dance is
+  timed to it — so replacing it just works, but truncating it silently
+  shortens the walk.
+- `audio/treat/` — `musictreat.wav` cut into 13 beats by `tools/slice_treat.py`.
+  **Currently unused.** It was the reward round until 2026-10-06, when the two
+  nursery tunes replaced it; the slices and the tool are kept so that round can
+  be brought back without redoing the beat analysis. Nothing fetches them at
+  runtime, so they cost page weight only in the repo, not in the browser.
 - `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
   Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
   highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
@@ -149,26 +158,76 @@ its clip with `tools/generate_words.py`.
 
 ## The shape minigame
 
-A reward round built on Milo's own recording, `musictreat.wav` — **13 beats, 13
-shapes.** One bright shape appears at a time; touching it pops it and plays the
-next beat. Beats 1–7 run left to right across the top, then it **wraps back to
-the left** for beats 8–13 along the bottom, and the tune completes itself.
+A reward round of **seven shapes, seven notes.** One bright shape appears at a
+time, left to right; touching it pops it and plays the next note of a nursery
+tune, and by the last shape the phrase has completed itself.
 
-It is deliberately **self-paced, not a rhythm game.** The music is cut into one
-clip per beat and handed out a touch at a time, so the tune assembles at
-whatever speed he works at rather than demanding he keep time with a track.
-Tapping during the pop animation is ignored, so a double-tap cannot skip a beat.
+**Each section has its own tune, and that is the point.** It is the only cue in
+the reward round that says which activity he is in:
+
+| Mode | Tune | Notes |
+| --- | --- | --- |
+| Letters | Mary Had a Little Lamb | E D C D E E E |
+| Numbers | Mary Had a Little Lamb | E D C D E E E |
+| Words (CVC) | Twinkle Twinkle Little Star | C C G G A A G |
+
+Numbers shares the tracing tune because it *is* a tracing activity — a digit is
+traced exactly the way a letter is. Both phrases sit an octave above the braille
+dot tones, so a reward never muddles the dot drill, and both end on a longer
+note (`LAST_NOTE_DUR`) so the seventh shape resolves instead of just stopping.
+Don't shuffle which mode gets which tune.
+
+It is deliberately **self-paced, not a rhythm game.** A note is handed out one
+touch at a time, so the tune assembles at whatever speed he works at rather than
+demanding he keep time with a track. Tapping during the pop animation is
+ignored, so a double-tap cannot skip a note.
 
 Shapes and colours are redrawn at random every round from the standard
 kindergarten set — circle, square, triangle, rectangle, oval, diamond, star,
-heart, hexagon. There are only 9 shapes and 10 colours for 13 beats, so a round
-must repeat some; `sample()` draws from reshuffled batches and never lets the
-same shape or colour land twice in a row. **The flow and the beats never
-change:** always left to right, always the same 13 beats in order.
+heart, hexagon. `sample()` draws from reshuffled batches and never lets the same
+shape or colour land twice in a row; it also handles asking for more items than
+the list holds, which a longer tune would need. A tune longer than `ROW_MAX`
+(7) wraps back to the left for a second row. **The flow and the notes never
+change:** always left to right, always the same notes in order.
 
-### Re-cutting the music
+## The brain break
 
-`tools/slice_treat.py <source.wav>` writes `audio/treat/01.wav … 13.wav`.
+Every **fourth completed task**, Carl dances across the screen to his own music
+(`audio/brainbreak/carlwin.wav`, 10.23s) and then the activity resumes by itself.
+
+A *task* is any finished piece of work — a letter, a word, a number — **and a
+reward round counts as one too**, so the break is paced off everything he does
+rather than off letters alone. In words mode, where a reward round comes every
+second word, that works out as: word, word, shapes, word → break.
+
+There is **nothing to tap and no way to get it wrong.** That is the whole
+design: it is a rest between pieces of work, not another thing to perform. The
+layer is opaque and inert, it ends itself, and it sits *below* the `⌂` and `×`
+buttons so the adult in the room can always walk out of it.
+
+Two things in the implementation are load-bearing:
+
+- **It ends on the audio's own `ended` event, never on a timer.** A fixed timer
+  either clips the music or leaves him watching a frozen Carl. The timer that is
+  there is a backstop for a file that fails to play at all — without it, a
+  blocked `play()` would strand him on a black screen forever.
+- **The travel and the hop are two animations on two elements** (`carlCross` on
+  `#carl`, `carlHop` on the image inside it). Splitting them keeps the crossing
+  perfectly linear while he bounces, and because both are CSS animations in
+  viewport units they re-resolve on rotation for free. `carlCross` goes from
+  `translateX(-100%)` to `translateX(100vw)`, so he clears both edges at any
+  size. It must be restarted explicitly each break — `forwards` otherwise holds
+  him parked off the right edge.
+
+He crosses in 94% of the clip length so he is already gone when the last note
+lands. The length comes from the audio element, which is why the clip is
+`load()`ed as soon as the splash is dismissed rather than left to `preload`.
+
+### Re-cutting the (currently unused) treat music
+
+`tools/slice_treat.py <source.wav>` writes `audio/treat/01.wav … 13.wav`. This
+drove the reward round before the nursery tunes; kept because the analysis was
+not cheap to get right.
 
 Finding the beats took two steps, because neither alone works. The source is a
 continuous texture, so naive onset detection finds every subdivision — 45 of
@@ -185,7 +244,8 @@ seconds and skips the fitting entirely.
 
 How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
 4th number, every **2nd** word — a CVC word is three cells of work, so it earns
-a reward twice as often as a single letter. Where the row wraps is `TREAT_ROW1`.
+a reward twice as often as a single letter. The brain break has its own
+`BRAIN_BREAK_EVERY` (4), counted in tasks rather than items.
 
 ## Tracing
 
@@ -207,9 +267,9 @@ school-print writing order.
 - The small `⌂` at the top **left** returns to the activity menu on a **double
   tap**. The `×` at the top right exits, also on a double tap. Both are tiny and
   dim on purpose: they are for the adult in the room, and he must not be able to
-  find either by flailing at the screen. Going home mid-word or mid-reward-round
-  is safe — a session counter invalidates any timer still in flight, so nothing
-  advances behind the menu.
+  find either by flailing at the screen. Going home mid-word, mid-reward-round
+  or mid-brain-break is safe — a session counter invalidates any timer still in
+  flight, so nothing advances behind the menu.
 
 ## Tuning dials
 
@@ -221,6 +281,10 @@ eye or ear:
 | Brush loudness | `BRUSH_LEVEL` |
 | Brush brightness range | `700+norm*2600` in `brushSpeed()` |
 | Reward frequency | `MINIGAME_EVERY` |
+| Brain break frequency | `BRAIN_BREAK_EVERY` |
+| Which tune each mode gets | `MODE_TUNE` / `TUNES` |
+| How big Carl is | `--carlH` |
+| How high Carl hops, how fast | `carlHop` keyframes |
 | How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |
 | Beat before the word is spoken | the `700` in `checkCompletion()` |
 | Print letter size in its box | `--boxSize` on `#boxes` |

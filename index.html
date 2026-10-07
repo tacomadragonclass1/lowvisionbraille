@@ -52,6 +52,7 @@
     touch-action:manipulation;
   }
   #success { position:absolute; inset:0; z-index:12; pointer-events:none; background:white; opacity:0; }
+  :root { --carlH: min(60vh, 78vw); }
   #exitMessage {
     display:none; position:absolute; inset:0; z-index:70; place-items:center;
     background:#000; color:#fff; font:700 clamp(28px,8vw,70px)/1 Arial,sans-serif;
@@ -65,6 +66,37 @@
     display:block; touch-action:none; will-change:transform,opacity;
   }
   .mgShape svg { display:block; width:100%; height:100%; overflow:visible; }
+  /* Brain break: Carl dances across the screen to his own music. Nothing to
+     tap, nothing to get right - it is a rest, so the layer is inert. It sits
+     above the reward round but BELOW the home and exit buttons (z 60), so the
+     adult in the room can always walk out of it. */
+  #brainbreak { display:none; position:absolute; inset:0; z-index:50; background:#000; touch-action:none; }
+  #brainbreak.on { display:block; }
+  /* Travel and hop are two animations on two elements. Splitting them keeps
+     the crossing perfectly linear while Carl bounces, and it means the
+     keyframes stay short enough to read. */
+  #carl {
+    position:absolute; left:0; top:50%; height:var(--carlH);
+    margin-top:calc(var(--carlH) / -2);
+    animation:carlCross var(--bbDur,10.2s) linear forwards;
+    will-change:transform;
+  }
+  #carl img {
+    display:block; height:100%; width:auto;
+    filter:drop-shadow(0 0 clamp(6px,1.4vh,16px) rgba(255,255,255,.35));
+    animation:carlHop .46s ease-in-out infinite;
+    will-change:transform;
+  }
+  /* -100% is Carl's own width, so he starts fully off the left edge whatever
+     size he is; 100vw puts his left edge past the right one. */
+  @keyframes carlCross {
+    from { transform:translateX(-100%); }
+    to   { transform:translateX(100vw); }
+  }
+  @keyframes carlHop {
+    0%,100% { transform:translateY(0) rotate(-6deg) scaleY(.97); }
+    50%     { transform:translateY(calc(var(--carlH) * -.17)) rotate(6deg) scaleY(1.03); }
+  }
   /* Tap-to-start gate. Covers everything so the first touch of a session lands
      here and nowhere else, whichever part of the screen he reaches for. */
   #splash {
@@ -177,6 +209,7 @@
   <button id="exit" aria-label="Double tap to exit">×</button>
   <div id="success"></div>
   <div id="minigame" aria-hidden="true"></div>
+  <div id="brainbreak" aria-hidden="true"><div id="carl"><img src="img/carl.png" alt=""></div></div>
   <div id="splash" role="button" tabindex="0" aria-label="Tap anywhere to start">
     <div id="splashInner">
       <div id="splashDot"></div>
@@ -840,13 +873,26 @@
   }
 
   // ------------------------------------------------------- shape minigame ---
-  // The reward round is Milo's own recording, cut into one clip per beat by
-  // tools/slice_treat.py. Thirteen beats, thirteen shapes: each one hands out
-  // the next beat when it is touched, so the tune assembles itself at whatever
-  // pace he works at rather than demanding he keep time with a track.
-  const TREAT_BEATS = 13;
-  const TREAT_ROW1 = 7;   // then it wraps back to the left to finish
-  const treatSrc = beat => `audio/treat/${String(beat+1).padStart(2,'0')}.wav`;
+  // Each shape hands out the next note of a nursery tune when it is touched,
+  // so the melody assembles itself at whatever pace he works at rather than
+  // demanding he keep time with a track.
+  //
+  // The tune is how he knows which activity he is in: tracing (letters and
+  // numbers) always plays Mary, blending (words) always plays Twinkle. It is
+  // the only per-mode cue in the reward round, so do not shuffle them.
+  // Both sit an octave above the braille dot tones, so a reward never muddles
+  // the dot drill.
+  const TUNES = {
+    // "Twinkle Twinkle Little Star", first seven notes: C C G G A A G.
+    twinkle: [523.25, 523.25, 783.99, 783.99, 880.00, 880.00, 783.99],
+    // "Mary Had a Little Lamb", first seven notes: E D C D E E E.
+    mary:    [659.25, 587.33, 523.25, 587.33, 659.25, 659.25, 659.25]
+  };
+  const MODE_TUNE = { letters:'mary', numbers:'mary', cvc:'twinkle' };
+  // Both phrases end on a long note, so the last shape resolves instead of
+  // just stopping. Keep this if a longer tune is ever added.
+  const LAST_NOTE_DUR = 1.0, NOTE_DUR = .6;
+  const ROW_MAX = 7;   // past this a round wraps back to the left for a 2nd row
 
   // Standard kindergarten shapes, drawn in a 0 0 100 100 box.
   const SHAPES = {
@@ -888,7 +934,7 @@
     return out;
   }
 
-  let mgRound=[], mgStep=0, mgOnFinish=null, mgBusy=false;
+  let mgRound=[], mgStep=0, mgOnFinish=null, mgBusy=false, mgTune=TUNES.twinkle;
 
   function minigameActive() { return minigame.classList.contains('on'); }
 
@@ -896,12 +942,10 @@
     brushOff();
     mgOnFinish=onFinish;
     mgStep=0; mgBusy=false;
+    mgTune=TUNES[MODE_TUNE[mode]] || TUNES.twinkle;
     // Shapes and colours are redrawn every round; the note order never is.
-    const shapes=sample(SHAPE_NAMES,TREAT_BEATS);
-    const colors=sample(SHAPE_COLORS,TREAT_BEATS);
-    // Beat 1 is wanted the instant he touches the first shape; the rest have
-    // his own tapping speed as a head start.
-    clip(treatSrc(0));
+    const shapes=sample(SHAPE_NAMES,mgTune.length);
+    const colors=sample(SHAPE_COLORS,mgTune.length);
     mgRound=shapes.map((name,i)=>({name,color:colors[i]}));
     minigame.textContent='';
     minigame.classList.add('on');
@@ -914,13 +958,13 @@
     minigame.textContent=''; // idempotent: also lets a resize re-lay-out the live shape
     const {name,color}=mgRound[mgStep];
     const w=minigame.clientWidth, h=minigame.clientHeight;
-    // Left to right across the top row, then back to the left for the bottom
-    // row - the wrap is the shape of the tune, seven beats then six.
+    // Left to right across the top row. A seven-note tune is one row; a longer
+    // one wraps back to the left for a second.
     const total=mgRound.length;
-    const twoRows=total>TREAT_ROW1;
-    const row=twoRows && mgStep>=TREAT_ROW1 ? 1 : 0;
-    const slot=row ? mgStep-TREAT_ROW1 : mgStep;
-    const slots=row ? total-TREAT_ROW1 : Math.min(TREAT_ROW1,total);
+    const twoRows=total>ROW_MAX;
+    const row=twoRows && mgStep>=ROW_MAX ? 1 : 0;
+    const slot=row ? mgStep-ROW_MAX : mgStep;
+    const slots=row ? total-ROW_MAX : Math.min(ROW_MAX,total);
     const frac=slots<=1 ? .5 : slot/(slots-1);
     // Only one shape is ever on screen, so neighbouring slots may overlap; the
     // height cap is what has to shrink to fit two rows.
@@ -949,8 +993,8 @@
       if (popped || mgBusy) return;
       popped=true; mgBusy=true;
       playPop();
-      playClip(treatSrc(mgStep));
-      if (mgStep+1<mgRound.length) clip(treatSrc(mgStep+1)); // warm the next beat
+      playTone(mgTune[mgStep],
+               {dur: mgStep===mgTune.length-1 ? LAST_NOTE_DUR : NOTE_DUR, vol:.34});
       el.animate(
         [{transform:'translate(-50%,-50%) scale(1)',opacity:1},
          {transform:'translate(-50%,-50%) scale(1.55)',opacity:0}],
@@ -968,8 +1012,78 @@
     if (done) done();
   }
 
+  // ------------------------------------------------------------ brain break ---
+  // Every fourth completed task, Carl dances across the screen to his own
+  // music. There is nothing to tap and no way to get it wrong - it is a rest
+  // between pieces of work, not another thing to perform, so the layer is
+  // deliberately inert and ends itself.
+  const BRAIN_BREAK_SRC = 'audio/brainbreak/carlwin.wav';
+  // Only used if the file never loads at all; the real length comes from the
+  // audio element, and the end comes from its 'ended' event.
+  const BRAIN_BREAK_FALLBACK = 10400;
+
+  const brainbreak = document.getElementById('brainbreak');
+  const carlEl = document.getElementById('carl');
+  let bbClip=null, bbEnded=null, bbTimer=null, bbOnFinish=null;
+
+  function brainBreakActive() { return brainbreak.classList.contains('on'); }
+
+  function startBrainBreak(onFinish) {
+    brushOff();
+    bbOnFinish=onFinish;
+    brainbreak.classList.add('on');
+    brainbreak.setAttribute('aria-hidden','false');
+
+    const a=clip(BRAIN_BREAK_SRC);
+    // Same hand-off the spoken clips use: whatever was talking stops, and
+    // goHome()'s currentClip.pause() can reach the music.
+    if (currentClip && currentClip!==a) { try { currentClip.pause(); } catch {} }
+    currentClip=a;
+    try { a.pause(); a.currentTime=0; } catch {}
+
+    // The walk lasts exactly as long as the music. duration is NaN until
+    // metadata has loaded, which on a cold first play it has not.
+    const secs=(a.duration && isFinite(a.duration)) ? a.duration : BRAIN_BREAK_FALLBACK/1000;
+    // He crosses in a little under the full clip, so he is already off the
+    // right edge when the last note lands rather than being cut off mid-stride
+    // - and so a wrong duration estimate errs on the harmless side.
+    carlEl.style.setProperty('--bbDur',(secs*.94).toFixed(2)+'s');
+    // Restart the CSS animation from the top: without this the second break
+    // of a session shows Carl already parked off the right edge, because
+    // `forwards` holds him on the last keyframe.
+    carlEl.style.animation='none';
+    void carlEl.offsetWidth;
+    carlEl.style.removeProperty('animation');
+
+    // End on the audio's own 'ended' event, never on a timer alone - a timer
+    // either clips the music or leaves him watching a frozen Carl. The timer
+    // is the backstop for a file that fails to play, which must not strand him.
+    bbClip=a;
+    bbEnded=()=>endBrainBreak();
+    a.addEventListener('ended',bbEnded);
+    bbTimer=setTimeout(bbEnded, secs*1000+1200);
+
+    const played=a.play();
+    if (played && played.catch) played.catch(()=>{});
+  }
+
+  function endBrainBreak() {
+    if (!brainBreakActive()) return;
+    clearTimeout(bbTimer); bbTimer=null;
+    if (bbClip) {
+      bbClip.removeEventListener('ended',bbEnded);
+      try { bbClip.pause(); bbClip.currentTime=0; } catch {}
+      bbClip=null;
+    }
+    bbEnded=null;
+    brainbreak.classList.remove('on');
+    brainbreak.setAttribute('aria-hidden','true');
+    const done=bbOnFinish; bbOnFinish=null;
+    if (done) done();
+  }
+
   // ----------------------------------------------------------- progression ---
-  let itemsDone=0;
+  let itemsDone=0, tasksDone=0;
   // Bumped whenever the session changes (menu pick, or a trip home). Pending
   // timers captured an older value and silently do nothing, so a word that was
   // mid-advance cannot reach through and set up an item behind the menu.
@@ -978,6 +1092,16 @@
   // How many completed items earn a reward round, per mode. A CVC word is three
   // cells of work, so it earns one twice as often as a single letter does.
   const MINIGAME_EVERY = { letters:4, numbers:4, cvc:2 };
+
+  // How many completed TASKS earn a brain break. A task is any finished piece
+  // of work, and a reward round counts as one of them - so the break is paced
+  // off everything he does, not off letters alone.
+  const BRAIN_BREAK_EVERY = 4;
+
+  function taskDone(then) {
+    tasksDone++;
+    if (tasksDone%BRAIN_BREAK_EVERY===0) startBrainBreak(then); else then();
+  }
 
   function checkCompletion() {
     if (advancing || !traceDone) return;
@@ -991,8 +1115,16 @@
       orderIndex++;
       if (orderIndex>=order.length) buildOrder();
       itemsDone++;
-      const next=()=>{ if (myRun!==runId) return; setupItem(); advancing=false; };
-      if (itemsDone%MINIGAME_EVERY[mode]===0) startMinigame(next); else next();
+      // Three links, each waiting on the one before: break, reward round, next
+      // item. Both rewards can legitimately fall on the same item, and every
+      // link re-checks runId because a trip to the menu must cut the chain.
+      const resume=()=>{ if (myRun!==runId) return; setupItem(); advancing=false; };
+      const afterGame=()=>{ if (myRun!==runId) return; taskDone(resume); };
+      const afterBreak=()=>{
+        if (myRun!==runId) return;
+        if (itemsDone%MINIGAME_EVERY[mode]===0) startMinigame(afterGame); else resume();
+      };
+      taskDone(afterBreak);
     };
     const flashAndAdvance=()=>{
       if (myRun!==runId) return;
@@ -1121,7 +1253,7 @@
     document.body.classList.add('mode-'+mode);
     chooser.classList.remove('on');
     homeBtn.hidden=false;
-    itemsDone=0;
+    itemsDone=0; tasksDone=0;
     buildOrder();
     setupItem();
     resizeCanvas();
@@ -1153,6 +1285,7 @@
     // Drop the reward round's continuation before tearing it down, or finishing
     // it would advance the activity we are walking away from.
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
+    if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     vowelPanel.hidden=true;
     openChooser();
   }
@@ -1172,6 +1305,9 @@
   function afterSplash() {
     if (handedOver) return;
     handedOver=true;
+    // 1.8MB, and its duration is what the dance is timed to - fetch it now,
+    // long before it is needed. preload alone is a hint; load() is not.
+    try { clip(BRAIN_BREAK_SRC).load(); } catch {}
     if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null);
     else openChooser();
   }
