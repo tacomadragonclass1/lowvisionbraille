@@ -39,8 +39,18 @@ One braille cell is foregrounded at a time: it is full size and bright, its
 print box is outlined in the letter colour, and the other two cells are shrunk
 and dimmed. He answers the onset, that cell recedes while its phoneme plays and
 its box fills green, then the vowel comes forward, then the final consonant.
-When all three are done the whole word is spoken, and only then does the screen
-move on.
+When all three are done there is a deliberate beat — about 0.7s — and then the
+whole word is spoken. The pause is the point: it lands as "n… u… t… NUT" rather
+than running the blend straight into the word. Only after the voice finishes
+does the screen move on.
+
+The print letters are **drawn from the same centerlines as the tracing guide**,
+not set in a font. That is what gives the single-story `a` and the serif-free
+`t` that school print wants and Arial does not have, and it means the letter he
+reads is identical to the one he traces. The three letters share one vertical
+range so their baselines align and an ascender really is taller than an
+x-height letter — but the range is the word's own, so a word with no descender
+does not sit high in its boxes reserving space for a tail it never grows.
 
 **Backgrounded cells are inert, not merely silent.** If he could answer the
 third cell while the first is live, the sequence would stop teaching the order
@@ -99,9 +109,12 @@ off a USB stick — `fetch()` is blocked on `file://`, `<audio>` is not.
   `phonicsfarm/docs/pronunciation-studio-permission.md`. All five short vowels
   are exactly what CVC needs: /a/ pan, /ɛ/ met, /ɪ/ tip, /ɒ/ lock, /ʌ/ fun.
 - `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
-  Local Kokoro-82M (Apache-2.0), voice `bf_emma` — Annette's voice from Phonics
-  Farm, and British to match the phoneme recordings, so a word sounds like the
-  blend of the three sounds he just heard.
+  Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
+  highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
+  second). These shipped once in British `bf_emma`, on the theory that it would
+  match the British phoneme recordings — Milo's verdict was that it sounded bad,
+  and sounding good in a Tacoma classroom beat internal consistency with the
+  phonemes. Do not go back to a British voice.
 
 Regenerate or re-voice with:
 
@@ -109,9 +122,10 @@ Regenerate or re-voice with:
 ~/.local/share/phonicsfarm-tts/venv/bin/python tools/generate_words.py --force
 ```
 
-`--voice af_heart --lang a` switches the whole set to American. The browser's
-`speechSynthesis` is **not** used and should not be: it needs a user gesture,
-guarantees no particular voice on any given tablet, and has a murky licence.
+`--voice <name> --lang a` swaps the voice; the whole set re-renders in about a
+minute. The browser's `speechSynthesis` is **not** used and should not be: it
+needs a user gesture, guarantees no particular voice on any given tablet, and
+has a murky licence.
 
 ## The word list
 
@@ -162,8 +176,13 @@ school-print writing order.
 - `?mode=letters` / `?mode=words` / `?mode=numbers` — bookmark straight past the
   activity menu. `?mode=words&vowel=i` locks one vowel family.
 - `?letter=k` — lock to a single letter for targeted practice.
-- The *Full screen* button hides browser chrome. The small `×` at the top right
-  exits on a double tap, so it is hard to hit by accident.
+- The *Full screen* button hides browser chrome.
+- The small `⌂` at the top **left** returns to the activity menu on a **double
+  tap**. The `×` at the top right exits, also on a double tap. Both are tiny and
+  dim on purpose: they are for the adult in the room, and he must not be able to
+  find either by flailing at the screen. Going home mid-word or mid-reward-round
+  is safe — a session counter invalidates any timer still in flight, so nothing
+  advances behind the menu.
 
 ## Tuning dials
 
@@ -176,3 +195,5 @@ eye or ear:
 | Brush brightness range | `700+norm*2600` in `brushSpeed()` |
 | Reward frequency | `MINIGAME_EVERY` |
 | How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |
+| Beat before the word is spoken | the `700` in `checkCompletion()` |
+| Print letter size in its box | `--boxSize` on `#boxes` |

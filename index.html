@@ -38,6 +38,13 @@
   }
   #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
     color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
+  #home {
+    position:absolute; z-index:60; top:max(3px,env(safe-area-inset-top)); left:3px;
+    width:24px; height:20px; padding:0; border:0; border-radius:4px;
+    background:#121212; color:#555; opacity:.48; font:bold 12px/20px Arial,sans-serif;
+    touch-action:manipulation;
+  }
+  #home[hidden] { display:none; }
   #exit {
     position:absolute; z-index:60; top:max(3px,env(safe-area-inset-top)); right:3px;
     width:24px; height:20px; padding:0; border:0; border-radius:4px;
@@ -99,16 +106,28 @@
   #braille.cells-2 .brailleCol, #braille.cells-3 .brailleCol { gap:clamp(8px,1.5vh,16px); }
   /* The print letters of a CVC word. No tracing here - he reads these and
      answers them in braille, so the box only ever reports progress. */
-  #boxes { display:none; align-items:center; justify-content:center; gap:clamp(12px,3vw,34px); min-height:0; }
+  /* One absolute size drives both the box and the letter inside it. A
+     percentage height on the <svg> does NOT resolve here - the box's
+     aspect-ratio leaves its height indefinite for descendants, so the letter
+     falls back to its own intrinsic ratio and ascenders spill out the bottom.
+     The vh term keeps the boxes inside their row on a short landscape screen. */
+  #boxes {
+    --boxSize:clamp(56px,min(20vw,26vh),200px);
+    display:none; align-items:center; justify-content:center;
+    gap:clamp(12px,3vw,34px); min-height:0;
+  }
   body.mode-cvc #boxes { display:flex; }
   .box {
     display:grid; place-items:center; border-radius:clamp(10px,2vw,20px);
-    width:clamp(74px,19vw,200px); aspect-ratio:1;
+    width:var(--boxSize); height:var(--boxSize);
     border:clamp(4px,1vw,9px) solid #3a3a3a; background:#0b0b0b; color:#6a6a6a;
-    font:700 clamp(44px,12vw,112px)/1 Arial,sans-serif;
     transition:transform .22s ease, opacity .22s ease, color .22s ease,
                border-color .22s ease, background .22s ease;
   }
+  .box svg { height:calc(var(--boxSize)*.62); width:auto;
+             max-width:calc(var(--boxSize)*.78); display:block; overflow:visible; }
+  .box svg path { fill:none; stroke:currentColor; stroke-width:10;
+                  stroke-linecap:round; stroke-linejoin:round; }
   .box.active { border-color:var(--letter); color:var(--letter); transform:scale(1.14); background:#140707; }
   .box.done { border-color:var(--trace); color:#04210d; background:var(--trace); transform:scale(1); }
   /* Teacher's menu. Big targets, high contrast, and it only appears once per
@@ -154,6 +173,7 @@
   <div id="braille" aria-label="Braille cells"></div>
   <button id="fullscreen" type="button">⛶ Full screen</button>
   <div id="fullscreenStatus" role="status"></div>
+  <button id="home" aria-label="Double tap to return to the activity menu">⌂</button>
   <button id="exit" aria-label="Double tap to exit">×</button>
   <div id="success"></div>
   <div id="minigame" aria-hidden="true"></div>
@@ -576,12 +596,54 @@
     });
   }
 
+  // The print letters are drawn from the SAME centerlines the tracing guide
+  // uses, not set in a font. Two reasons: it guarantees the single-story `a`
+  // and the serif-free `t` that school print wants and Arial does not have,
+  // and it means the letter he reads is identical to the one he traces.
+  const SVGNS='http://www.w3.org/2000/svg';
+  const PAD=7;  // half the 10-unit stroke, plus a hair
+  const inkBounds=new Map();
+
+  function glyphBounds(ch) {
+    if (!inkBounds.has(ch)) {
+      let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+      for (const d of PATHS[ch]) {
+        const path=document.createElementNS(SVGNS,'path');
+        path.setAttribute('d',d);
+        const length=path.getTotalLength(), count=Math.max(1,Math.ceil(length/2));
+        for (let i=0;i<=count;i++) {
+          const pt=path.getPointAtLength(length*i/count);
+          if (pt.x<minX) minX=pt.x;
+          if (pt.x>maxX) maxX=pt.x;
+          if (pt.y<minY) minY=pt.y;
+          if (pt.y>maxY) maxY=pt.y;
+        }
+      }
+      inkBounds.set(ch,{minX,maxX,minY,maxY});
+    }
+    return inkBounds.get(ch);
+  }
+
   function buildBoxes(chars) {
     boxesEl.textContent='';
+    // All three letters share ONE vertical range, so their baselines line up
+    // and an ascender really does stand taller than an x-height letter. The
+    // range is the word's own, not a fixed one: a word with no descender must
+    // not sit high in its boxes reserving space for a tail it never grows.
+    const top=Math.min(...chars.map(ch=>glyphBounds(ch).minY))-PAD;
+    const bottom=Math.max(...chars.map(ch=>glyphBounds(ch).maxY))+PAD;
     for (const ch of chars) {
+      const b=glyphBounds(ch);
+      const svg=document.createElementNS(SVGNS,'svg');
+      svg.setAttribute('viewBox',`${b.minX-PAD} ${top} ${(b.maxX-b.minX)+PAD*2} ${bottom-top}`);
+      for (const d of PATHS[ch]) {
+        const path=document.createElementNS(SVGNS,'path');
+        path.setAttribute('d',d);
+        svg.appendChild(path);
+      }
       const box=document.createElement('div');
       box.className='box';
-      box.textContent=ch;
+      box.appendChild(svg);
       boxesEl.appendChild(box);
     }
   }
@@ -877,6 +939,10 @@
 
   // ----------------------------------------------------------- progression ---
   let itemsDone=0;
+  // Bumped whenever the session changes (menu pick, or a trip home). Pending
+  // timers captured an older value and silently do nothing, so a word that was
+  // mid-advance cannot reach through and set up an item behind the menu.
+  let runId=0;
 
   // How many completed items earn a reward round, per mode. A CVC word is three
   // cells of work, so it earns one twice as often as a single letter does.
@@ -888,21 +954,26 @@
     advancing=true;
     brushOff();
 
+    const myRun=runId;
     const advance=()=>{
+      if (myRun!==runId) return;
       orderIndex++;
       if (orderIndex>=order.length) buildOrder();
       itemsDone++;
-      const next=()=>{ setupItem(); advancing=false; };
+      const next=()=>{ if (myRun!==runId) return; setupItem(); advancing=false; };
       if (itemsDone%MINIGAME_EVERY[mode]===0) startMinigame(next); else next();
     };
     const flashAndAdvance=()=>{
+      if (myRun!==runId) return;
       success.animate([{opacity:0},{opacity:.30},{opacity:0}],{duration:430,easing:'ease-out'});
       setTimeout(advance,500);
     };
 
     // The whole word is the payoff for blending three sounds, so it is spoken
     // BEFORE the screen moves on - the flash waits for the voice to finish.
-    if (mode==='cvc') { setTimeout(()=>playClip(wordSrc(word),flashAndAdvance),200); return; }
+    // A deliberate beat between the final consonant and the whole word, so the
+    // blend lands as "n... u... t... NUT" rather than running together.
+    if (mode==='cvc') { setTimeout(()=>playClip(wordSrc(word),flashAndAdvance),700); return; }
     if (mode==='numbers') { setTimeout(()=>playClip(numberSrc(glyph),flashAndAdvance),200); return; }
     flashAndAdvance();
   }
@@ -1013,17 +1084,47 @@
   }
 
   function start(picked,vowel) {
+    runId++;
     mode=picked; cvcVowel=vowel;
     document.body.classList.remove('mode-letters','mode-cvc','mode-numbers');
     document.body.classList.add('mode-'+mode);
     chooser.classList.remove('on');
+    homeBtn.hidden=false;
     itemsDone=0;
     buildOrder();
     setupItem();
     resizeCanvas();
   }
 
-  function openChooser() { chooser.classList.add('on'); }
+  function openChooser() {
+    chooser.classList.add('on');
+    homeBtn.hidden=true;
+  }
+
+  // Back to the activity menu. Top-left, tiny, dull, and double-tap only - the
+  // same shape as the exit button, for the same reason: it is for the adult in
+  // the room, and he must not be able to find it by flailing at the screen.
+  const homeBtn=document.getElementById('home');
+  let lastHomeTap=0;
+  homeBtn.addEventListener('pointerup',ev=>{
+    ev.preventDefault();
+    const now=performance.now();
+    if (now-lastHomeTap<650) goHome();
+    lastHomeTap=now;
+  });
+
+  function goHome() {
+    runId++;
+    advancing=false;
+    brushOff();
+    stopDrawing();
+    if (currentClip) { try { currentClip.pause(); } catch {} }
+    // Drop the reward round's continuation before tearing it down, or finishing
+    // it would advance the activity we are walking away from.
+    if (minigameActive()) { mgOnFinish=null; endMinigame(); }
+    vowelPanel.hidden=true;
+    openChooser();
+  }
 
   // A teacher can bookmark straight past the menu: ?mode=cvc&vowel=i
   const params=new URLSearchParams(location.search);

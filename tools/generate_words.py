@@ -6,11 +6,13 @@ needs a user gesture, guarantees no particular voice on any given tablet, and
 has a murky licence for a published app. Pre-rendered WAVs are deterministic,
 offline, and sound the same on every device the student touches.
 
-Voice is Annette's -- bf_emma, lang_code "b" -- on purpose. The isolated
-phonemes in audio/phonemes/ are British recordings (Pronunciation Studio), so
-a British whole-word read is the blend of the three sounds he just heard. An
-American set is one flag away (--voice af_heart --lang a) if the accent clash
-with a Tacoma classroom matters more than internal consistency.
+Voice is af_heart, lang_code "a": American, female, and the highest-graded
+voice Kokoro ships (grade A; af_bella at A- is the only close second).
+
+We shipped British bf_emma first -- Annette's voice from Phonics Farm -- on the
+theory that it would match the British phoneme recordings. Milo's verdict was
+blunt: "Annette's voice is the worst." Internal consistency with the phonemes
+lost to simply sounding good in a Tacoma classroom. Do not go back.
 
 Clips are `pending_user_review`. The assistant cannot hear them and must never
 call a pronunciation verified -- Milo chooses by ear, per clip.
@@ -27,8 +29,8 @@ import wave
 
 SAMPLE_RATE = 24000
 REPO = "hexgrad/Kokoro-82M"
-DEFAULT_VOICE = "bf_emma"
-DEFAULT_LANG = "b"
+DEFAULT_VOICE = "af_heart"
+DEFAULT_LANG = "a"
 
 # Milo's list, in Milo's order. The vowel sequence a-i-o-e-u is not
 # alphabetical by accident: e and i are the most confusable short vowels, so
