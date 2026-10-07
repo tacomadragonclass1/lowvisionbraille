@@ -1,32 +1,57 @@
-# Low Vision Braille — trace + braille alphabet
+# Low Vision Braille — trace, blend, and count
 
-A single-file, offline web app for a low-vision student learning print letter
-formation alongside the braille alphabet. Open `index.html` — there is no build
-step, no dependency, and no network call.
+An offline web app for a low-vision student learning print letter formation,
+the braille alphabet, CVC blending, and braille numbers. Open `index.html` —
+there is no build step and no network call. The only dependency is the
+`audio/` folder next to it.
 
 **Live:** https://tacomadragonclass1.github.io/lowvisionbraille/
 
 Designed for a tablet in landscape, full screen, held in two hands.
 
-## How a letter works
+## The three activities
 
-1. A large letter guide is drawn on the left. The student traces it with a finger.
-   Tracing is deliberately loose: a generous halo around the thick guide counts,
-   and a stroke is satisfied at 70% coverage (18% for the dots on `i` and `j`).
-2. The braille cell on the right lights the dots required for that letter.
-   The student touches each one.
-3. **Both** are required to advance — a traced letter alone will not move on,
-   and neither will the dots alone.
+After the *Tap to start* splash, an adult picks one. There is deliberately **no
+mode button on the activity screen** — he would hit it, and he would hit it in
+the middle of a word.
 
-## Starting a session
+| | Trace | Braille | Speaks |
+| --- | --- | --- | --- |
+| **Letters** `abc` | a–z | one cell | the letter's phoneme |
+| **Words** `cat` | — | three cells, in order | each phoneme, then the whole word |
+| **Numbers** `123` | 0–9 | two cells, in order | the number's name |
 
-The app opens on a **Tap to start** screen: a large pulsing yellow circle on
-black. Tapping anywhere answers with a rising C-E-G chime and begins.
+Picking **Words** then asks which short vowel to drill.
 
-This is not decoration. Browsers refuse to start audio without a user gesture,
-so without the gate the first dot or stroke of a session would be silent and
-read as broken. The splash absorbs that unlocking touch, and the chime doubles
-as proof to the adult in the room that sound is working.
+### Letters
+
+Unchanged from the original app. A large letter guide is traced with a finger
+while the braille cell lights the dots that letter needs. **Both** are required
+to advance. New: finishing the cell now plays that letter's sound — `/b/`, not
+"bee".
+
+### Words (CVC)
+
+The three print letters sit in boxes along the top. **There is no tracing
+here** — he reads them and answers in braille.
+
+One braille cell is foregrounded at a time: it is full size and bright, its
+print box is outlined in the letter colour, and the other two cells are shrunk
+and dimmed. He answers the onset, that cell recedes while its phoneme plays and
+its box fills green, then the vowel comes forward, then the final consonant.
+When all three are done the whole word is spoken, and only then does the screen
+move on.
+
+**Backgrounded cells are inert, not merely silent.** If he could answer the
+third cell while the first is live, the sequence would stop teaching the order
+of the letters, which is the whole point of the activity.
+
+### Numbers
+
+The letter-tracing routine with digits. A braille digit is genuinely two cells —
+the number sign (dots 3-4-5-6) followed by the letter `a`–`j` — so he taps the
+number sign first, then the digit cell, and traces the printed numeral. All
+three must be done before it advances, then the number's name is spoken.
 
 ## Sound
 
@@ -36,15 +61,17 @@ as proof to the adult in the room that sound is working.
 | Finger off the guide, or lifted | Buzz stops immediately |
 | A **required** braille dot touched | That dot's fixed tone |
 | A ghosted (not required) dot touched | Nothing — silent |
+| A braille cell completed | That letter's phoneme |
+| A CVC word completed | The whole word, spoken |
+| A number completed | The number's name, spoken |
 | Shape touched in the minigame | A pop, then one note of the tune |
 
 The brush follows the **finger**, not the gesture: wander off the guide and it
-drops out, come back and it returns, with no restart gap.
-
-It is pink noise through a bandpass that **opens as the finger moves faster** —
-a slow careful trace is a dark quiet whisper (~700 Hz), a confident sweep is a
-bright loud swoosh (~3300 Hz). Resting a finger on the line settles it to a
-quiet hiss rather than cutting out, so he can still hear that he is on the line.
+drops out, come back and it returns, with no restart gap. It is pink noise
+through a bandpass that **opens as the finger moves faster** — a slow careful
+trace is a dark quiet whisper (~700 Hz), a confident sweep is a bright loud
+swoosh (~3300 Hz). Resting a finger on the line settles it to a quiet hiss
+rather than cutting out, so he can still hear that he is on the line.
 
 ### Braille dot tones — C major, one tone per position
 
@@ -55,28 +82,97 @@ The mapping never changes. Position is what the student learns to hear.
 | Note | C4 | D4 | E4 | F4 | G4 | A4 |
 
 Left column top-to-bottom is C–D–E; right column top-to-bottom is F–G–A.
-**Only the dots the current letter needs make a sound.** Ghosted dots are
-silent. The app originally sounded every dot so that exploring the cell was
-audible; in use that turned the cell into a noise toy — he hit the ghosted dots
-for the tone instead of reading the letter. Do not restore it.
+**Only the dots the current cell needs make a sound.** Ghosted dots are silent.
+The app originally sounded every dot so that exploring the cell was audible; in
+use that turned the cell into a noise toy — he hit the ghosted dots for the tone
+instead of reading the letter. Do not restore it.
+
+### Recorded audio
+
+`audio/` is the one thing `index.html` needs beside it. It plays through plain
+`<audio>` rather than `decodeAudioData`, so the app still works opened straight
+off a USB stick — `fetch()` is blocked on `file://`, `<audio>` is not.
+
+- `audio/phonemes/` — the 26 letter sounds. **Human recordings**, the same files
+  Phonics Farm uses, from the Pronunciation Studio IPA chart. Used here under the
+  non-profit educational permission granted for that project; see
+  `phonicsfarm/docs/pronunciation-studio-permission.md`. All five short vowels
+  are exactly what CVC needs: /a/ pan, /ɛ/ met, /ɪ/ tip, /ɒ/ lock, /ʌ/ fun.
+- `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
+  Local Kokoro-82M (Apache-2.0), voice `bf_emma` — Annette's voice from Phonics
+  Farm, and British to match the phoneme recordings, so a word sounds like the
+  blend of the three sounds he just heard.
+
+Regenerate or re-voice with:
+
+```
+~/.local/share/phonicsfarm-tts/venv/bin/python tools/generate_words.py --force
+```
+
+`--voice af_heart --lang a` switches the whole set to American. The browser's
+`speechSynthesis` is **not** used and should not be: it needs a user gesture,
+guarantees no particular voice on any given tablet, and has a murky licence.
+
+## The word list
+
+Grouped by short vowel, in **a-i-o-e-u** order. That is not alphabetical by
+accident — `e` and `i` are the most confusable short vowels, so teaching
+programs deliberately separate them. Do not "fix" it to a-e-i-o-u.
+
+| Vowel | Words |
+| --- | --- |
+| a | cat hat sat mat fat rat map bag man can |
+| i | sit pit hit fit kit pig lip fin hid |
+| o | mop top cop hop not dog rob |
+| e | bet wet met set get bed leg |
+| u | cup pup sun run fun nut |
+
+Adding a word means adding it to `CVC_WORDS` in `index.html` **and** rendering
+its clip with `tools/generate_words.py`.
 
 ## The shape minigame
 
-After every 4th completed letter, a reward round plays the first seven notes of
-*Mary Had a Little Lamb* (**mi re do re mi mi mi**).
-
-One bright shape appears at a time, each further to the right than the last.
-Touching it pops it and plays its note, then the next appears. After the seventh
-note the app returns to tracing.
+A reward round playing the first seven notes of *Twinkle Twinkle Little Star*
+(**C C G G A A G**). One bright shape appears at a time, each further right than
+the last; touching it pops it and plays its note. After the seventh note the app
+returns to the activity.
 
 Shapes and colours are redrawn at random every round from the standard
 kindergarten set — circle, square, triangle, rectangle, oval, diamond, star,
 heart, hexagon. **The flow and the notes never change:** always left to right,
 always the same seven notes.
 
+How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
+4th number, every **2nd** word — a CVC word is three cells of work, so it earns
+a reward twice as often as a single letter.
+
+## Tracing
+
+Tracing is deliberately loose, and this is load-bearing: a generous halo around
+the thick guide counts, and a stroke is satisfied at 70% coverage (18% for the
+dots on `i` and `j`). Do not tighten it to look rigorous — it is a motor
+accessibility allowance, not a bug.
+
+Digit centerlines live in the same `PATHS` table as the letters, in the same
+space (baseline y=70, x-height top y=0, ascender top y=-30), and are drawn in
+school-print writing order.
+
 ## Options
 
-- `?letter=k` — lock the app to a single letter for targeted practice.
-  Without it, the alphabet is shuffled and cycles.
+- `?mode=letters` / `?mode=words` / `?mode=numbers` — bookmark straight past the
+  activity menu. `?mode=words&vowel=i` locks one vowel family.
+- `?letter=k` — lock to a single letter for targeted practice.
 - The *Full screen* button hides browser chrome. The small `×` at the top right
   exits on a double tap, so it is hard to hit by accident.
+
+## Tuning dials
+
+Single constants in `index.html`, all of them things Milo may want to adjust by
+eye or ear:
+
+| What | Where |
+| --- | --- |
+| Brush loudness | `BRUSH_LEVEL` |
+| Brush brightness range | `700+norm*2600` in `brushSpeed()` |
+| Reward frequency | `MINIGAME_EVERY` |
+| How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |

@@ -81,23 +81,77 @@
     .brailleCol { gap:clamp(10px,3vh,24px); }
     .dot { width:clamp(48px,11vh,94px); border-width:clamp(5px,1.35vh,11px); }
   }
+  /* A braille cell. In CVC and numbers a word is several cells in sequence:
+     only the foregrounded one is live, the rest are dimmed and inert, so the
+     ORDER of the cells is itself part of what is being taught. */
+  #braille.cells-2 .cell, #braille.cells-3 .cell { transform:scale(.6); opacity:.32; }
+  #braille .cell {
+    display:flex; gap:clamp(22px,5.5vw,56px);
+    transition:transform .22s ease, opacity .22s ease;
+    transform-origin:center;
+  }
+  #braille.cells-2 .cell.active, #braille.cells-3 .cell.active { transform:scale(1); opacity:1; }
+  #braille .cell.done { opacity:.3; }
+  #braille.cells-2 .cell.done, #braille.cells-3 .cell.done { transform:scale(.62); opacity:.3; }
+  #braille.cells-2, #braille.cells-3 { gap:clamp(10px,2.2vw,30px); }
+  #braille.cells-2 .dot { width:clamp(44px,11vw,96px); border-width:clamp(5px,1.3vw,11px); }
+  #braille.cells-3 .dot { width:clamp(38px,9.4vw,84px); border-width:clamp(4px,1.1vw,10px); }
+  #braille.cells-2 .brailleCol, #braille.cells-3 .brailleCol { gap:clamp(8px,1.5vh,16px); }
+  /* The print letters of a CVC word. No tracing here - he reads these and
+     answers them in braille, so the box only ever reports progress. */
+  #boxes { display:none; align-items:center; justify-content:center; gap:clamp(12px,3vw,34px); min-height:0; }
+  body.mode-cvc #boxes { display:flex; }
+  .box {
+    display:grid; place-items:center; border-radius:clamp(10px,2vw,20px);
+    width:clamp(74px,19vw,200px); aspect-ratio:1;
+    border:clamp(4px,1vw,9px) solid #3a3a3a; background:#0b0b0b; color:#6a6a6a;
+    font:700 clamp(44px,12vw,112px)/1 Arial,sans-serif;
+    transition:transform .22s ease, opacity .22s ease, color .22s ease,
+               border-color .22s ease, background .22s ease;
+  }
+  .box.active { border-color:var(--letter); color:var(--letter); transform:scale(1.14); background:#140707; }
+  .box.done { border-color:var(--trace); color:#04210d; background:var(--trace); transform:scale(1); }
+  /* Teacher's menu. Big targets, high contrast, and it only appears once per
+     session - there is no mode button on the activity screen for him to hit. */
+  #chooser {
+    position:absolute; inset:0; z-index:70; background:#000;
+    display:none; place-items:center; padding:3vh 3vw; touch-action:none;
+  }
+  #chooser.on { display:grid; }
+  #chooserInner { display:flex; flex-direction:column; gap:clamp(18px,4vh,40px); align-items:center; }
+  .chooserRow { display:flex; gap:clamp(12px,3vw,34px); flex-wrap:wrap; justify-content:center; }
+  /* The UA sheet's [hidden] rule loses to .chooserRow's display:flex. */
+  #chooser [hidden] { display:none; }
+  .chooserLabel { color:#8e8e8e; font:600 clamp(15px,3.4vh,26px)/1 Arial,sans-serif; text-align:center; margin-bottom:12px; }
+  #chooserVowels { flex-direction:column; }
+  .card {
+    min-width:clamp(118px,24vw,230px); padding:clamp(14px,3vh,30px) clamp(10px,2vw,22px);
+    border:4px solid #4a4a4a; border-radius:16px; background:#111; color:#fff;
+    display:flex; flex-direction:column; gap:10px; align-items:center;
+    font-family:Arial,sans-serif; touch-action:manipulation;
+  }
+  .card b { font-size:clamp(30px,7vh,62px); line-height:1; color:#ffd60a; font-weight:700; }
+  .card span { font-size:clamp(14px,2.8vh,24px); color:#cfcfcf; }
+  .card.vowel { min-width:clamp(78px,13vw,130px); }
+  .card.vowel b { color:#30d158; }
+  /* CVC has no canvas: print boxes on top, the three cells underneath. */
+  body.mode-cvc #traceWrap { display:none; }
+  body.mode-cvc #app { grid-template-rows:minmax(0,34fr) minmax(0,66fr); grid-template-columns:100%; }
+  body.mode-cvc #boxes { grid-row:1; grid-column:1; }
+  body.mode-cvc #braille { grid-row:2; grid-column:1; padding:0 3vw max(1vh,8px); }
+  /* A braille digit is two cells, which does not fit the one-cell column. */
+  body.mode-numbers #app { grid-template-rows:minmax(0,62fr) minmax(0,38fr); }
+  @media (orientation:landscape) {
+    body.mode-numbers #app { grid-template-columns:minmax(0,58fr) minmax(0,42fr); grid-template-rows:100%; }
+  }
+  #braille.cells-2 .cell, #braille.cells-3 .cell { gap:clamp(14px,3.4vw,34px); }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="traceWrap"><canvas id="traceCanvas"></canvas></div>
-  <div id="braille" aria-label="Braille cell">
-    <div class="brailleCol">
-      <div class="dot" data-dot="1"></div>
-      <div class="dot" data-dot="2"></div>
-      <div class="dot" data-dot="3"></div>
-    </div>
-    <div class="brailleCol">
-      <div class="dot" data-dot="4"></div>
-      <div class="dot" data-dot="5"></div>
-      <div class="dot" data-dot="6"></div>
-    </div>
-  </div>
+  <div id="boxes" aria-hidden="true"></div>
+  <div id="braille" aria-label="Braille cells"></div>
   <button id="fullscreen" type="button">⛶ Full screen</button>
   <div id="fullscreenStatus" role="status"></div>
   <button id="exit" aria-label="Double tap to exit">×</button>
@@ -109,6 +163,19 @@
       <div id="splashText">Tap to start</div>
     </div>
   </div>
+  <div id="chooser" aria-label="Choose an activity">
+    <div id="chooserInner">
+      <div class="chooserRow" id="chooserModes">
+        <button class="card" type="button" data-mode="letters"><b>abc</b><span>Letters</span></button>
+        <button class="card" type="button" data-mode="cvc"><b>cat</b><span>Words</span></button>
+        <button class="card" type="button" data-mode="numbers"><b>123</b><span>Numbers</span></button>
+      </div>
+      <div class="chooserRow" id="chooserVowels" hidden>
+        <div class="chooserLabel">Which vowel?</div>
+        <div class="chooserRow"></div>
+      </div>
+    </div>
+  </div>
   <div id="exitMessage">Exited</div>
 </div>
 <script>
@@ -116,7 +183,8 @@
   'use strict';
   const canvas = document.getElementById('traceCanvas');
   const ctx = canvas.getContext('2d', { alpha:false });
-  const dots = [...document.querySelectorAll('.dot')];
+  const brailleEl = document.getElementById('braille');
+  const boxesEl = document.getElementById('boxes');
   const exitBtn = document.getElementById('exit');
   const success = document.getElementById('success');
   const exitMessage = document.getElementById('exitMessage');
@@ -167,6 +235,36 @@
       hi.connect(hiGain).connect(env); hi.start(t0); hi.stop(t0+dur+.05);
     }
   }
+
+  // ------------------------------------------------------ recorded audio ---
+  // Played through plain <audio>, NOT decodeAudioData, so the app still works
+  // opened straight off a USB stick: fetch() is blocked on file://, <audio> is not.
+  // Letter phonemes are the human recordings from PhonicsFarm; whole words and
+  // number names are local Kokoro. See audio/ and README.
+  const clipCache=new Map();
+  let currentClip=null;
+  function clip(src) {
+    let a=clipCache.get(src);
+    if (!a) { a=new Audio(src); a.preload='auto'; clipCache.set(src,a); }
+    return a;
+  }
+  function playClip(src,onEnd) {
+    const a=clip(src);
+    if (currentClip && currentClip!==a) { try { currentClip.pause(); } catch {} }
+    currentClip=a;
+    try { a.pause(); a.currentTime=0; } catch {}
+    let fired=false;
+    // A missing or undecodable file must never strand him mid-word, so the
+    // continuation is also armed on a timer and on the error path.
+    const finish=()=>{ if (fired) return; fired=true; a.removeEventListener('ended',finish); onEnd&&onEnd(); };
+    if (onEnd) { a.addEventListener('ended',finish); setTimeout(finish,2600); }
+    const played=a.play();
+    if (played && played.catch) played.catch(finish);
+    return a;
+  }
+  const phonemeSrc=ch=>`audio/phonemes/${ch}.wav`;
+  const wordSrc=w=>`audio/words/${w}.wav`;
+  const numberSrc=d=>`audio/numbers/${d}.wav`;
 
   // Short filtered noise transient: the "pop" of a shape bursting.
   let popBuffer=null;
@@ -267,6 +365,12 @@
     u:[1,3,6], v:[1,2,3,6], w:[2,4,5,6], x:[1,3,4,6], y:[1,3,4,5,6], z:[1,3,5,6]
   };
 
+  // Braille digits are the number sign followed by the letter a-j, so every
+  // digit is genuinely TWO cells. He taps the number sign, then the letter.
+  const NUMBER_SIGN = [3,4,5,6];
+  const DIGIT_LETTER = { '1':'a','2':'b','3':'c','4':'d','5':'e',
+                         '6':'f','7':'g','8':'h','9':'i','0':'j' };
+
   const COLOR_PAIRS = [
     ['#ff453a','#30d158'], // red / green
     ['#ffd60a','#0a84ff'], // yellow / blue
@@ -304,7 +408,19 @@
     w:['M0 0 L22 70 L44 8 L66 70 L88 0'],
     x:['M0 0 L60 70','M60 0 L0 70'],
     y:['M0 0 L30 63','M60 0 L15 100'],
-    z:['M0 0 L60 0 L0 70 L60 70']
+    z:['M0 0 L60 0 L0 70 L60 70'],
+    // Digits are ascender-height (-30 to 70) and drawn in school-print writing
+    // order, same centerline space and stroke weight as the letters.
+    '0':['M28 -30 C12 -30 2 -8 2 20 C2 48 12 70 28 70 C44 70 54 48 54 20 C54 -8 44 -30 28 -30'],
+    '1':['M6 -14 L26 -30 L26 70'],
+    '2':['M4 -12 C6 -27 24 -34 39 -27 C54 -20 55 -1 38 14 C24 27 11 44 3 70 L55 70'],
+    '3':['M5 -17 C15 -31 43 -31 48 -15 C52 0 37 17 21 19 C39 18 56 27 54 44 C52 62 26 76 4 62'],
+    '4':['M40 -30 L2 32 L54 32','M40 -30 L40 70'],
+    '5':['M52 -30 L8 -30 L6 12 C24 2 50 8 53 32 C56 54 34 74 7 62'],
+    '6':['M46 -23 C26 -33 4 -12 4 24 C4 52 14 70 30 70 C46 70 55 57 53 43 C51 28 32 20 18 28 C12 31 8 36 7 40'],
+    '7':['M3 -30 L54 -30 L20 70'],
+    '8':['M29 -30 C16 -30 9 -22 9 -12 C9 2 23 10 33 18 C45 27 51 36 51 48 C51 61 42 70 29 70 C16 70 7 61 7 48 C7 36 13 27 25 18 C35 10 49 2 49 -12 C49 -22 42 -30 29 -30'],
+    '9':['M51 2 C49 -19 40 -30 27 -30 C13 -30 4 -20 4 -6 C4 8 14 18 28 18 C40 18 49 12 51 2 L51 70']
   };
   const GLYPHS = Object.fromEntries(Object.entries(PATHS).map(([ch,paths]) => [ch,paths.map(d => {
     const path=document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -315,13 +431,30 @@
     });
   })]));
 
+  // Milo's list, in Milo's order. The vowel sequence a-i-o-e-u is not
+  // alphabetical by accident: e and i are the most confusable short vowels, so
+  // teaching programs deliberately separate them. Do not "fix" it to a-e-i-o-u.
+  const CVC_WORDS = {
+    a:['cat','hat','sat','mat','fat','rat','map','bag','man','can'],
+    i:['sit','pit','hit','fit','kit','pig','lip','fin','hid'],
+    o:['mop','top','cop','hop','not','dog','rob'],
+    e:['bet','wet','met','set','get','bed','leg'],
+    u:['cup','pup','sun','run','fun','nut']
+  };
+  const VOWEL_ORDER = ['a','i','o','e','u'];
+
+  let mode='letters';   // 'letters' | 'cvc' | 'numbers'
+  let cvcVowel=null;    // a key of CVC_WORDS, or null for a mix of all
+  let cells=[];         // the braille cells of the current item, in tap order
+  let activeCell=0;
+
   let order=[];
   let orderIndex=0;
-  let letter='a';
+  let glyph='a';       // the character being TRACED: a letter or a digit
   let colorPair=COLOR_PAIRS[0];
   let coverage=[];
   let traceDone=false;
-  let touchedBraille=new Set();
+  let word=null;        // the CVC word being built, or null outside CVC mode
   let markerSegments=[];
   let drawing=false;
   let lastMoveTime=0;
@@ -329,15 +462,25 @@
   let currentPointer=null;
   let lastPointerScreen=null;
 
-  function shuffleAlphabet() {
-    const forced=(new URLSearchParams(location.search).get('letter')||'').toLowerCase();
-    if (/^[a-z]$/.test(forced)) { order=[forced]; orderIndex=0; return; }
-    order='abcdefghijklmnopqrstuvwxyz'.split('');
-    for (let i=order.length-1;i>0;i--) {
+  function shuffle(list) {
+    for (let i=list.length-1;i>0;i--) {
       const j=Math.floor(Math.random()*(i+1));
-      [order[i],order[j]]=[order[j],order[i]];
+      [list[i],list[j]]=[list[j],list[i]];
     }
+    return list;
+  }
+
+  function buildOrder() {
     orderIndex=0;
+    if (mode==='cvc') {
+      order=shuffle(cvcVowel ? [...CVC_WORDS[cvcVowel]]
+                             : VOWEL_ORDER.flatMap(v=>CVC_WORDS[v]));
+      return;
+    }
+    if (mode==='numbers') { order=shuffle('0123456789'.split('')); return; }
+    const forced=(new URLSearchParams(location.search).get('letter')||'').toLowerCase();
+    if (/^[a-z]$/.test(forced)) { order=[forced]; return; }
+    order=shuffle('abcdefghijklmnopqrstuvwxyz'.split(''));
   }
 
   function cssVar(name,value) { document.documentElement.style.setProperty(name,value); }
@@ -350,7 +493,7 @@
 
   function currentTransform() {
     const w=canvas.clientWidth, h=canvas.clientHeight;
-    const b=GLYPH_BOUNDS[letter];
+    const b=GLYPH_BOUNDS[glyph];
     const glyphW=Math.max(1,b.maxX-b.minX), glyphH=Math.max(1,b.maxY-b.minY);
     // Uniform scaling is critical: never stretch a glyph differently in portrait and landscape.
     // 1.25 CSS inches above ALL guide ink; extra allowance for reaching fingers.
@@ -377,7 +520,7 @@
 
   function currentGeometry() {
     const t=currentTransform();
-    return GLYPHS[letter].map(stroke=>stroke.map(p=>localToScreen(p,t)));
+    return GLYPHS[glyph].map(stroke=>stroke.map(p=>localToScreen(p,t)));
   }
 
   function resizeCanvas() {
@@ -392,22 +535,94 @@
     if (minigameActive() && !mgBusy) spawnShape();
   }
 
-  function setupLetter() {
+  // A cell is {char, required, sound, touched, done, el, dotEls}. An item is an
+  // ordered list of them: one for a letter, two for a digit (number sign then
+  // the letter cell), three for a CVC word. Only the active cell is live.
+  function buildCells(specs) {
+    cells=specs.map(spec=>({ ...spec, touched:new Set(), done:false, el:null, dotEls:{} }));
+    activeCell=0;
+    brailleEl.textContent='';
+    brailleEl.className='cells-'+cells.length;
+    for (const cell of cells) {
+      const el=document.createElement('div');
+      el.className='cell';
+      for (const column of [[1,2,3],[4,5,6]]) {
+        const col=document.createElement('div');
+        col.className='brailleCol';
+        for (const n of column) {
+          const dot=document.createElement('div');
+          dot.className='dot'+(cell.required.includes(n)?' required':'');
+          dot.dataset.dot=String(n);
+          cell.dotEls[n]=dot;
+          col.appendChild(dot);
+        }
+        el.appendChild(col);
+      }
+      cell.el=el;
+      brailleEl.appendChild(el);
+    }
+    paintCells();
+  }
+
+  function paintCells() {
+    cells.forEach((cell,i)=>{
+      cell.el.classList.toggle('active',i===activeCell && !cell.done);
+      cell.el.classList.toggle('done',cell.done);
+    });
+    if (!boxesEl.children.length) return;
+    [...boxesEl.children].forEach((box,i)=>{
+      box.classList.toggle('active',i===activeCell && !cells[i].done);
+      box.classList.toggle('done',cells[i] && cells[i].done);
+    });
+  }
+
+  function buildBoxes(chars) {
+    boxesEl.textContent='';
+    for (const ch of chars) {
+      const box=document.createElement('div');
+      box.className='box';
+      box.textContent=ch;
+      boxesEl.appendChild(box);
+    }
+  }
+
+  function setupItem() {
     stopDrawing();
-    letter=order[orderIndex];
+    const item=order[orderIndex];
     colorPair=COLOR_PAIRS[Math.floor(Math.random()*COLOR_PAIRS.length)];
     cssVar('--letter',colorPair[0]); cssVar('--trace',colorPair[1]);
-    coverage=GLYPHS[letter].map(stroke=>new Array(stroke.length).fill(false));
-    markerSegments=[];
-    traceDone=false;
-    touchedBraille.clear();
-    const required=BRAILLE[letter];
-    for (const d of dots) {
-      const n=Number(d.dataset.dot);
-      d.classList.toggle('required',required.includes(n));
-      d.classList.remove('hit');
+
+    if (mode==='cvc') {
+      word=item;
+      glyph=null;
+      // Nothing to trace: the print letters are READ, and answered in braille.
+      traceDone=true;
+      buildBoxes(item.split(''));
+      buildCells(item.split('').map(ch=>({ char:ch, required:BRAILLE[ch], sound:phonemeSrc(ch) })));
+      clip(wordSrc(item));
+    } else if (mode==='numbers') {
+      word=null;
+      glyph=item;
+      traceDone=false;
+      boxesEl.textContent='';
+      buildCells([
+        { char:'#', required:NUMBER_SIGN, sound:null },
+        { char:DIGIT_LETTER[item], required:BRAILLE[DIGIT_LETTER[item]], sound:null }
+      ]);
+      clip(numberSrc(item));
+    } else {
+      word=null;
+      glyph=item;
+      traceDone=false;
+      boxesEl.textContent='';
+      buildCells([{ char:item, required:BRAILLE[item], sound:phonemeSrc(item) }]);
     }
-    draw();
+
+    if (glyph) {
+      coverage=GLYPHS[glyph].map(stroke=>new Array(stroke.length).fill(false));
+      markerSegments=[];
+      draw();
+    }
   }
 
   function drawPolyline(points,color,width,alpha=1) {
@@ -422,7 +637,7 @@
   function draw() {
     const w=canvas.clientWidth,h=canvas.clientHeight;
     ctx.globalAlpha=1; ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
-    if (!GLYPHS[letter]) return;
+    if (!GLYPHS[glyph]) return;
     const geometry=currentGeometry();
     const guideWidth=currentTransform().guideWidth;
     const markerWidth=guideWidth*.76;
@@ -469,7 +684,7 @@
     // For i/j, the first disconnected stroke is the dot: a deliberate touch counts; the stem still needs tracing.
     traceDone=coverage.every((bits,strokeIndex)=>{
       const ratio=bits.filter(Boolean).length/bits.length;
-      const isDot=(letter==='i'||letter==='j') && strokeIndex===0;
+      const isDot=(glyph==='i'||glyph==='j') && strokeIndex===0;
       return ratio >= (isDot ? .18 : .70);
     });
     checkCompletion();
@@ -524,26 +739,48 @@
   canvas.addEventListener('pointerup',stopDrawing);
   canvas.addEventListener('pointercancel',stopDrawing);
 
-  for (const d of dots) {
-    d.addEventListener('pointerdown',ev=>{
-      ev.preventDefault();
-      if (advancing) return;
-      const n=Number(d.dataset.dot);
-      // Only the dots this letter needs make a sound. Sounding the ghosted ones
-      // too - the original design - turned the cell into a noise toy: he hit
-      // them for the tone instead of reading the letter. Silence is the signal.
-      if (!BRAILLE[letter].includes(n)) return;
-      playTone(DOT_TONE[n],{dur:.62,vol:.3});
-      touchedBraille.add(n);
-      d.classList.add('hit');
-      checkCompletion();
-    });
+  // Delegated: the dots are rebuilt for every item, so the listener lives on
+  // the container and never has to be re-attached.
+  brailleEl.addEventListener('pointerdown',ev=>{
+    const d=ev.target.closest('.dot');
+    if (!d) return;
+    ev.preventDefault();
+    if (advancing) return;
+    const cell=cells[activeCell];
+    // Dots in a backgrounded cell are inert, not merely silent. If he could
+    // answer the third cell while the first is live, the sequence would stop
+    // teaching the ORDER of the letters, which is the whole point.
+    if (!cell || cell.done || !cell.el.contains(d)) return;
+    const n=Number(d.dataset.dot);
+    // Only the dots this cell needs make a sound. Sounding the ghosted ones
+    // too - the original design - turned the cell into a noise toy: he hit
+    // them for the tone instead of reading the letter. Silence is the signal.
+    if (!cell.required.includes(n)) return;
+    playTone(DOT_TONE[n],{dur:.62,vol:.3});
+    cell.touched.add(n);
+    d.classList.add('hit');
+    if (!cell.required.every(r=>cell.touched.has(r))) return;
+    // If this was the final cell, the word must wait for this phoneme to finish
+    // speaking - on a fixed timer it cut the last sound off part-way through.
+    const last=cells.every(c=>c.done||c===cell);
+    completeCell(cell, last ? checkCompletion : null);
+  });
+
+  function completeCell(cell,after) {
+    cell.done=true;
+    // The cell recedes as its own sound plays, then the next comes forward:
+    // the sound belongs to the cell he just finished, not the one he is starting.
+    const next=cells.findIndex(c=>!c.done);
+    activeCell=next===-1 ? cells.length-1 : next;
+    paintCells();
+    if (cell.sound) setTimeout(()=>playClip(cell.sound,after),140);
+    else if (after) setTimeout(after,180);
   }
 
   // ------------------------------------------------------- shape minigame ---
-  // "Mary Had a Little Lamb", first seven notes: E D C D E E E (mi re do re mi mi mi).
+  // "Twinkle Twinkle Little Star", first seven notes: C C G G A A G.
   // One octave above the braille dot tones so the tune never muddles the dot drill.
-  const MARY = [659.26, 587.33, 523.25, 587.33, 659.26, 659.26, 659.26];
+  const TUNE = [523.25, 523.25, 783.99, 783.99, 880.00, 880.00, 783.99];
 
   // Standard kindergarten shapes, drawn in a 0 0 100 100 box.
   const SHAPES = {
@@ -579,8 +816,8 @@
     mgOnFinish=onFinish;
     mgStep=0; mgBusy=false;
     // Shapes and colours are redrawn every round; the note order never is.
-    const shapes=sample(SHAPE_NAMES,MARY.length);
-    const colors=sample(SHAPE_COLORS,MARY.length);
+    const shapes=sample(SHAPE_NAMES,TUNE.length);
+    const colors=sample(SHAPE_COLORS,TUNE.length);
     mgRound=shapes.map((name,i)=>({name,color:colors[i]}));
     minigame.textContent='';
     minigame.classList.add('on');
@@ -620,7 +857,7 @@
       if (popped || mgBusy) return;
       popped=true; mgBusy=true;
       playPop();
-      playTone(MARY[mgStep],{dur:.7,vol:.32});
+      playTone(TUNE[mgStep],{dur:.7,vol:.32});
       el.animate(
         [{transform:'translate(-50%,-50%) scale(1)',opacity:1},
          {transform:'translate(-50%,-50%) scale(1.55)',opacity:0}],
@@ -639,21 +876,35 @@
   }
 
   // ----------------------------------------------------------- progression ---
-  let lettersDone=0;
+  let itemsDone=0;
+
+  // How many completed items earn a reward round, per mode. A CVC word is three
+  // cells of work, so it earns one twice as often as a single letter does.
+  const MINIGAME_EVERY = { letters:4, numbers:4, cvc:2 };
 
   function checkCompletion() {
     if (advancing || !traceDone) return;
-    if (!BRAILLE[letter].every(n=>touchedBraille.has(n))) return;
+    if (!cells.length || !cells.every(c=>c.done)) return;
     advancing=true;
     brushOff();
-    success.animate([{opacity:0},{opacity:.30},{opacity:0}],{duration:430,easing:'ease-out'});
-    setTimeout(()=>{
+
+    const advance=()=>{
       orderIndex++;
-      if (orderIndex>=order.length) shuffleAlphabet();
-      lettersDone++;
-      const advance=()=>{ setupLetter(); advancing=false; };
-      if (lettersDone%4===0) startMinigame(advance); else advance();
-    },500);
+      if (orderIndex>=order.length) buildOrder();
+      itemsDone++;
+      const next=()=>{ setupItem(); advancing=false; };
+      if (itemsDone%MINIGAME_EVERY[mode]===0) startMinigame(next); else next();
+    };
+    const flashAndAdvance=()=>{
+      success.animate([{opacity:0},{opacity:.30},{opacity:0}],{duration:430,easing:'ease-out'});
+      setTimeout(advance,500);
+    };
+
+    // The whole word is the payoff for blending three sounds, so it is spoken
+    // BEFORE the screen moves on - the flash waits for the voice to finish.
+    if (mode==='cvc') { setTimeout(()=>playClip(wordSrc(word),flashAndAdvance),200); return; }
+    if (mode==='numbers') { setTimeout(()=>playClip(numberSrc(glyph),flashAndAdvance),200); return; }
+    flashAndAdvance();
   }
 
   // Browser prototype: double-tap the tiny button. The APK can later use true immersive/kiosk-like behavior.
@@ -723,7 +974,7 @@
     // the failure is purely visual, which on a tablet is the worst kind.
     const fade=splash.animate([{opacity:1},{opacity:0}],
                               {duration:280,easing:'ease-out',fill:'forwards'});
-    const hide=()=>splash.classList.add('gone');
+    const hide=()=>{ splash.classList.add('gone'); afterSplash(); };
     fade.finished.then(hide,hide);
     setTimeout(hide,400); // belt and braces if `finished` never settles at all
   }
@@ -732,9 +983,66 @@
     if (ev.key===' '||ev.key==='Enter') { ev.preventDefault(); dismissSplash(); }
   });
 
-  shuffleAlphabet();
-  setupLetter();
-  resizeCanvas();
+  // ------------------------------------------------------------- chooser ---
+  // The teacher picks the activity once, at the start of the session. There is
+  // deliberately NO mode button on the activity screen: he would hit it, and he
+  // would hit it in the middle of a word.
+  const chooser=document.getElementById('chooser');
+  const vowelPanel=document.getElementById('chooserVowels');
+  const vowelRow=vowelPanel.querySelector('.chooserRow');
+
+  for (const v of VOWEL_ORDER) {
+    const b=document.createElement('button');
+    b.type='button'; b.className='card vowel';
+    b.innerHTML=`<b>${v}</b><span>${CVC_WORDS[v][0]}</span>`;
+    b.addEventListener('click',()=>start('cvc',v));
+    vowelRow.appendChild(b);
+  }
+  const mix=document.createElement('button');
+  mix.type='button'; mix.className='card vowel';
+  mix.innerHTML='<b>a i o e u</b><span>Mix them</span>';
+  mix.addEventListener('click',()=>start('cvc',null));
+  vowelRow.appendChild(mix);
+
+  for (const card of document.querySelectorAll('#chooserModes .card')) {
+    card.addEventListener('click',()=>{
+      const picked=card.dataset.mode;
+      if (picked==='cvc') { vowelPanel.hidden=false; return; }
+      start(picked,null);
+    });
+  }
+
+  function start(picked,vowel) {
+    mode=picked; cvcVowel=vowel;
+    document.body.classList.remove('mode-letters','mode-cvc','mode-numbers');
+    document.body.classList.add('mode-'+mode);
+    chooser.classList.remove('on');
+    itemsDone=0;
+    buildOrder();
+    setupItem();
+    resizeCanvas();
+  }
+
+  function openChooser() { chooser.classList.add('on'); }
+
+  // A teacher can bookmark straight past the menu: ?mode=cvc&vowel=i
+  const params=new URLSearchParams(location.search);
+  const wanted=(params.get('mode')||'').toLowerCase();
+  const wantedVowel=(params.get('vowel')||'').toLowerCase();
+  const presetMode=({letters:'letters',words:'cvc',cvc:'cvc',numbers:'numbers'})[wanted]
+                   || (params.get('letter') ? 'letters' : null);
+
+  // Something must be rendered behind the splash, so letters is set up now and
+  // simply replaced if the teacher picks differently.
+  start('letters',null);
+
+  let handedOver=false;
+  function afterSplash() {
+    if (handedOver) return;
+    handedOver=true;
+    if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null);
+    else openChooser();
+  }
 })();
 </script>
 </body>
