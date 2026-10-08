@@ -110,7 +110,7 @@ file `carl.png`). It plays through plain `<audio>` rather than
   non-profit educational permission granted for that project; see
   `phonicsfarm/docs/pronunciation-studio-permission.md`. All five short vowels
   are exactly what CVC needs: /a/ pan, /ɛ/ met, /ɪ/ tip, /ɒ/ lock, /ʌ/ fun.
-- `audio/brainbreak/carlwin.wav` — the brain break music, 10.23s, Milo's own
+- `audio/brainbreak/carlwin.wav` — the brain break music, 10.23s, owner's own
   file. Kept at its original 44.1 kHz stereo because it is music, not speech.
   It is also the **only clip whose length the UI depends on** — the dance is
   timed to it — so replacing it just works, but truncating it silently
@@ -124,8 +124,8 @@ file `carl.png`). It plays through plain `<audio>` rather than
   Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
   highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
   second). These shipped once in British `bf_emma`, on the theory that it would
-  match the British phoneme recordings — Milo's verdict was that it sounded bad,
-  and sounding good in a Tacoma classroom beat internal consistency with the
+  match the British phoneme recordings — Owner's verdict was that it sounded bad,
+  and sounding good in a  classroom beat internal consistency with the
   phonemes. Do not go back to a British voice.
 
 Regenerate or re-voice with:
