@@ -65,7 +65,10 @@
     touch-action:manipulation;
   }
   #success { position:absolute; inset:0; z-index:12; pointer-events:none; background:white; opacity:0; }
-  :root { --carlH: min(60vh, 78vw); }
+  /* Carl's height. Both terms are 1.3x the originals (60vh / 78vw) - owner asked
+     for 30% bigger on 2026-10-11. The vw term governs in portrait, the vh term
+     in landscape. */
+  :root { --carlH: min(78vh, 101.4vw); }
   #exitMessage {
     display:none; position:absolute; inset:0; z-index:70; place-items:center;
     background:#000; color:#fff; font:700 clamp(28px,8vw,70px)/1 Arial,sans-serif;
@@ -83,7 +86,7 @@
      tap, nothing to get right - it is a rest, so the layer is inert. It sits
      above the reward round but BELOW the home and exit buttons (z 60), so the
      adult in the room can always walk out of it. */
-  #brainbreak { display:none; position:absolute; inset:0; z-index:50; background:#000; touch-action:none; }
+  #brainbreak { display:none; position:absolute; inset:0; z-index:50; background:#fff; touch-action:none; }
   #brainbreak.on { display:block; }
   /* Travel and hop are two animations on two elements. Splitting them keeps
      the crossing perfectly linear while Carl bounces, and it means the
@@ -96,7 +99,16 @@
   }
   #carl img {
     display:block; height:100%; width:auto;
-    filter:drop-shadow(0 0 clamp(6px,1.4vh,16px) rgba(255,255,255,.35));
+    /* Two shadows, both dark, on a white background (changed 2026-10-11). The
+       transit is TRACKING practice, so the whole silhouette has to read as one
+       moving shape. Measured, 48.9% of Carl's pixels are near-black and ~30%
+       are near-white: on the old black background the dark half vanished, and
+       on white the light third would. The tight 2px shadow is the edge that
+       keeps his light parts visible against #fff; the wide soft one is the
+       halo the white glow used to give. Don't drop the tight one - it is the
+       one doing the work. */
+    filter:drop-shadow(0 0 2px rgba(0,0,0,.9))
+           drop-shadow(0 0 clamp(6px,1.4vh,16px) rgba(0,0,0,.45));
     animation:carlHop .46s ease-in-out infinite;
     will-change:transform;
   }
