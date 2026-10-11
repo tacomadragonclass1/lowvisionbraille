@@ -4,8 +4,8 @@
 The minigame is self-paced: a shape waits until the student touches it, then
 pops and plays its beat. So the music cannot simply be played as a track - it
 has to be cut into pieces that are handed out one touch at a time. Thirteen
-shapes, thirteen beats, and the tune completes itself as he works across the
-screen and wraps back to the left.
+shapes, thirteen beats, and the tune completes itself as the student works
+across the screen and wraps back to the left.
 
 The beat grid is FITTED and then SNAPPED, because neither step alone works.
 The source is a continuous texture, so naive onset picking finds every

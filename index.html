@@ -38,7 +38,7 @@
   }
   #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
     color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
-  /* Findable by the adult in the room, still not a target for him. The old one
+  /* Findable by the adult in the room, still not a target for the student. The old
      was 24x20 of #555 on #121212 at 48% opacity - black on black at arm's
      length, and could not be found at all. It is legible grey on a bordered
      pill now, but still small, still jammed in the corner, and still double-tap,
@@ -123,7 +123,7 @@
     50%     { transform:translateY(calc(var(--carlH) * -.17)) rotate(6deg) scaleY(1.03); }
   }
   /* Tap-to-start gate. Covers everything so the first touch of a session lands
-     here and nowhere else, whichever part of the screen he reaches for. */
+     here and nowhere else, whichever part of the screen the student reaches for. */
   #splash {
     position:absolute; inset:0; z-index:80; background:#000;
     display:grid; place-items:center; touch-action:none;
@@ -161,7 +161,7 @@
   #braille.cells-2 .dot { width:clamp(44px,11vw,96px); border-width:clamp(5px,1.3vw,11px); }
   #braille.cells-3 .dot { width:clamp(38px,9.4vw,84px); border-width:clamp(4px,1.1vw,10px); }
   #braille.cells-2 .brailleCol, #braille.cells-3 .brailleCol { gap:clamp(8px,1.5vh,16px); }
-  /* The print letters of a CVC word. No tracing here - he reads these and
+  /* The print letters of a CVC word. No tracing here - the student reads these and
      answers them in braille, so the box only ever reports progress. */
   /* One absolute size drives both the box and the letter inside it. A
      percentage height on the <svg> does NOT resolve here - the box's
@@ -188,7 +188,7 @@
   .box.active { border-color:var(--letter); color:var(--letter); transform:scale(1.14); background:#140707; }
   .box.done { border-color:var(--trace); color:#04210d; background:var(--trace); transform:scale(1); }
   /* Teacher's menu. Big targets, high contrast, and it only appears once per
-     session - there is no mode button on the activity screen for him to hit. */
+     session - there is no mode button on the activity screen to hit. */
   #chooser {
     position:absolute; inset:0; z-index:70; background:#000;
     display:none; place-items:center; padding:3vh 3vw; touch-action:none;
@@ -332,7 +332,7 @@
     currentClip=a;
     try { a.pause(); a.currentTime=0; } catch {}
     let fired=false;
-    // A missing or undecodable file must never strand him mid-word, so the
+    // A missing or undecodable file must never strand the student mid-word, so the
     // continuation is also armed on a timer and on the error path.
     const finish=()=>{ if (fired) return; fired=true; a.removeEventListener('ended',finish); onEnd&&onEnd(); };
     if (onEnd) { a.addEventListener('ended',finish); setTimeout(finish,2600); }
@@ -422,7 +422,7 @@
 
   // Finger speed in px/ms both brightens the filter and pushes the level.
   // A stroke that stops moving settles to a quiet hiss rather than cutting out,
-  // so the student still hears that he is on the line.
+  // so the student still hears they are on the line.
   function brushSpeed(pxPerMs) {
     if (!brushNodes || !brushAudible) return;
     const norm=Math.max(0,Math.min(1,pxPerMs/1.6));
@@ -657,7 +657,7 @@
   // The print letters are drawn from the SAME centerlines the tracing guide
   // uses, not set in a font. Two reasons: it guarantees the single-story `a`
   // and the serif-free `t` that school print wants and Arial does not have,
-  // and it means the letter he reads is identical to the one he traces.
+  // and it means the letter the student reads is identical to the one they trace.
   const SVGNS='http://www.w3.org/2000/svg';
   const PAD=7;  // half the 10-unit stroke, plus a hair
   const inkBounds=new Map();
@@ -867,14 +867,14 @@
     ev.preventDefault();
     if (advancing) return;
     const cell=cells[activeCell];
-    // Dots in a backgrounded cell are inert, not merely silent. If he could
+    // Dots in a backgrounded cell are inert, not merely silent. If the student could
     // answer the third cell while the first is live, the sequence would stop
     // teaching the ORDER of the letters, which is the whole point.
     if (!cell || cell.done || !cell.el.contains(d)) return;
     const n=Number(d.dataset.dot);
     // Only the dots this cell needs make a sound. Sounding the ghosted ones
-    // too - the original design - turned the cell into a noise toy: he hit
-    // them for the tone instead of reading the letter. Silence is the signal.
+    // too - the original design - turns the cell into a noise toy: a student
+    // will hit them for the tone instead of reading the letter. Silence is the signal.
     if (!cell.required.includes(n)) return;
     playTone(DOT_TONE[n],{dur:.62,vol:.3});
     cell.touched.add(n);
@@ -889,7 +889,7 @@
   function completeCell(cell,after) {
     cell.done=true;
     // The cell recedes as its own sound plays, then the next comes forward:
-    // the sound belongs to the cell he just finished, not the one he is starting.
+    // the sound belongs to the cell just finished, not the one starting.
     const next=cells.findIndex(c=>!c.done);
     activeCell=next===-1 ? cells.length-1 : next;
     paintCells();
@@ -899,10 +899,10 @@
 
   // ------------------------------------------------------- shape minigame ---
   // Each shape hands out the next note of a nursery tune when it is touched,
-  // so the melody assembles itself at whatever pace he works at rather than
-  // demanding he keep time with a track.
+  // so the melody assembles itself at whatever pace the student works at rather
+  // than demanding they keep time with a track.
   //
-  // The tune is how he knows which activity he is in: tracing (letters and
+  // The tune is how the student knows which activity they are in: tracing (letters and
   // numbers) always plays Mary, blending (words) always plays Twinkle. It is
   // the only per-mode cue in the reward round, so do not shuffle them.
   // Both sit an octave above the braille dot tones, so a reward never muddles
@@ -1081,8 +1081,8 @@
     carlEl.style.removeProperty('animation');
 
     // End on the audio's own 'ended' event, never on a timer alone - a timer
-    // either clips the music or leaves him watching a frozen Carl. The timer
-    // is the backstop for a file that fails to play, which must not strand him.
+    // either clips the music or leaves the student watching a frozen Carl. The timer
+    // is the backstop for a file that fails to play, which must not strand them.
     bbClip=a;
     bbEnded=()=>endBrainBreak();
     a.addEventListener('ended',bbEnded);
@@ -1120,7 +1120,7 @@
 
   // How many completed TASKS earn a brain break. A task is any finished piece
   // of work, and a reward round counts as one of them - so the break is paced
-  // off everything he does, not off letters alone.
+  // off everything the student does, not off letters alone.
   const BRAIN_BREAK_EVERY = 4;
 
   function taskDone(then) {
@@ -1244,8 +1244,8 @@
 
   // ------------------------------------------------------------- chooser ---
   // The teacher picks the activity once, at the start of the session. There is
-  // deliberately NO mode button on the activity screen: he would hit it, and he
-  // would hit it in the middle of a word.
+  // deliberately NO mode button on the activity screen: a student would hit it,
+  // and would hit it in the middle of a word.
   const chooser=document.getElementById('chooser');
   const vowelPanel=document.getElementById('chooserVowels');
   const vowelRow=vowelPanel.querySelector('.chooserRow');
@@ -1291,7 +1291,7 @@
 
   // Back to the activity menu. Top-left, tiny, dull, and double-tap only - the
   // same shape as the exit button, for the same reason: it is for the adult in
-  // the room, and he must not be able to find it by flailing at the screen.
+  // the room, and the student must not be able to find it by flailing at the screen.
   const homeBtn=document.getElementById('home');
   let lastHomeTap=0, homeArmTimer=null;
   function disarmHome() {

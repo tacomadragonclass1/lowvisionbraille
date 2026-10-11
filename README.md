@@ -1,6 +1,6 @@
 # Low Vision Braille — trace, blend, and count
 
-An offline web app for a low-vision student learning print letter formation,
+An offline web app for low-vision students learning print letter formation,
 the braille alphabet, CVC blending, and braille numbers. Open `index.html` —
 there is no build step and no network call. The dependencies are the `audio/`
 and `img/` folders next to it — **copy all three or nothing works.**
@@ -12,8 +12,8 @@ Designed for a tablet in landscape, full screen, held in two hands.
 ## The three activities
 
 After the *Tap to start* splash, an adult picks one. There is deliberately **no
-mode button on the activity screen** — he would hit it, and he would hit it in
-the middle of a word.
+mode button on the activity screen** — a student would hit it, and would hit it
+in the middle of a word.
 
 | | Trace | Braille | Speaks |
 | --- | --- | --- | --- |
@@ -33,7 +33,7 @@ to advance. New: finishing the cell now plays that letter's sound — `/b/`, not
 ### Words (CVC)
 
 The three print letters sit in boxes along the top. **There is no tracing
-here** — he reads them and answers in braille.
+here** — the student reads them and answers in braille.
 
 One braille cell is foregrounded at a time: it is full size and bright, its
 print box is outlined in the letter colour, and the other two cells are shrunk
@@ -46,20 +46,20 @@ does the screen move on.
 
 The print letters are **drawn from the same centerlines as the tracing guide**,
 not set in a font. That is what gives the single-story `a` and the serif-free
-`t` that school print wants and Arial does not have, and it means the letter he
-reads is identical to the one he traces. The three letters share one vertical
+`t` that school print wants and Arial does not have, and it means the letter the
+student reads is identical to the one they trace. The three letters share one vertical
 range so their baselines align and an ascender really is taller than an
 x-height letter — but the range is the word's own, so a word with no descender
 does not sit high in its boxes reserving space for a tail it never grows.
 
-**Backgrounded cells are inert, not merely silent.** If he could answer the
+**Backgrounded cells are inert, not merely silent.** If the student could answer the
 third cell while the first is live, the sequence would stop teaching the order
 of the letters, which is the whole point of the activity.
 
 ### Numbers
 
 The letter-tracing routine with digits. A braille digit is genuinely two cells —
-the number sign (dots 3-4-5-6) followed by the letter `a`–`j` — so he taps the
+the number sign (dots 3-4-5-6) followed by the letter `a`–`j` — so the student taps the
 number sign first, then the digit cell, and traces the printed numeral. All
 three must be done before it advances, then the number's name is spoken.
 
@@ -82,7 +82,7 @@ drops out, come back and it returns, with no restart gap. It is pink noise
 through a bandpass that **opens as the finger moves faster** — a slow careful
 trace is a dark quiet whisper (~700 Hz), a confident sweep is a bright loud
 swoosh (~3300 Hz). Resting a finger on the line settles it to a quiet hiss
-rather than cutting out, so he can still hear that he is on the line.
+rather than cutting out, so the student can still hear they are on the line.
 
 ### Braille dot tones — C major, one tone per position
 
@@ -95,8 +95,8 @@ The mapping never changes. Position is what the student learns to hear.
 Left column top-to-bottom is C–D–E; right column top-to-bottom is F–G–A.
 **Only the dots the current cell needs make a sound.** Ghosted dots are silent.
 The app originally sounded every dot so that exploring the cell was audible; in
-use that turned the cell into a noise toy — he hit the ghosted dots for the tone
-instead of reading the letter. Do not restore it.
+use that turns the cell into a noise toy — a student will hit the ghosted dots
+for the tone instead of reading the letter. Do not restore it.
 
 ### Recorded audio
 
@@ -163,7 +163,7 @@ time, left to right; touching it pops it and plays the next note of a nursery
 tune, and by the last shape the phrase has completed itself.
 
 **Each section has its own tune, and that is the point.** It is the only cue in
-the reward round that says which activity he is in:
+the reward round that says which activity the student is in:
 
 | Mode | Tune | Notes |
 | --- | --- | --- |
@@ -178,8 +178,8 @@ note (`LAST_NOTE_DUR`) so the seventh shape resolves instead of just stopping.
 Don't shuffle which mode gets which tune.
 
 It is deliberately **self-paced, not a rhythm game.** A note is handed out one
-touch at a time, so the tune assembles at whatever speed he works at rather than
-demanding he keep time with a track. Tapping during the pop animation is
+touch at a time, so the tune assembles at whatever speed the student works at rather
+than demanding they keep time with a track. Tapping during the pop animation is
 ignored, so a double-tap cannot skip a note.
 
 Shapes and colours are redrawn at random every round from the standard
@@ -196,7 +196,7 @@ Every **fourth completed task**, Carl dances across the screen to his own music
 (`audio/brainbreak/carlwin.wav`, 10.23s) and then the activity resumes by itself.
 
 A *task* is any finished piece of work — a letter, a word, a number — **and a
-reward round counts as one too**, so the break is paced off everything he does
+reward round counts as one too**, so the break is paced off everything the student does
 rather than off letters alone. In words mode, where a reward round comes every
 second word, that works out as: word, word, shapes, word → break.
 
@@ -208,9 +208,9 @@ buttons so the adult in the room can always walk out of it.
 Two things in the implementation are load-bearing:
 
 - **It ends on the audio's own `ended` event, never on a timer.** A fixed timer
-  either clips the music or leaves him watching a frozen Carl. The timer that is
+  either clips the music or leaves the student watching a frozen Carl. The timer that is
   there is a backstop for a file that fails to play at all — without it, a
-  blocked `play()` would strand him on a black screen forever.
+  blocked `play()` would strand the student on a black screen forever.
 - **The travel and the hop are two animations on two elements** (`carlCross` on
   `#carl`, `carlHop` on the image inside it). Splitting them keeps the crossing
   perfectly linear while he bounces, and because both are CSS animations in
