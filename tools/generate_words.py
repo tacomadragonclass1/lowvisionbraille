@@ -9,13 +9,13 @@ offline, and sound the same on every device the student touches.
 Voice is af_heart, lang_code "a": American, female, and the highest-graded
 voice Kokoro ships (grade A; af_bella at A- is the only close second).
 
-We shipped British bf_emma first -- Annette's voice from Phonics Farm -- on the
-theory that it would match the British phoneme recordings. Milo's verdict was
-blunt: "Annette's voice is the worst." Internal consistency with the phonemes
-lost to simply sounding good in a Tacoma classroom. Do not go back.
+We shipped British bf_emma first -- the British voice from Phonics Farm -- on
+the theory that it would match the British phoneme recordings. The owner's
+verdict was blunt: that voice was the worst. Internal consistency with the
+phonemes lost to simply sounding good in the classroom. Do not go back.
 
 Clips are `pending_user_review`. The assistant cannot hear them and must never
-call a pronunciation verified -- Milo chooses by ear, per clip.
+call a pronunciation verified -- the owner chooses by ear, per clip.
 
 Run with the PhonicsFarm TTS venv:
   ~/.local/share/phonicsfarm-tts/venv/bin/python tools/generate_words.py
@@ -32,7 +32,7 @@ REPO = "hexgrad/Kokoro-82M"
 DEFAULT_VOICE = "af_heart"
 DEFAULT_LANG = "a"
 
-# Milo's list, in Milo's order. The vowel sequence a-i-o-e-u is not
+# The owner's list, in the owner's order. The vowel sequence a-i-o-e-u is not
 # alphabetical by accident: e and i are the most confusable short vowels, so
 # teaching programs separate them. Do not "fix" this to a-e-i-o-u.
 WORDS = {

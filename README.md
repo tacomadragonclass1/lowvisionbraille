@@ -124,8 +124,8 @@ file `carl.png`). It plays through plain `<audio>` rather than
   Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
   highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
   second). These shipped once in British `bf_emma`, on the theory that it would
-  match the British phoneme recordings — Owner's verdict was that it sounded bad,
-  and sounding good in a  classroom beat internal consistency with the
+  match the British phoneme recordings — the owner's verdict was that it sounded bad,
+  and sounding good in a classroom beat internal consistency with the
   phonemes. Do not go back to a British voice.
 
 Regenerate or re-voice with:
@@ -280,7 +280,7 @@ school-print writing order.
 
 ## Tuning dials
 
-Single constants in `index.html`, all of them things Milo may want to adjust by
+Single constants in `index.html`, all of them things you may want to adjust by
 eye or ear:
 
 | What | Where |
