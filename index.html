@@ -18,7 +18,7 @@
   #traceCanvas { display:block; width:100%; height:100%; touch-action:none; }
   #braille {
     min-height:0; display:flex; align-items:center; justify-content:center;
-    gap:clamp(34px,9vw,78px); padding:0 5vw max(1vh,8px);
+    gap:clamp(34px,9vw,78px); padding:0 5vw max(1vh,8px); touch-action:none;
   }
   .brailleCol { display:flex; flex-direction:column; gap:clamp(12px,2vh,22px); }
   .dot {
@@ -34,7 +34,7 @@
     bottom:max(12px,env(safe-area-inset-bottom)); min-height:44px;
     padding:10px 14px; border:1px solid #888; border-radius:8px;
     background:#171717; color:#eee; font:600 15px Arial,sans-serif;
-    touch-action:manipulation;
+    touch-action:none;
   }
   #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
     color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
@@ -50,7 +50,7 @@
     width:40px; height:32px; padding:0;
     border:1px solid #4a4a4a; border-radius:6px;
     background:#1c1c1c; color:#b4b4b4; font:bold 18px/30px Arial,sans-serif;
-    touch-action:manipulation;
+    touch-action:none;
     transition:background .12s linear, color .12s linear, border-color .12s linear;
   }
   /* The first tap of the pair lights it up, so an adult who taps once can see
@@ -62,7 +62,7 @@
     position:absolute; z-index:60; top:max(3px,env(safe-area-inset-top)); right:3px;
     width:24px; height:20px; padding:0; border:0; border-radius:4px;
     background:#121212; color:#555; opacity:.48; font:bold 10px/20px Arial,sans-serif;
-    touch-action:manipulation;
+    touch-action:none;
   }
   #success { position:absolute; inset:0; z-index:12; pointer-events:none; background:white; opacity:0; }
   /* Carl's height. Both terms are 1.3x the originals (60vh / 78vw) - owner asked
@@ -171,7 +171,7 @@
   #boxes {
     --boxSize:clamp(56px,min(20vw,26vh),200px);
     display:none; align-items:center; justify-content:center;
-    gap:clamp(12px,3vw,34px); min-height:0;
+    gap:clamp(12px,3vw,34px); min-height:0; touch-action:none;
   }
   body.mode-cvc #boxes { display:flex; }
   .box {
@@ -180,6 +180,7 @@
     border:clamp(4px,1vw,9px) solid #3a3a3a; background:#0b0b0b; color:#6a6a6a;
     transition:transform .22s ease, opacity .22s ease, color .22s ease,
                border-color .22s ease, background .22s ease;
+    touch-action:none;
   }
   .box svg { height:calc(var(--boxSize)*.62); width:auto;
              max-width:calc(var(--boxSize)*.78); display:block; overflow:visible; }
@@ -204,7 +205,7 @@
     min-width:clamp(118px,24vw,230px); padding:clamp(14px,3vh,30px) clamp(10px,2vw,22px);
     border:4px solid #4a4a4a; border-radius:16px; background:#111; color:#fff;
     display:flex; flex-direction:column; gap:10px; align-items:center;
-    font-family:Arial,sans-serif; touch-action:manipulation;
+    font-family:Arial,sans-serif; touch-action:none;
   }
   .card b { font-size:clamp(30px,7vh,62px); line-height:1; color:#ffd60a; font-weight:700; }
   .card span { font-size:clamp(14px,2.8vh,24px); color:#cfcfcf; }
@@ -259,6 +260,35 @@
 <script>
 (() => {
   'use strict';
+
+  // ------------------------------------------------------------ no zoom ---
+  // CSS touch-action:none (below, on every tappable element) is the first
+  // line of defense, but iOS Safari has long-standing gaps where it still
+  // starts a pinch-zoom anyway. 'gesturestart'/'gesturechange' are WebKit's
+  // own pinch events and blocking them is the one technique that reliably
+  // holds on an iPad even when touch-action doesn't. A second finger landing
+  // mid-touch (touchmove with >1 touch) is covered the same way.
+  const killGesture = ev => ev.preventDefault();
+  document.addEventListener('gesturestart', killGesture);
+  document.addEventListener('gesturechange', killGesture);
+  document.addEventListener('gestureend', killGesture);
+  document.addEventListener('touchmove', ev => {
+    if (ev.touches.length > 1) ev.preventDefault();
+  }, { passive:false });
+  // Belt-and-braces: if the page still ends up zoomed (an OS gesture we
+  // didn't catch), snap it back to scale 1 ourselves so the adult in the
+  // room never has to reload. Rewriting the viewport meta's content to a
+  // different string is what makes Safari actually recompute the scale.
+  const viewportMeta = document.querySelector('meta[name="viewport"]');
+  const viewportContent = viewportMeta.getAttribute('content');
+  function resetPageZoom() {
+    viewportMeta.setAttribute('content', viewportContent + ',minimum-scale=1');
+    requestAnimationFrame(() => viewportMeta.setAttribute('content', viewportContent));
+  }
+  window.visualViewport?.addEventListener('resize', () => {
+    if (window.visualViewport.scale > 1.02) resetPageZoom();
+  });
+
   const canvas = document.getElementById('traceCanvas');
   const ctx = canvas.getContext('2d', { alpha:false });
   const brailleEl = document.getElementById('braille');
