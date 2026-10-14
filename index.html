@@ -148,19 +148,25 @@
   /* A braille cell. In CVC and numbers a word is several cells in sequence:
      only the foregrounded one is live, the rest are dimmed and inert, so the
      ORDER of the cells is itself part of what is being taught. */
-  #braille.cells-2 .cell, #braille.cells-3 .cell { transform:scale(.6); opacity:.32; }
+  #braille.cells-2 .cell, #braille.cells-3 .cell,
+  #braille.cells-4 .cell { transform:scale(.6); opacity:.32; }
   #braille .cell {
     display:flex; gap:clamp(22px,5.5vw,56px);
     transition:transform .22s ease, opacity .22s ease;
     transform-origin:center;
   }
-  #braille.cells-2 .cell.active, #braille.cells-3 .cell.active { transform:scale(1); opacity:1; }
+  #braille.cells-2 .cell.active, #braille.cells-3 .cell.active,
+  #braille.cells-4 .cell.active { transform:scale(1); opacity:1; }
   #braille .cell.done { opacity:.3; }
-  #braille.cells-2 .cell.done, #braille.cells-3 .cell.done { transform:scale(.62); opacity:.3; }
+  #braille.cells-2 .cell.done, #braille.cells-3 .cell.done,
+  #braille.cells-4 .cell.done { transform:scale(.62); opacity:.3; }
   #braille.cells-2, #braille.cells-3 { gap:clamp(10px,2.2vw,30px); }
+  #braille.cells-4 { gap:clamp(8px,1.8vw,24px); }
   #braille.cells-2 .dot { width:clamp(44px,11vw,96px); border-width:clamp(5px,1.3vw,11px); }
   #braille.cells-3 .dot { width:clamp(38px,9.4vw,84px); border-width:clamp(4px,1.1vw,10px); }
-  #braille.cells-2 .brailleCol, #braille.cells-3 .brailleCol { gap:clamp(8px,1.5vh,16px); }
+  #braille.cells-4 .dot { width:clamp(32px,8vw,72px); border-width:clamp(4px,1vw,9px); }
+  #braille.cells-2 .brailleCol, #braille.cells-3 .brailleCol,
+  #braille.cells-4 .brailleCol { gap:clamp(8px,1.5vh,16px); }
   /* The print letters of a CVC word. No tracing here - the student reads these and
      answers them in braille, so the box only ever reports progress. */
   /* One absolute size drives both the box and the letter inside it. A
@@ -200,7 +206,7 @@
   /* The UA sheet's [hidden] rule loses to .chooserRow's display:flex. */
   #chooser [hidden] { display:none; }
   .chooserLabel { color:#8e8e8e; font:600 clamp(15px,3.4vh,26px)/1 Arial,sans-serif; text-align:center; margin-bottom:12px; }
-  #chooserVowels { flex-direction:column; }
+  #chooserVowels, #chooserSight { flex-direction:column; }
   .card {
     min-width:clamp(118px,24vw,230px); padding:clamp(14px,3vh,30px) clamp(10px,2vw,22px);
     border:4px solid #4a4a4a; border-radius:16px; background:#111; color:#fff;
@@ -211,23 +217,85 @@
   .card span { font-size:clamp(14px,2.8vh,24px); color:#cfcfcf; }
   .card.vowel { min-width:clamp(78px,13vw,130px); }
   .card.vowel b { color:#30d158; }
+  .card.sightOpt b { color:#30d158; font-size:clamp(24px,5.5vh,48px); letter-spacing:.02em; }
   /* CVC has no canvas: print boxes on top, the three cells underneath. */
   body.mode-cvc #traceWrap { display:none; }
   body.mode-cvc #app { grid-template-rows:minmax(0,34fr) minmax(0,66fr); grid-template-columns:100%; }
   body.mode-cvc #boxes { grid-row:1; grid-column:1; }
   body.mode-cvc #braille { grid-row:2; grid-column:1; padding:0 3vw max(1vh,8px); }
+  /* The sight word in print. ONE svg for the whole word, deliberately NOT
+     the CVC letter boxes: a box costs a border and a gap per letter, and the
+     brief for this section is that the lettering is as big as the screen
+     allows. So the word is laid out once in glyph space and scaled to fit
+     whatever room the row has - a one-letter word fills the band, a
+     four-letter word fits across it. The print row and the braille row are
+     separate grid tracks, so neither can push the other off screen. */
+  #sightWord {
+    display:none; grid-row:1; grid-column:1; min-width:0; min-height:0;
+    align-items:center; justify-content:center; padding:1.5vh 2vw; overflow:hidden;
+  }
+  body.mode-sight:not(.round2) #sightWord { display:flex; }
+  #sightWord svg { width:100%; height:100%; display:block; overflow:visible; }
+  #sightWord svg path { fill:none; stroke:currentColor; stroke-width:10;
+                        stroke-linecap:round; stroke-linejoin:round; }
+  /* Plain near-white is the maximum-contrast default; the letter colour marks
+     the one being answered and green marks the ones finished, which is the
+     same vocabulary the CVC boxes use. Set on the <g> so currentColor carries
+     it to every path of that letter. */
+  #sightWord svg g { color:#e8e8e8; transition:color .2s linear; }
+  #sightWord svg g.active { color:var(--letter); }
+  #sightWord svg g.done { color:var(--trace); }
+  body.mode-sight #traceWrap { display:none; }
+  body.mode-sight #app {
+    grid-template-columns:100%; grid-template-rows:minmax(0,52fr) minmax(0,48fr);
+  }
+  body.mode-sight #braille { grid-row:2; grid-column:1; padding:0 3vw max(1vh,8px); }
+  /* Round 2 is dots and nothing else, so they get the whole screen. "Bigger"
+     is the point of round 2, not a side effect: with no print to read, the
+     cell is the only thing on the display. */
+  body.mode-sight.round2 #app { grid-template-rows:100%; }
+  body.mode-sight.round2 #braille { grid-row:1; grid-column:1; padding:2vh 3vw; }
+  /* Sight-word dots are sized off the space they actually have rather than off
+     the shared cells-N ceilings, because this section's two rounds give the
+     braille row very different amounts of it. Three terms, one per way the row
+     can run out of room, and min() takes whichever binds first:
+       - a hard cap, so a desktop does not get absurd;
+       - a vw term for the width, which is the SAME in both rounds because the
+         row is full-width either way;
+       - a vh term for the height, which is where the rounds differ: round 1
+         leaves the braille 48% of the screen, round 2 gives it all of it.
+     Two things here were got wrong by arithmetic and corrected by measuring,
+     so measure rather than re-derive:
+       - a backgrounded cell is scaled with a TRANSFORM, which does not shrink
+         the width it occupies, so a four-cell word costs four FULL-width cells
+         however small three of them look;
+       - the binding case is a phone in landscape, where the screen is short
+         and three stacked dots overflow long before the width does. */
+  body.mode-sight #braille.cells-1 { --d:min(108px,34vw,13vh); }
+  body.mode-sight #braille.cells-2 { --d:min( 96px,19vw,13vh); }
+  body.mode-sight #braille.cells-3 { --d:min( 84px,12vw,13vh); }
+  body.mode-sight #braille.cells-4 { --d:min( 72px,8.5vw,13vh); }
+  body.mode-sight.round2 #braille.cells-1 { --d:min(210px,34vw,28vh); }
+  body.mode-sight.round2 #braille.cells-2 { --d:min(190px,19vw,28vh); }
+  body.mode-sight.round2 #braille.cells-3 { --d:min(130px,12vw,28vh); }
+  body.mode-sight.round2 #braille.cells-4 { --d:min(110px,8.5vw,28vh); }
+  /* #braille is in the selector to outrank `#braille.cells-N .dot` above:
+     an id beats any number of classes. */
+  body.mode-sight #braille .dot { width:var(--d); border-width:calc(var(--d)/9); }
   /* A braille digit is two cells, which does not fit the one-cell column. */
   body.mode-numbers #app { grid-template-rows:minmax(0,62fr) minmax(0,38fr); }
   @media (orientation:landscape) {
     body.mode-numbers #app { grid-template-columns:minmax(0,58fr) minmax(0,42fr); grid-template-rows:100%; }
   }
-  #braille.cells-2 .cell, #braille.cells-3 .cell { gap:clamp(14px,3.4vw,34px); }
+  #braille.cells-2 .cell, #braille.cells-3 .cell,
+  #braille.cells-4 .cell { gap:clamp(14px,3.4vw,34px); }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="traceWrap"><canvas id="traceCanvas"></canvas></div>
   <div id="boxes" aria-hidden="true"></div>
+  <div id="sightWord" aria-hidden="true"></div>
   <div id="braille" aria-label="Braille cells"></div>
   <button id="fullscreen" type="button">⛶ Full screen</button>
   <div id="fullscreenStatus" role="status"></div>
@@ -248,10 +316,21 @@
         <button class="card" type="button" data-mode="letters"><b>abc</b><span>Letters</span></button>
         <button class="card" type="button" data-mode="cvc"><b>cat</b><span>Words</span></button>
         <button class="card" type="button" data-mode="numbers"><b>123</b><span>Numbers</span></button>
+        <button class="card" type="button" data-mode="sight"><b>the</b><span>Sight words</span></button>
       </div>
       <div class="chooserRow" id="chooserVowels" hidden>
         <div class="chooserLabel">Which vowel?</div>
         <div class="chooserRow"></div>
+      </div>
+      <!-- Which braille convention the sight words use. Asked once, by the
+           adult, for the same reason the vowel is: it is a teaching decision,
+           and there is no way to change it from the activity screen. -->
+      <div class="chooserRow" id="chooserSight" hidden>
+        <div class="chooserLabel">Which braille?</div>
+        <div class="chooserRow">
+          <button class="card sightOpt" type="button" data-convention="grapheme"><b>t h e</b><span>Letter by letter</span></button>
+          <button class="card sightOpt" type="button" data-convention="ueb"><b>the</b><span>UEB contractions</span></button>
+        </div>
       </div>
     </div>
   </div>
@@ -293,6 +372,7 @@
   const ctx = canvas.getContext('2d', { alpha:false });
   const brailleEl = document.getElementById('braille');
   const boxesEl = document.getElementById('boxes');
+  const sightWordEl = document.getElementById('sightWord');
   const exitBtn = document.getElementById('exit');
   const success = document.getElementById('success');
   const exitMessage = document.getElementById('exitMessage');
@@ -373,6 +453,14 @@
   const phonemeSrc=ch=>`audio/phonemes/${ch}.wav`;
   const wordSrc=w=>`audio/words/${w}.wav`;
   const numberSrc=d=>`audio/numbers/${d}.wav`;
+  // The letter NAME, not its phoneme. A sight word is recognised and spelled,
+  // never sounded out, so audio/phonemes/ is wrong here by design.
+  const letterNameSrc=ch=>`audio/letters/${ch}.wav`;
+  // The word "I" lives at sight/i.wav: a filename differing from another only
+  // by case is a trap on a case-insensitive checkout.
+  const sightSrc=w=>`audio/sight/${w.toLowerCase()}.wav`;
+  const SIGHT_ASK='audio/sight/prompt-what.wav';
+  const SIGHT_REVEAL='audio/sight/prompt-reveal.wav';
 
   // Short filtered noise transient: the "pop" of a shape bursting.
   let popBuffer=null;
@@ -479,6 +567,37 @@
   const DIGIT_LETTER = { '1':'a','2':'b','3':'c','4':'d','5':'e',
                          '6':'f','7':'g','8':'h','9':'i','0':'j' };
 
+  // Dot 6 alone. A capital letter in braille is genuinely two cells - this
+  // indicator, then the letter - exactly the shape the number sign has in
+  // Numbers, so the sequencer already knows what to do with it.
+  const CAPITAL_SIGN = [6];
+
+  // ---------------------------------------------------------- sight words ---
+  // First tranche, as given. "I" is capitalised throughout: capital in print,
+  // capital indicator in braille.
+  const SIGHT_WORDS = ['the','is','it','said','and','as','a','I'];
+
+  // The teacher picks the convention for the whole session. `grapheme` spells
+  // every word out, one cell per print letter, and is the default because it
+  // is what the rest of this app teaches and the only form in which naming a
+  // letter per cell means anything.
+  //
+  // `ueb` is how these words actually appear in Unified English Braille. A
+  // cell gets a spoken letter name only when it IS that letter in the
+  // spelling: the wordsign cells are silent, because naming "ex" over the one
+  // cell that means `it` would teach the wrong thing. Dots cross-checked
+  // against the alphabet table above - `it` is the letter x, `as` is z.
+  const SIGHT_UEB = {
+    the:  [{ dots:[2,3,4,6] }],                    // strong wordsign
+    is:   [{ name:'i' }, { name:'s' }],            // no contraction, spelled
+    it:   [{ dots:[1,3,4,6] }],                    // alphabetic wordsign (x)
+    said: [{ name:'s' }, { name:'d' }],            // shortform  s-d
+    and:  [{ dots:[1,2,3,4,6] }],                  // strong wordsign
+    as:   [{ dots:[1,3,5,6] }],                    // alphabetic wordsign (z)
+    a:    [{ name:'a' }],
+    I:    [{ dots:CAPITAL_SIGN }, { name:'i' }]
+  };
+
   const COLOR_PAIRS = [
     ['#ff453a','#30d158'], // red / green
     ['#ffd60a','#0a84ff'], // yellow / blue
@@ -517,6 +636,11 @@
     x:['M0 0 L60 70','M60 0 L0 70'],
     y:['M0 0 L30 63','M60 0 L15 100'],
     z:['M0 0 L60 0 L0 70 L60 70'],
+    // The only capital the app needs: the sight word "I", which is a capital
+    // in print and a capital in braille. Cap height is the ascender line, and
+    // school-print manuscript gives it both crossbars - a bare vertical would
+    // read as a lowercase l. Stem first, then the bars, as it is taught.
+    I:['M30 -30 L30 70','M5 -30 L55 -30','M5 70 L55 70'],
     // Digits are ascender-height (-30 to 70) and drawn in school-print writing
     // order, same centerline space and stroke weight as the letters.
     '0':['M28 -30 C12 -30 2 -8 2 20 C2 48 12 70 28 70 C44 70 54 48 54 20 C54 -8 44 -30 28 -30'],
@@ -551,8 +675,14 @@
   };
   const VOWEL_ORDER = ['a','i','o','e','u'];
 
-  let mode='letters';   // 'letters' | 'cvc' | 'numbers'
+  let mode='letters';   // 'letters' | 'cvc' | 'numbers' | 'sight'
   let cvcVowel=null;    // a key of CVC_WORDS, or null for a mix of all
+  let sightConvention='grapheme';  // 'grapheme' | 'ueb'
+  // Round 1 shows the print word above the dots; round 2 shows the dots alone
+  // and asks for the word. Round 2 begins only once round 1 has used the whole
+  // list, so the words are familiar before they are tested.
+  let sightRound=1;
+  let sightGroups=[];   // the per-letter <g> of the printed word, in order
   let cells=[];         // the braille cells of the current item, in tap order
   let activeCell=0;
 
@@ -586,6 +716,7 @@
       return;
     }
     if (mode==='numbers') { order=shuffle('0123456789'.split('')); return; }
+    if (mode==='sight') { order=shuffle([...SIGHT_WORDS]); return; }
     const forced=(new URLSearchParams(location.search).get('letter')||'').toLowerCase();
     if (/^[a-z]$/.test(forced)) { order=[forced]; return; }
     order=shuffle('abcdefghijklmnopqrstuvwxyz'.split(''));
@@ -677,6 +808,19 @@
       cell.el.classList.toggle('active',i===activeCell && !cell.done);
       cell.el.classList.toggle('done',cell.done);
     });
+    if (sightGroups.length) {
+      // perLetter is false under UEB, where one cell can be a whole word: then
+      // there is no current letter, and the print word simply turns green when
+      // it is finished.
+      const perLetter=cells.some(c=>c.letter!=null);
+      const allDone=cells.every(c=>c.done);
+      const active=cells[activeCell];
+      sightGroups.forEach((g,i)=>{
+        const done=allDone || (perLetter && cells.every(c=>c.letter!==i || c.done));
+        g.classList.toggle('done',done);
+        g.classList.toggle('active',!done && perLetter && !!active && active.letter===i);
+      });
+    }
     if (!boxesEl.children.length) return;
     [...boxesEl.children].forEach((box,i)=>{
       box.classList.toggle('active',i===activeCell && !cells[i].done);
@@ -736,11 +880,67 @@
     }
   }
 
+  // `letter` is the index of the PRINT letter a cell belongs to, so the word
+  // above can highlight the letter being answered. A capital shares its
+  // letter's index with the indicator cell in front of it - both cells are
+  // that one letter. UEB cells carry no index: a wordsign is one cell for the
+  // whole word, so there is no "current letter" to point at.
+  function sightCells(w) {
+    if (sightConvention==='ueb') {
+      return SIGHT_UEB[w].map(spec=>spec.name
+        ? { char:spec.name, required:BRAILLE[spec.name], sound:letterNameSrc(spec.name) }
+        : { char:'', required:spec.dots, sound:null });
+    }
+    const out=[];
+    [...w].forEach((ch,i)=>{
+      const lower=ch.toLowerCase();
+      if (ch!==lower) out.push({ char:'', required:CAPITAL_SIGN, sound:null, letter:i });
+      out.push({ char:lower, required:BRAILLE[lower], sound:letterNameSrc(lower), letter:i });
+    });
+    return out;
+  }
+
+  const SIGHT_GAP=22;   // space between letters, in glyph units
+
+  // The whole word as a single svg, scaled to fit the row: see the CSS note on
+  // why there are no per-letter boxes here.
+  function buildSightWord(w) {
+    sightWordEl.textContent='';
+    sightGroups=[];
+    const chars=[...w];
+    // One shared vertical range for the word, the same reasoning as the CVC
+    // boxes: baselines line up and an ascender really does stand taller than
+    // an x-height letter, but the range is this word's own, so a word with no
+    // descender does not reserve space for a tail it never grows.
+    const top=Math.min(...chars.map(ch=>glyphBounds(ch).minY))-PAD;
+    const bottom=Math.max(...chars.map(ch=>glyphBounds(ch).maxY))+PAD;
+    const svg=document.createElementNS(SVGNS,'svg');
+    let x=0;
+    chars.forEach((ch,i)=>{
+      const b=glyphBounds(ch);
+      const g=document.createElementNS(SVGNS,'g');
+      g.setAttribute('transform',`translate(${x-b.minX+PAD},0)`);
+      for (const d of PATHS[ch]) {
+        const path=document.createElementNS(SVGNS,'path');
+        path.setAttribute('d',d);
+        g.appendChild(path);
+      }
+      svg.appendChild(g);
+      sightGroups.push(g);
+      x+=(b.maxX-b.minX)+PAD*2+(i===chars.length-1 ? 0 : SIGHT_GAP);
+    });
+    svg.setAttribute('viewBox',`0 ${top} ${x} ${bottom-top}`);
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    sightWordEl.appendChild(svg);
+  }
+
   function setupItem() {
     stopDrawing();
     const item=order[orderIndex];
     colorPair=COLOR_PAIRS[Math.floor(Math.random()*COLOR_PAIRS.length)];
     cssVar('--letter',colorPair[0]); cssVar('--trace',colorPair[1]);
+
+    if (mode!=='sight') { sightWordEl.textContent=''; sightGroups=[]; }
 
     if (mode==='cvc') {
       word=item;
@@ -750,6 +950,20 @@
       buildBoxes(item.split(''));
       buildCells(item.split('').map(ch=>({ char:ch, required:BRAILLE[ch], sound:phonemeSrc(ch) })));
       clip(wordSrc(item));
+    } else if (mode==='sight') {
+      word=item;
+      glyph=null;
+      // Nothing to trace: the word is read, or recalled, and answered in braille.
+      traceDone=true;
+      boxesEl.textContent='';
+      document.body.classList.toggle('round2',sightRound===2);
+      // Round 2 shows no print at all. That is what makes it a reading test
+      // rather than a matching exercise, so there is nothing to fall back on.
+      if (sightRound===1) buildSightWord(item);
+      else { sightWordEl.textContent=''; sightGroups=[]; }
+      buildCells(sightCells(item));
+      clip(sightSrc(item));
+      if (sightRound===2) { clip(SIGHT_ASK); clip(SIGHT_REVEAL); }
     } else if (mode==='numbers') {
       word=null;
       glyph=item;
@@ -941,9 +1155,14 @@
     // "Twinkle Twinkle Little Star", first seven notes: C C G G A A G.
     twinkle: [523.25, 523.25, 783.99, 783.99, 880.00, 880.00, 783.99],
     // "Mary Had a Little Lamb", first seven notes: E D C D E E E.
-    mary:    [659.25, 587.33, 523.25, 587.33, 659.25, 659.25, 659.25]
+    mary:    [659.25, 587.33, 523.25, 587.33, 659.25, 659.25, 659.25],
+    // "London Bridge Is Falling Down", G A G F E F G - one whole phrase in
+    // exactly seven notes. It starts on G and arches, where Mary starts on E
+    // and falls and Twinkle starts on a repeated C, so the three are told
+    // apart from the first note.
+    london:  [783.99, 880.00, 783.99, 698.46, 659.25, 698.46, 783.99]
   };
-  const MODE_TUNE = { letters:'mary', numbers:'mary', cvc:'twinkle' };
+  const MODE_TUNE = { letters:'mary', numbers:'mary', cvc:'twinkle', sight:'london' };
   // Both phrases end on a long note, so the last shape resolves instead of
   // just stopping. Keep this if a longer tune is ever added.
   const LAST_NOTE_DUR = 1.0, NOTE_DUR = .6;
@@ -1146,7 +1365,7 @@
 
   // How many completed items earn a reward round, per mode. A CVC word is three
   // cells of work, so it earns one twice as often as a single letter does.
-  const MINIGAME_EVERY = { letters:4, numbers:4, cvc:2 };
+  const MINIGAME_EVERY = { letters:4, numbers:4, cvc:2, sight:2 };
 
   // How many completed TASKS earn a brain break. A task is any finished piece
   // of work, and a reward round counts as one of them - so the break is paced
@@ -1156,6 +1375,26 @@
   function taskDone(then) {
     tasksDone++;
     if (tasksDone%BRAIN_BREAK_EVERY===0) startBrainBreak(then); else then();
+  }
+
+  // How long the student gets to think before round 2 answers itself. The one
+  // real timer in this chain - every other step waits on the clip before it
+  // ending, because a fixed timer cut the CVC blend off part-way through once
+  // already. It is runId-guarded like the rest, so a trip to the menu during
+  // the silence cannot let the answer fire behind the chooser.
+  const SIGHT_THINK_MS = 5000;
+
+  function sightReveal(myRun,done) {
+    const alive=()=>myRun===runId;
+    const sayWord=()=>{ if (alive()) playClip(sightSrc(word),done); };
+    // Round 1: the spelling, a beat, then the word - the same shape the CVC
+    // blend has, so it lands as "t... h... e... THE" rather than running
+    // the letters straight into the word.
+    if (sightRound===1) { setTimeout(sayWord,700); return; }
+    // Round 2: ask, wait in silence, then answer.
+    const reveal=()=>{ if (alive()) playClip(SIGHT_REVEAL,sayWord); };
+    const think=()=>{ if (alive()) setTimeout(reveal,SIGHT_THINK_MS); };
+    playClip(SIGHT_ASK,think);
   }
 
   function checkCompletion() {
@@ -1168,7 +1407,12 @@
     const advance=()=>{
       if (myRun!==runId) return;
       orderIndex++;
-      if (orderIndex>=order.length) buildOrder();
+      if (orderIndex>=order.length) {
+        // Round 2 starts once round 1 has used the whole list, then hands back
+        // to round 1: the section cycles rather than ending.
+        if (mode==='sight') sightRound = sightRound===1 ? 2 : 1;
+        buildOrder();
+      }
       itemsDone++;
       // Three links, each waiting on the one before: break, reward round, next
       // item. Both rewards can legitimately fall on the same item, and every
@@ -1191,6 +1435,7 @@
     // BEFORE the screen moves on - the flash waits for the voice to finish.
     // A deliberate beat between the final consonant and the whole word, so the
     // blend lands as "n... u... t... NUT" rather than running together.
+    if (mode==='sight') { sightReveal(myRun,flashAndAdvance); return; }
     if (mode==='cvc') { setTimeout(()=>playClip(wordSrc(word),flashAndAdvance),700); return; }
     if (mode==='numbers') { setTimeout(()=>playClip(numberSrc(glyph),flashAndAdvance),200); return; }
     flashAndAdvance();
@@ -1279,6 +1524,7 @@
   const chooser=document.getElementById('chooser');
   const vowelPanel=document.getElementById('chooserVowels');
   const vowelRow=vowelPanel.querySelector('.chooserRow');
+  const sightPanel=document.getElementById('chooserSight');
 
   for (const v of VOWEL_ORDER) {
     const b=document.createElement('button');
@@ -1293,18 +1539,29 @@
   mix.addEventListener('click',()=>start('cvc',null));
   vowelRow.appendChild(mix);
 
+  for (const b of sightPanel.querySelectorAll('.card')) {
+    b.addEventListener('click',()=>start('sight',null,b.dataset.convention));
+  }
+
   for (const card of document.querySelectorAll('#chooserModes .card')) {
     card.addEventListener('click',()=>{
       const picked=card.dataset.mode;
+      // Only one follow-up panel at a time: tapping Words then Sight words
+      // must not leave both sets of choices on screen.
+      vowelPanel.hidden=true; sightPanel.hidden=true;
       if (picked==='cvc') { vowelPanel.hidden=false; return; }
+      if (picked==='sight') { sightPanel.hidden=false; return; }
       start(picked,null);
     });
   }
 
-  function start(picked,vowel) {
+  function start(picked,vowel,convention) {
     runId++;
     mode=picked; cvcVowel=vowel;
-    document.body.classList.remove('mode-letters','mode-cvc','mode-numbers');
+    sightConvention = convention==='ueb' ? 'ueb' : 'grapheme';
+    sightRound=1;
+    document.body.classList.remove('mode-letters','mode-cvc','mode-numbers',
+                                   'mode-sight','round2');
     document.body.classList.add('mode-'+mode);
     chooser.classList.remove('on');
     homeBtn.hidden=false;
@@ -1350,6 +1607,7 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     vowelPanel.hidden=true;
+    sightPanel.hidden=true;
     openChooser();
   }
 
@@ -1357,8 +1615,10 @@
   const params=new URLSearchParams(location.search);
   const wanted=(params.get('mode')||'').toLowerCase();
   const wantedVowel=(params.get('vowel')||'').toLowerCase();
-  const presetMode=({letters:'letters',words:'cvc',cvc:'cvc',numbers:'numbers'})[wanted]
+  const presetMode=({letters:'letters',words:'cvc',cvc:'cvc',numbers:'numbers',
+                     sight:'sight',sightwords:'sight'})[wanted]
                    || (params.get('letter') ? 'letters' : null);
+  const wantedBraille=(params.get('braille')||'').toLowerCase();
 
   // Something must be rendered behind the splash, so letters is set up now and
   // simply replaced if the teacher picks differently.
@@ -1371,7 +1631,8 @@
     // 1.8MB, and its duration is what the dance is timed to - fetch it now,
     // long before it is needed. preload alone is a hint; load() is not.
     try { clip(BRAIN_BREAK_SRC).load(); } catch {}
-    if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null);
+    if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null,
+                          wantedBraille);
     else openChooser();
   }
 })();

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Render the CVC words and the spoken number names with local Kokoro TTS.
+"""Render every pre-rendered TTS clip the app uses, with local Kokoro.
+
+Four sets, each `--only`-selectable: the CVC words, the spoken number names,
+the 26 letter NAMES ("tee", not /t/), and the sight-word section's word reads
+plus its two spoken prompts.
+
+Letter names are a separate set from audio/phonemes/ on purpose. The phonemes
+are human recordings and say the SOUND; the sight-word section needs the
+NAME, because a sight word is spelled and recognised, not sounded out.
 
 Why pre-rendered and not the browser's speechSynthesis: the Web Speech API
 needs a user gesture, guarantees no particular voice on any given tablet, and
@@ -45,6 +53,30 @@ WORDS = {
 
 NUMBERS = ["zero", "one", "two", "three", "four", "five",
            "six", "seven", "eight", "nine"]
+
+# The spoken NAME of each letter, spelled the way Kokoro's G2P will say it.
+# A bare "t" is not reliably read as a letter name, so every one is spelled
+# out. These are the clip texts, not the clip contents -- check them by ear.
+LETTER_NAMES = {
+    "a": "ay", "b": "bee", "c": "see", "d": "dee", "e": "ee", "f": "eff",
+    "g": "gee", "h": "aitch", "i": "eye", "j": "jay", "k": "kay", "l": "ell",
+    "m": "em", "n": "en", "o": "oh", "p": "pee", "q": "cue", "r": "are",
+    "s": "ess", "t": "tee", "u": "you", "v": "vee", "w": "double-you",
+    "x": "ex", "y": "why", "z": "zee",
+}
+
+# The sight-word section's first tranche, as given. Keyed by the file slug:
+# the word "I" is spoken and written capitalised but its clip is sight/i.wav,
+# because a filename differing from another only by case is a trap on a
+# case-insensitive checkout.
+SIGHT_WORDS = {"the": "the", "is": "is", "it": "it", "said": "said",
+               "and": "and", "as": "as", "a": "a", "i": "I"}
+
+# Round 2 asks, waits, then answers. Two clips rather than eight rendered
+# phrases: the reveal reuses the very word clip from round 1, so there is one
+# recording per word to approve rather than two, and nothing can drift apart.
+PROMPTS = {"prompt-what": "What is this word?",
+           "prompt-reveal": "The word is"}
 
 
 def postprocess(audio, peak=0.89, head_ms=30, tail_ms=140, floor=0.008):
@@ -93,7 +125,11 @@ def main():
                     help='Kokoro lang_code: "b" British, "a" American')
     ap.add_argument("--output", type=Path, default=root / "audio")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--only", default="all",
+                    choices=["all", "words", "numbers", "letters", "sight"],
+                    help="render one set instead of all four")
     args = ap.parse_args()
+    want = lambda name: args.only in ("all", name)
 
     from kokoro import KPipeline
     pipeline = KPipeline(lang_code=args.lang, repo_id=REPO, device="cpu")
@@ -111,14 +147,28 @@ def main():
                             duration_seconds=duration, engine="kokoro",
                             status="pending_user_review", **extra))
 
-    for vowel, words in WORDS.items():
-        for word in words:
-            emit(word, args.output / "words" / f"{word}.wav", "cvc_word",
-                 dict(vowel=vowel))
+    if want("words"):
+        for vowel, words in WORDS.items():
+            for word in words:
+                emit(word, args.output / "words" / f"{word}.wav", "cvc_word",
+                     dict(vowel=vowel))
 
-    for digit, name in enumerate(NUMBERS):
-        emit(name, args.output / "numbers" / f"{digit}.wav", "number_name",
-             dict(digit=digit))
+    if want("numbers"):
+        for digit, name in enumerate(NUMBERS):
+            emit(name, args.output / "numbers" / f"{digit}.wav", "number_name",
+                 dict(digit=digit))
+
+    if want("letters"):
+        for letter, spoken in LETTER_NAMES.items():
+            emit(spoken, args.output / "letters" / f"{letter}.wav",
+                 "letter_name", dict(letter=letter))
+
+    if want("sight"):
+        for slug, spoken in SIGHT_WORDS.items():
+            emit(spoken, args.output / "sight" / f"{slug}.wav", "sight_word",
+                 dict(word=spoken))
+        for slug, spoken in PROMPTS.items():
+            emit(spoken, args.output / "sight" / f"{slug}.wav", "prompt", {})
 
     if records:
         manifest = args.output / "manifest-tts.json"
@@ -128,13 +178,16 @@ def main():
         manifest.write_text(json.dumps(dict(
             source="local Kokoro-82M, Apache-2.0 model and voices",
             format="24 kHz 16-bit mono PCM WAV",
-            note="Whole-word and number-name reads only. The isolated letter "
-                 "phonemes in audio/phonemes/ are human recordings, not TTS.",
+            note="Whole-word, number-name, letter-NAME and sight-word reads. "
+                 "The isolated letter phonemes in audio/phonemes/ are human "
+                 "recordings, not TTS; audio/letters/ is the spoken letter "
+                 "NAME and is TTS.",
             clips=sorted(merged.values(), key=lambda r: (r["kind"], r["file"])),
         ), indent=2) + "\n")
         print(f"wrote  {manifest.name}", flush=True)
 
-    total = sum(len(w) for w in WORDS.values()) + len(NUMBERS)
+    total = (sum(len(w) for w in WORDS.values()) + len(NUMBERS)
+             + len(LETTER_NAMES) + len(SIGHT_WORDS) + len(PROMPTS))
     print(f"done   {len(records)} new of {total} clips", flush=True)
 
 

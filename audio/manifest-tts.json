@@ -1,7 +1,7 @@
 {
   "source": "local Kokoro-82M, Apache-2.0 model and voices",
   "format": "24 kHz 16-bit mono PCM WAV",
-  "note": "Whole-word and number-name reads only. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS.",
+  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.",
   "clips": [
     {
       "text": "bag",
@@ -433,6 +433,292 @@
       "vowel": "e"
     },
     {
+      "text": "ay",
+      "file": "letters/a.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.37,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "a"
+    },
+    {
+      "text": "bee",
+      "file": "letters/b.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.534,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "b"
+    },
+    {
+      "text": "see",
+      "file": "letters/c.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.55,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "c"
+    },
+    {
+      "text": "dee",
+      "file": "letters/d.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.529,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "d"
+    },
+    {
+      "text": "ee",
+      "file": "letters/e.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.5,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "e"
+    },
+    {
+      "text": "eff",
+      "file": "letters/f.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.534,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "f"
+    },
+    {
+      "text": "gee",
+      "file": "letters/g.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.532,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "g"
+    },
+    {
+      "text": "aitch",
+      "file": "letters/h.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.491,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "h"
+    },
+    {
+      "text": "eye",
+      "file": "letters/i.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.37,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "i"
+    },
+    {
+      "text": "jay",
+      "file": "letters/j.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.522,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "j"
+    },
+    {
+      "text": "kay",
+      "file": "letters/k.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.492,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "k"
+    },
+    {
+      "text": "ell",
+      "file": "letters/l.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.508,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "l"
+    },
+    {
+      "text": "em",
+      "file": "letters/m.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.522,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "m"
+    },
+    {
+      "text": "en",
+      "file": "letters/n.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.529,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "n"
+    },
+    {
+      "text": "oh",
+      "file": "letters/o.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.4,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "o"
+    },
+    {
+      "text": "pee",
+      "file": "letters/p.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.559,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "p"
+    },
+    {
+      "text": "cue",
+      "file": "letters/q.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.579,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "q"
+    },
+    {
+      "text": "are",
+      "file": "letters/r.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.448,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "r"
+    },
+    {
+      "text": "ess",
+      "file": "letters/s.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.561,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "s"
+    },
+    {
+      "text": "tee",
+      "file": "letters/t.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.555,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "t"
+    },
+    {
+      "text": "you",
+      "file": "letters/u.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.518,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "u"
+    },
+    {
+      "text": "vee",
+      "file": "letters/v.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.548,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "v"
+    },
+    {
+      "text": "double-you",
+      "file": "letters/w.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.701,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "w"
+    },
+    {
+      "text": "ex",
+      "file": "letters/x.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.568,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "x"
+    },
+    {
+      "text": "why",
+      "file": "letters/y.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.533,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "y"
+    },
+    {
+      "text": "zee",
+      "file": "letters/z.wav",
+      "kind": "letter_name",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.55,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "letter": "z"
+    },
+    {
       "text": "zero",
       "file": "numbers/0.wav",
       "kind": "number_name",
@@ -541,6 +827,114 @@
       "engine": "kokoro",
       "status": "pending_user_review",
       "digit": 9
+    },
+    {
+      "text": "The word is",
+      "file": "sight/prompt-reveal.wav",
+      "kind": "prompt",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.829,
+      "engine": "kokoro",
+      "status": "pending_user_review"
+    },
+    {
+      "text": "What is this word?",
+      "file": "sight/prompt-what.wav",
+      "kind": "prompt",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 1.077,
+      "engine": "kokoro",
+      "status": "pending_user_review"
+    },
+    {
+      "text": "a",
+      "file": "sight/a.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.365,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "a"
+    },
+    {
+      "text": "and",
+      "file": "sight/and.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.494,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "and"
+    },
+    {
+      "text": "as",
+      "file": "sight/as.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.365,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "as"
+    },
+    {
+      "text": "I",
+      "file": "sight/i.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.365,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "I"
+    },
+    {
+      "text": "is",
+      "file": "sight/is.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.515,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "is"
+    },
+    {
+      "text": "it",
+      "file": "sight/it.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.444,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "it"
+    },
+    {
+      "text": "said",
+      "file": "sight/said.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.58,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "said"
+    },
+    {
+      "text": "the",
+      "file": "sight/the.wav",
+      "kind": "sight_word",
+      "voice": "af_heart",
+      "lang_code": "a",
+      "duration_seconds": 0.454,
+      "engine": "kokoro",
+      "status": "pending_user_review",
+      "word": "the"
     }
   ]
 }

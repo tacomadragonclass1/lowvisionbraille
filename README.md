@@ -1,7 +1,7 @@
-# Low Vision Braille — trace, blend, and count
+# Low Vision Braille — trace, blend, count, and read
 
 An offline web app for low-vision students learning print letter formation,
-the braille alphabet, CVC blending, and braille numbers. Open `index.html` —
+the braille alphabet, CVC blending, braille numbers, and sight words. Open `index.html` —
 there is no build step and no network call. The dependencies are the `audio/`
 and `img/` folders next to it — **copy all three or nothing works.**
 
@@ -9,7 +9,7 @@ and `img/` folders next to it — **copy all three or nothing works.**
 
 Designed for a tablet in landscape, full screen, held in two hands.
 
-## The three activities
+## The four activities
 
 After the *Tap to start* splash, an adult picks one. There is deliberately **no
 mode button on the activity screen** — a student would hit it, and would hit it
@@ -20,8 +20,10 @@ in the middle of a word.
 | **Letters** `abc` | a–z | one cell | the letter's phoneme |
 | **Words** `cat` | — | three cells, in order | each phoneme, then the whole word |
 | **Numbers** `123` | 0–9 | two cells, in order | the number's name |
+| **Sight words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
 
-Picking **Words** then asks which short vowel to drill.
+Picking **Words** then asks which short vowel to drill; picking **Sight words**
+asks which braille convention to use.
 
 ### Letters
 
@@ -63,6 +65,53 @@ the number sign (dots 3-4-5-6) followed by the letter `a`–`j` — so the stude
 number sign first, then the digit cell, and traces the printed numeral. All
 three must be done before it advances, then the number's name is spoken.
 
+### Sight words
+
+Eight high-frequency words — **the, is, it, said, and, as, a, I** — in two
+rounds. Round 1 shows the word in print above the dots; **round 2 shows the
+dots alone** and asks for the word. Round 2 begins only once round 1 has used
+the whole list, so every word has been seen before it is tested, and after
+round 2 the section cycles back to round 1.
+
+The print word is deliberately **not** in the CVC letter boxes. A box costs a
+border and a gap on every letter, and the point of this section is lettering as
+big as the screen allows, so the word is laid out once in glyph space — the
+same centerlines the tracing guide uses — and scaled to fill the row. In the
+letter-by-letter convention the letter being answered is tinted, and finished
+letters go green, which is the vocabulary the CVC boxes use without the chrome.
+
+**The cells speak letter NAMES here, not phonemes** (`audio/letters/`, a
+separate set from the human recordings in `audio/phonemes/`). A sight word is
+recognised and spelled, never sounded out, so "ess, ay, eye, dee" is the right
+read-back for `said` and `/s/ /a/ /i/ /d/` is not.
+
+Round 2's chain is: the last cell is answered → *"What is this word?"* → **five
+seconds of silence** → *"The word is"* → the word. The silence is the activity.
+Every step waits on the clip before it ending rather than on a timer of its
+own; the five-second think is the one real timer, and it is cancelled by a trip
+to the menu like everything else.
+
+#### Which braille, and why it is asked
+
+The adult picks once, at the start of the section:
+
+| | `the` | `is` | `it` | `said` | `and` | `as` | `a` | `I` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **Letter by letter** | ⠞⠓⠑ | ⠊⠎ | ⠊⠞ | ⠎⠁⠊⠙ | ⠁⠝⠙ | ⠁⠎ | ⠁ | ⠠⠊ |
+| **UEB** | ⠮ | ⠊⠎ | ⠭ | ⠎⠙ | ⠯ | ⠵ | ⠁ | ⠠⠊ |
+
+Letter by letter is the default and is what the rest of this app teaches. UEB
+is how these words actually appear in braille text: `the` and `and` are strong
+wordsigns, `it` and `as` are the alphabetic wordsigns for `x` and `z`, and
+`said` is the shortform `s-d`. **A wordsign cell is silent** — naming "ex" over
+the single cell that means `it` would teach the wrong thing — so under UEB only
+the cells that really are that letter in the spelling speak.
+
+**`I` is capitalised in both**: a capital `I` in print, and dot 6 then `i` in
+braille. A capital is genuinely two cells, exactly as a digit is, so the
+sequencer already knew what to do with it. It is the only capital in the app
+and the only glyph in `PATHS` that is not lowercase.
+
 ## Sound
 
 | Event | Sound |
@@ -74,6 +123,9 @@ three must be done before it advances, then the number's name is spoken.
 | A braille cell completed | That letter's phoneme |
 | A CVC word completed | The whole word, spoken |
 | A number completed | The number's name, spoken |
+| A sight-word cell completed | That letter's **name** — "tee", not /t/ |
+| A sight word completed, round 1 | The whole word, spoken |
+| A sight word completed, round 2 | "What is this word?", five seconds, "The word is …" |
 | Shape touched in the minigame | A pop, then the next note of that mode's tune |
 | Every 4th completed task | Carl's music, while he dances across the screen |
 
@@ -170,6 +222,7 @@ the reward round that says which activity the student is in:
 | Letters | Mary Had a Little Lamb | E D C D E E E |
 | Numbers | Mary Had a Little Lamb | E D C D E E E |
 | Words (CVC) | Twinkle Twinkle Little Star | C C G G A A G |
+| Sight words | London Bridge Is Falling Down | G A G F E F G |
 
 Numbers shares the tracing tune because it *is* a tracing activity — a digit is
 traced exactly the way a letter is. Both phrases sit an octave above the braille
