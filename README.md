@@ -80,10 +80,34 @@ same centerlines the tracing guide uses — and scaled to fill the row. In the
 letter-by-letter convention the letter being answered is tinted, and finished
 letters go green, which is the vocabulary the CVC boxes use without the chrome.
 
-**The cells speak letter NAMES here, not phonemes** (`audio/letters/`, a
-separate set from the human recordings in `audio/phonemes/`). A sight word is
-recognised and spelled, never sounded out, so "ess, ay, eye, dee" is the right
-read-back for `said` and `/s/ /a/ /i/ /d/` is not.
+The cells are **designed** to speak letter NAMES here, not phonemes. A sight
+word is recognised and spelled, never sounded out, so "ess, ay, eye, dee" is
+the right read-back for `said` and `/s/ /a/ /i/ /d/` is not.
+
+> ### ⚠️ Letter names are MUTED — needed from an educator
+>
+> The TTS letter names were **rejected on listening** and nothing is spoken as
+> a cell is completed. `SIGHT_SPEAK_LETTER_NAMES` in `index.html` is `false`;
+> flip it to `true` the moment real recordings exist.
+>
+> **What is needed:** the spoken *name* of each letter — "tee", not /t/ — as
+> `audio/letters/<letter>.wav`. Only **eight** are actually used by this word
+> list: **t h e i s a d n**. The other 18 are only needed if the list grows.
+>
+> **Format:** mono WAV, 24 kHz, 16-bit, trimmed of leading silence and peaking
+> around 0.89, so they sit at one level with the rest of the audio.
+> `postprocess()` in `tools/generate_words.py` is what the existing clips were
+> put through, if it helps to match.
+>
+> The rejected TTS files are **kept in place, not deleted**, so a human
+> recording is a drop-in replacement at the same path and nothing else has to
+> change. They are marked `rejected_awaiting_educator_recording` in
+> `audio/manifest-tts.json`.
+>
+> Muting is safe and changes nothing else: a cell with no sound is a path the
+> sequencer already takes — it is exactly how the number sign and the capital
+> indicator behave. The dot tones still sound, the cell still advances, and the
+> word is still spoken at the end.
 
 Round 2's chain is: the last cell is answered → *"What is this word?"* → **five
 seconds of silence** → *"The word is"* → the word. The silence is the activity.
@@ -123,7 +147,7 @@ and the only glyph in `PATHS` that is not lowercase.
 | A braille cell completed | That letter's phoneme |
 | A CVC word completed | The whole word, spoken |
 | A number completed | The number's name, spoken |
-| A sight-word cell completed | That letter's **name** — "tee", not /t/ |
+| A sight-word cell completed | **Nothing — muted.** Should be that letter's *name*, "tee" not /t/; see the warning above |
 | A sight word completed, round 1 | The whole word, spoken |
 | A sight word completed, round 2 | "What is this word?", five seconds, "The word is …" |
 | Shape touched in the minigame | A pop, then the next note of that mode's tune |
@@ -172,6 +196,11 @@ file `carl.png`). It plays through plain `<audio>` rather than
   nursery tunes replaced it; the slices and the tool are kept so that round can
   be brought back without redoing the beat analysis. Nothing fetches them at
   runtime, so they cost page weight only in the repo, not in the browser.
+- `audio/letters/` — the spoken letter **names**, for the sight-word section.
+  **Rejected and unused** — see the warning above. Kept so a human recording
+  drops straight in.
+- `audio/sight/` — the eight sight words, plus the two round-2 prompts
+  ("What is this word?" and "The word is").
 - `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
   Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
   highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
@@ -245,13 +274,16 @@ change:** always left to right, always the same notes in order.
 
 ## The brain break
 
-Every **fourth completed task**, Carl dances across the screen to his own music
+Every **sixth completed task**, Carl dances across the screen to his own music
 (`audio/brainbreak/carlwin.wav`, 10.23s) and then the activity resumes by itself.
 
 A *task* is any finished piece of work — a letter, a word, a number — **and a
 reward round counts as one too**, so the break is paced off everything the student does
 rather than off letters alone. In words mode, where a reward round comes every
-second word, that works out as: word, word, shapes, word → break.
+second word, that works out as: word, word, shapes, word, word, shapes →
+break. It was every fourth task until 2026-10-14; in the modes that reward
+every second item that put a break after roughly every third word, which was
+too often in use.
 
 There is **nothing to tap and no way to get it wrong.** That is the whole
 design: it is a rest between pieces of work, not another thing to perform. The
@@ -298,7 +330,7 @@ seconds and skips the fitting entirely.
 How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
 4th number, every **2nd** word — a CVC word is three cells of work, so it earns
 a reward twice as often as a single letter. The brain break has its own
-`BRAIN_BREAK_EVERY` (4), counted in tasks rather than items.
+`BRAIN_BREAK_EVERY` (6), counted in tasks rather than items.
 
 ## Tracing
 

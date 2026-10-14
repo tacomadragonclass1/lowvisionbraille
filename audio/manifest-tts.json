@@ -1,7 +1,7 @@
 {
   "source": "local Kokoro-82M, Apache-2.0 model and voices",
   "format": "24 kHz 16-bit mono PCM WAV",
-  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.",
+  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.",
   "clips": [
     {
       "text": "bag",
@@ -440,8 +440,10 @@
       "lang_code": "a",
       "duration_seconds": 0.37,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "a"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "a",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "bee",
@@ -451,8 +453,10 @@
       "lang_code": "a",
       "duration_seconds": 0.534,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "b"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "b",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "see",
@@ -462,8 +466,10 @@
       "lang_code": "a",
       "duration_seconds": 0.55,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "c"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "c",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "dee",
@@ -473,8 +479,10 @@
       "lang_code": "a",
       "duration_seconds": 0.529,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "d"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "d",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "ee",
@@ -484,8 +492,10 @@
       "lang_code": "a",
       "duration_seconds": 0.5,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "e"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "e",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "eff",
@@ -495,8 +505,10 @@
       "lang_code": "a",
       "duration_seconds": 0.534,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "f"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "f",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "gee",
@@ -506,8 +518,10 @@
       "lang_code": "a",
       "duration_seconds": 0.532,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "g"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "g",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "aitch",
@@ -517,8 +531,10 @@
       "lang_code": "a",
       "duration_seconds": 0.491,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "h"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "h",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "eye",
@@ -528,8 +544,10 @@
       "lang_code": "a",
       "duration_seconds": 0.37,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "i"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "i",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "jay",
@@ -539,8 +557,10 @@
       "lang_code": "a",
       "duration_seconds": 0.522,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "j"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "j",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "kay",
@@ -550,8 +570,10 @@
       "lang_code": "a",
       "duration_seconds": 0.492,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "k"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "k",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "ell",
@@ -561,8 +583,10 @@
       "lang_code": "a",
       "duration_seconds": 0.508,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "l"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "l",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "em",
@@ -572,8 +596,10 @@
       "lang_code": "a",
       "duration_seconds": 0.522,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "m"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "m",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "en",
@@ -583,8 +609,10 @@
       "lang_code": "a",
       "duration_seconds": 0.529,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "n"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "n",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "oh",
@@ -594,8 +622,10 @@
       "lang_code": "a",
       "duration_seconds": 0.4,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "o"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "o",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "pee",
@@ -605,8 +635,10 @@
       "lang_code": "a",
       "duration_seconds": 0.559,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "p"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "p",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "cue",
@@ -616,8 +648,10 @@
       "lang_code": "a",
       "duration_seconds": 0.579,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "q"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "q",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "are",
@@ -627,8 +661,10 @@
       "lang_code": "a",
       "duration_seconds": 0.448,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "r"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "r",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "ess",
@@ -638,8 +674,10 @@
       "lang_code": "a",
       "duration_seconds": 0.561,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "s"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "s",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "tee",
@@ -649,8 +687,10 @@
       "lang_code": "a",
       "duration_seconds": 0.555,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "t"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "t",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "you",
@@ -660,8 +700,10 @@
       "lang_code": "a",
       "duration_seconds": 0.518,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "u"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "u",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "vee",
@@ -671,8 +713,10 @@
       "lang_code": "a",
       "duration_seconds": 0.548,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "v"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "v",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "double-you",
@@ -682,8 +726,10 @@
       "lang_code": "a",
       "duration_seconds": 0.701,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "w"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "w",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "ex",
@@ -693,8 +739,10 @@
       "lang_code": "a",
       "duration_seconds": 0.568,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "x"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "x",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "why",
@@ -704,8 +752,10 @@
       "lang_code": "a",
       "duration_seconds": 0.533,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "y"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "y",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "zee",
@@ -715,8 +765,10 @@
       "lang_code": "a",
       "duration_seconds": 0.55,
       "engine": "kokoro",
-      "status": "pending_user_review",
-      "letter": "z"
+      "status": "rejected_awaiting_educator_recording",
+      "letter": "z",
+      "in_use": false,
+      "note": "Rejected on listening. Not played by the app: SIGHT_SPEAK_LETTER_NAMES is false in index.html. Kept so a human recording is a drop-in replacement at the same path."
     },
     {
       "text": "zero",

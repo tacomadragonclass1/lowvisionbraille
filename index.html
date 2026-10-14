@@ -456,6 +456,16 @@
   // The letter NAME, not its phoneme. A sight word is recognised and spelled,
   // never sounded out, so audio/phonemes/ is wrong here by design.
   const letterNameSrc=ch=>`audio/letters/${ch}.wav`;
+  // ⚠️ MUTED ON PURPOSE - awaiting recordings from an educator.
+  // The TTS letter names in audio/letters/ were rejected on listening, so no
+  // letter name is spoken in this section at all. A cell with no sound is a
+  // path the sequencer already takes (it is how the number sign and the
+  // capital indicator behave), so muting changes nothing else: the dot tones
+  // still sound, the cell still advances, and the word is still spoken at the
+  // end. Flip this back to true once real recordings land in audio/letters/.
+  // The files are kept rather than deleted so a replacement is a drop-in.
+  const SIGHT_SPEAK_LETTER_NAMES = false;
+  const sightLetterSound=ch=>SIGHT_SPEAK_LETTER_NAMES ? letterNameSrc(ch) : null;
   // The word "I" lives at sight/i.wav: a filename differing from another only
   // by case is a trap on a case-insensitive checkout.
   const sightSrc=w=>`audio/sight/${w.toLowerCase()}.wav`;
@@ -888,14 +898,14 @@
   function sightCells(w) {
     if (sightConvention==='ueb') {
       return SIGHT_UEB[w].map(spec=>spec.name
-        ? { char:spec.name, required:BRAILLE[spec.name], sound:letterNameSrc(spec.name) }
+        ? { char:spec.name, required:BRAILLE[spec.name], sound:sightLetterSound(spec.name) }
         : { char:'', required:spec.dots, sound:null });
     }
     const out=[];
     [...w].forEach((ch,i)=>{
       const lower=ch.toLowerCase();
       if (ch!==lower) out.push({ char:'', required:CAPITAL_SIGN, sound:null, letter:i });
-      out.push({ char:lower, required:BRAILLE[lower], sound:letterNameSrc(lower), letter:i });
+      out.push({ char:lower, required:BRAILLE[lower], sound:sightLetterSound(lower), letter:i });
     });
     return out;
   }
@@ -1370,7 +1380,9 @@
   // How many completed TASKS earn a brain break. A task is any finished piece
   // of work, and a reward round counts as one of them - so the break is paced
   // off everything the student does, not off letters alone.
-  const BRAIN_BREAK_EVERY = 4;
+  // Was 4 until 2026-10-14. At 4 the break landed roughly every third word in
+  // the modes that reward every second item, which read as too often in use.
+  const BRAIN_BREAK_EVERY = 6;
 
   function taskDone(then) {
     tasksDone++;
