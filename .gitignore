@@ -1,1 +1,5 @@
 __pycache__/
+
+# Local backup of the pre-Chatterbox Kokoro sight clips. Kept on disk for
+# rollback, deliberately NOT shipped -- the app never loads them.
+audio/.sight-kokoro-backup-*/

@@ -254,6 +254,14 @@
      is the point of round 2, not a side effect: with no print to read, the
      cell is the only thing on the display. */
   body.mode-sight.round2 #app { grid-template-rows:100%; }
+  /* While the round-2 question is still speaking the dots are genuinely inert
+     (the JS gate is the authority; this blocks the pointer too). A low-vision
+     student tapping a control that silently does nothing has no way to tell
+     "not yet" from "broken", so the cells also recede slightly -- the same
+     language the inactive-cell styling already uses. The container opacity is
+     enough on its own -- the active cell is marked with transform/opacity, not
+     a shadow, so there is nothing else to neutralise. */
+  body.asking #braille { opacity:.45; pointer-events:none; transition:opacity .18s ease; }
   body.mode-sight.round2 #braille { grid-row:1; grid-column:1; padding:2vh 3vw; }
   /* Sight-word dots are sized off the space they actually have rather than off
      the shared cells-N ceilings, because this section's two rounds give the
@@ -445,7 +453,15 @@
     // A missing or undecodable file must never strand the student mid-word, so the
     // continuation is also armed on a timer and on the error path.
     const finish=()=>{ if (fired) return; fired=true; a.removeEventListener('ended',finish); onEnd&&onEnd(); };
-    if (onEnd) { a.addEventListener('ended',finish); setTimeout(finish,2600); }
+    if (onEnd) {
+      a.addEventListener('ended',finish);
+      // The fallback has to outlast the clip, or it pre-empts the real 'ended'
+      // event. A flat 2600 did exactly that: prompt-what.wav is 2.68 s. Use the
+      // real duration once metadata is in, and keep 2600 as the floor for the
+      // case where it never loads (missing/undecodable file).
+      const dur = Number.isFinite(a.duration) && a.duration>0 ? a.duration*1000+400 : 0;
+      setTimeout(finish, Math.max(2600, dur));
+    }
     const played=a.play();
     if (played && played.catch) played.catch(finish);
     return a;
@@ -973,7 +989,23 @@
       else { sightWordEl.textContent=''; sightGroups=[]; }
       buildCells(sightCells(item));
       clip(sightSrc(item));
-      if (sightRound===2) { clip(SIGHT_ASK); clip(SIGHT_REVEAL); }
+      // Round 2 asks UP FRONT: the question has to come before the student
+      // answers in braille, not after it. REVEAL is only warmed here - it
+      // plays once the dots are in. Round 2 never lands on the first card of
+      // a session (start() sets sightRound=1), so a gesture has always
+      // happened by now and this is allowed to autoplay.
+      // Warm BOTH prompts in BOTH rounds. playClip's fallback timer needs a
+      // real duration, and that is only known once the element has loaded its
+      // metadata -- so warming only in round 2 left the very first round-2
+      // card falling back to the 2600 ms floor and opening the gate ~80 ms
+      // early, which is the bug the gate exists to prevent. Round 1 runs the
+      // whole list first, so by round 2 both durations are known.
+      clip(SIGHT_ASK); clip(SIGHT_REVEAL);
+      if (sightRound===2) {
+        const myRun=runId;
+        setInputLocked(true);
+        playClip(SIGHT_ASK,()=>{ if (myRun===runId) setInputLocked(false); });
+      } else setInputLocked(false);
     } else if (mode==='numbers') {
       word=null;
       glyph=item;
@@ -1120,6 +1152,9 @@
     if (!d) return;
     ev.preventDefault();
     if (advancing) return;
+    // The question has to finish before the answer is possible: on a one-cell
+    // word a quick student could otherwise beat the prompt and cut it off.
+    if (inputLocked) return;
     const cell=cells[activeCell];
     // Dots in a backgrounded cell are inert, not merely silent. If the student could
     // answer the third cell while the first is live, the sequence would stop
@@ -1389,12 +1424,22 @@
     if (tasksDone%BRAIN_BREAK_EVERY===0) startBrainBreak(then); else then();
   }
 
-  // How long the student gets to think before round 2 answers itself. The one
-  // real timer in this chain - every other step waits on the clip before it
-  // ending, because a fixed timer cut the CVC blend off part-way through once
-  // already. It is runId-guarded like the rest, so a trip to the menu during
-  // the silence cannot let the answer fire behind the chooser.
-  const SIGHT_THINK_MS = 5000;
+  // There used to be a SIGHT_THINK_MS = 5000 pause here: round 2 asked the
+  // question and then answered itself after five seconds of silence. The ask
+  // now happens when the card is presented and the braille dots are the
+  // answer, so the student sets the pace and the timer is gone. The rule it
+  // was written under still stands for everything else in this chain: wait on
+  // the clip before you, never on a fixed timer, because a fixed timer cut
+  // the CVC blend off part-way through once already.
+
+  // True while a prompt is speaking and the dots must not accept input yet.
+  // Set only by the round-2 ask; cleared when that clip ends, when the clip
+  // fails, and on every runId change (menu trip) so it can never stick.
+  let inputLocked=false;
+  function setInputLocked(v) {
+    inputLocked=v;
+    document.body.classList.toggle('asking',v);
+  }
 
   function sightReveal(myRun,done) {
     const alive=()=>myRun===runId;
@@ -1403,10 +1448,10 @@
     // blend has, so it lands as "t... h... e... THE" rather than running
     // the letters straight into the word.
     if (sightRound===1) { setTimeout(sayWord,700); return; }
-    // Round 2: ask, wait in silence, then answer.
-    const reveal=()=>{ if (alive()) playClip(SIGHT_REVEAL,sayWord); };
-    const think=()=>{ if (alive()) setTimeout(reveal,SIGHT_THINK_MS); };
-    playClip(SIGHT_ASK,think);
+    // Round 2: the question was asked when the card came up, and the dots ARE
+    // the answer - so once they are in, confirm immediately. Same 700 ms beat
+    // as round 1 so the two rounds feel alike.
+    setTimeout(()=>{ if (alive()) playClip(SIGHT_REVEAL,sayWord); },700);
   }
 
   function checkCompletion() {
@@ -1569,6 +1614,7 @@
 
   function start(picked,vowel,convention) {
     runId++;
+    setInputLocked(false);
     mode=picked; cvcVowel=vowel;
     sightConvention = convention==='ueb' ? 'ueb' : 'grapheme';
     sightRound=1;
@@ -1610,6 +1656,7 @@
   function goHome() {
     disarmHome();
     runId++;
+    setInputLocked(false);
     advancing=false;
     brushOff();
     stopDrawing();
