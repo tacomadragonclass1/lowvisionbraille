@@ -21,7 +21,7 @@ in the middle of a word.
 | **CVC** `cat` | — | three cells, in order | each phoneme, then the whole word |
 | **Numbers** `123` | 0–9 | two cells, in order | the number's name |
 | **High Frequency Words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
-| **Rhythm** `●■` | — | — | announces the turn, then plays a beat |
+| **Rhythm** `●■` | — | — | plays a beat; the student plays it back |
 
 Every letter sample on a menu card is **drawn from `PATHS`, not set in a font**
 — `glyphWord()` — for the same reason the CVC boxes and the sight word are:
@@ -33,7 +33,7 @@ note.
 
 **Rhythm is the odd one out** and is deliberately kept that way: no braille, no
 print, no items, nothing scored. It owns the whole screen until the adult takes
-it back with the ⌂. It is under development — see *The beat game* — and it is
+it back with the ⌂. It is under development — see *The rhythm section* — and it is
 **not** in the brain-break rotation today, though it can still run as one.
 
 Picking **CVC** then asks which short vowel to drill; picking **High Frequency
@@ -165,10 +165,10 @@ and the only glyph in `PATHS` that is not lowercase.
 | A sight word completed, round 1 | The whole word, spoken |
 | A sight word completed, round 2 | "What is this word?", five seconds, "The word is …" |
 | Shape touched in the minigame | A pop, then the next note of that mode's tune |
-| Every 6th completed task | A brain break: Carl's dance, or the beat game |
-| BOOM touched in the beat game | A kick drum |
-| CLAP touched in the beat game | A snare |
-| The beat game's backing | A tick on every eighth, accented on the downbeat, a shaker between |
+| Every 6th completed task | A brain break: Carl's dance |
+| BOOM touched in the Rhythm section | A kick drum |
+| CLAP touched in the Rhythm section | A clap |
+| The Rhythm section's backing | Hi-hats on every eighth and a bass line — no kick or clap, those are the student's |
 
 The brush follows the **finger**, not the gesture: wander off the guide and it
 drops out, come back and it returns, with no restart gap. It is pink noise
@@ -294,7 +294,7 @@ change:** always left to right, always the same notes in order.
 Every **sixth completed task** the activity pauses for a break. Today that is
 always Carl's dance.
 
-The beat game was built as a second break and then **promoted out of the
+The rhythm section was built as a second break and then **promoted out of the
 rotation on 2026-10-20** to its own menu section, so it can be developed as
 something you practise rather than something that interrupts you. Its break
 form still works and is still tested — one set, then it hands back — and
@@ -365,174 +365,150 @@ How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
 a reward twice as often as a single letter. The brain break has its own
 `BRAIN_BREAK_EVERY` (6), counted in tasks rather than items.
 
-## The beat game
+## The rhythm section
 
-**Its own activity, picked from the menu — under development.** The band plays
-a beat, then the student has a turn on two enormous targets, and it runs set
-after set until the adult walks out with the ⌂. The turns change length as it
-goes.
-
-It has a second shape: run as a **brain break** it plays exactly one set and
-hands back to the braille work. That form is built and tested but is not in the
-rotation — put `'rhythm'` in `breakRotation` to use it, once this has been
-dialled in by ear. `startRhythmActivity()` and `startRhythmBreak()` are the two
-entry points; everything below is common to both.
-
-**BOOM is the circle on the left and plays a kick. CLAP is the square on the
-right and plays a snare.** Those three facts — shape, side, sound — never
-change, in either orientation. A student who cannot see the screen well learns
-where the targets are by position and keeps that knowledge; moving them, or
-swapping which is which, would throw away the only spatial fact the activity
-teaches. **Do not make them responsive in a way that reorders them.**
-
-### Nothing is scored, and that is the design
-
-What the student plays is **not measured, not judged and not spoken about.**
-There is no timing window, no accuracy, no mastery gate, no "a bit early", no
-retry, no failure. If he gets it he gets it; if he does not, the break ends
-anyway and the next one comes round. **The only coaching is visual:** the
-circle and the square light up on the beat they belong to.
-
-The targets are an **instrument**, and that is the whole of it. They sound and
-flash on every touch — during the band's turn, during the talking, during a
-rest. A target that went dead outside some "scored" window would read as
-broken.
-
-> A fully scored version of this existed — ±225 ms windows, 75% mastery gates,
-> five levels, early/late feedback — and was **removed on purpose on
-> 2026-10-19**. It turned a rest between pieces of work into another thing to
-> perform. Do not add accuracy back in without asking. If a measured version is
-> ever wanted it belongs in its own app, not in the break. The removed design
-> is in the git history of this file if it is ever needed.
-
-### A break
-
-The pulse runs continuously from the first measure to the last. Speech lands in
-*reserved measures on the same grid*, with the ticks going underneath it, so
-the student never loses the beat between the band's turn and his own. The only
-thing that stops the pulse is the end of the break.
-
-A **set** is two turns (`RHYTHM_TURNS_PER_SET`). As a break, one set *is* the
-whole thing. As the activity, the scheduler lays down the next set while the
-current one still has four measures to run, so the pulse carries straight
-through the seam and there is no gap to hear. Each turn is:
-
-| | |
-| --- | --- |
-| an announcement | *"Let's do it for two measures, like this."* |
-| **the band** | up to two measures of BOOM CLAP BOOM CLAP |
-| | *"Your turn!"* |
-| **count-in** | one measure, every beat accented — four even clicks needs no words |
-| **the student** | one to four measures. Whatever he plays, the break moves on |
-
-The **first set a student ever gets** is a scripted ramp — one measure, then
-two — so the shape of the game is taught by doing it, and the first turn needs
-no announcement because *"Okay, let's make a beat!"* has just made it. Every
-set after that draws its lengths at random from 1–4, **never the same length
-twice running, across the seam between sets as well as inside one.** That
-cross-seam case only started mattering when sets began chaining, and it is
-easy to miss: a guard that only looked inside a set would still announce "four
-measures" twice in a row.
+**Simon says, with a drum kit — under development.** The band plays one
+measure, the student plays it back, and getting it right moves them on to a
+new one. It runs until the adult walks out with the ⌂.
 
 ```
-activity:  intro → where → yourturn → len2 → yourturn → len4 → yourturn → …
-                                                          (until the ⌂)
-as a break: intro → where → yourturn → len2 → yourturn → bye        (48s)
-            intro → len3  → yourturn → len1 → yourturn → bye
+band's measure     targets GREYED OUT, shapes light on their beat
+student's measure  targets live, NO lights - that is the whole test
+got it             the next pattern in the list
+did not            the same pattern demonstrated again
 ```
 
-As a break it runs 44–60 s. The band never demonstrates for more than
-`RHYTHM_DEMO_MAX` (2) measures however long the turn is — the beat is one
-measure, so two of them is a complete demonstration, and it stops a
-four-measure turn from costing eight.
+**BOOM is the circle on the left and plays the kick. CLAP is the square on the
+right and plays the clap.** Shape, side and sound never change, in either
+orientation. A student who cannot see the screen well learns where the targets
+are by position and keeps that knowledge; **do not make them responsive in a
+way that reorders them.**
 
-A long activity session would otherwise grow its own script forever, so
-sections that have been fully scheduled and played are pruned;
-`rhythmSectionAt()` walks that list on every eighth note. Measured over seven
-minutes of continuous play: 140 measures, section list bounded.
+### No speech at all
 
-### The eight spoken lines
+Not an intro, not praise, not correction, not a spoken count-in. Everything the
+student needs is carried by the groove, the lights and the lock. An earlier
+version talked constantly — announcing, encouraging, correcting — and it was
+the first thing that had to go: 23–28% of the activity was the tablet talking.
 
-All eight are **announcements of what is about to happen** — never how the
-student did. `intro`, `where`, `len1`–`len4`, `yourturn`, `bye`. That is the
-whole vocabulary.
+The eight clips in `audio/rhythm/` are therefore **unused**. They are kept
+rather than deleted, exactly as `audio/treat/` and `audio/letters/` are, so the
+spoken version can be restored without re-rendering. Nothing fetches them, so
+they cost repo weight only, not page weight.
 
-`where` ("Boom is the circle on the left. Clap is the square on the right.") is
-said **once per session**, on the very first break, keyed off the break count
-rather than a flag of its own — a second flag could disagree with the count,
-and there is no state in which it should.
+### What is judged, and what is not
 
-**Clip length is load-bearing.** Each line is given whole measures of backing to
-itself and starting the next clip stops the one before it, so a line longer
-than its room is cut off mid-sentence — which is silent, invisible in the code,
-and only audible. `bars` in `RHYTHM_SAY` carries the measured durations;
-`rhythmBars()` widens a gap on its own once a clip's real duration has loaded,
-so a longer re-record self-corrects from the second break onwards, and `bars`
-is what gets the *first* one right. `where.wav` (4.43 s) is the only line
-needing two.
+**Only which shape lands in which slot.** The measure is cut into equal slots
+and a tap belongs to the nearest one, so the tolerance is half a slot either
+side — about 357 ms at quarter notes, 178 ms at eighths. A measure passes only
+if every slot holds exactly what was asked and nothing else was played.
 
-### The beat
+There is deliberately **no early/late reading, no accuracy percentage and
+nothing said about timing.** A learner needs the order before they need the
+microseconds. An earlier version had ±225 ms windows, 75% mastery gates and
+spoken "a bit early" feedback; it was removed on purpose.
 
-One measure of slot tokens in `RHYTHM_BEAT`, repeated. `div` is slots per beat,
-so `slots.length` must be `RHYTHM_METER * div` — checked at load and warned to
-the console, because it is the one mistake a new pattern can make that sounds
-plausible but is musically wrong rather than obviously broken.
+Getting it right plays a short rising figure (`RHYTHM_SUCCESS_CHIME`) and moves
+on. Getting it wrong does nothing at all except demonstrate the pattern again —
+there is no failure state, no streak and no interruption to the groove.
 
-| token | means |
-| --- | --- |
-| `B` | BOOM |
-| `C` | CLAP |
-| `-` | a rest — nothing sounds |
-| `b` / `c` | the band plays it and the student is not meant to |
+### The lock
 
-The current beat is `B C B C` and uses none of the lowercase or rest tokens.
-They are supported by the player anyway, at a cost of about six lines, because
-they are what a harder beat would be built from.
+While the band demonstrates, both targets go **grey, flat and slightly
+smaller**, and the buttons are genuinely `disabled`. Three changes at once,
+because a low-vision student may only catch one of them, and a real gate rather
+than a hint — a student drumming along with the demonstration must not be able
+to spend their turn by accident.
+
+A cue still reads **through** the lock: `#rhythmBoom.locked.cue` outranks
+`.locked` by being written after it, so the shape being demonstrated lights
+white while its neighbour stays dark. That is the demonstration.
+
+### The patterns
+
+Fifteen, one measure each, in a drummer's order rather than a programmer's: the
+backbeat first, then the kick variations a beginner actually meets, then the
+eighth-note placements that make a groove swing. `'B'` is BOOM, `'C'` is CLAP,
+`'-'` is nothing. `div` is slots per beat, so `slots.length` must be
+`RHYTHM_METER * div` — checked at load and warned to the console, because it is
+the one mistake a new pattern can make that sounds plausible but is wrong.
+
+The first is the one he is taught by being shown: `B C B C`. Everything after
+is a variation, and **nothing is ever longer than a measure.**
+
+### The backing track
+
+Hats and a bass line, every measure, underneath everything **including the
+student's own turn** — a groove that stopped for their turn would take the
+pulse with it at exactly the moment they need it.
+
+**Neither the kick nor the clap appears in the backing, on purpose.** Those two
+sounds belong to the student, and a backing that used them would make it
+impossible to hear whose note was whose.
+
+The kit is synthesised, and the first version of it sounded like a test tone.
+What changed:
+
+| | before | now |
+| --- | --- | --- |
+| hat | white noise through a highpass — reads as hiss | six square waves at inharmonic ratios, the analog recipe — reads as metal |
+| clap | one noise burst plus a tone | **four** bursts 9 ms apart with a longer tail, which is what a room full of hands actually is |
+| kick | sine sweep | sine sweep **plus** a 90 Hz thump, because a tablet speaker reproduces almost nothing below ~150 Hz, through a `tanh` stage so the transient rounds instead of clipping |
+| — | nothing else | a **bass line**, which is what makes it a track rather than a metronome |
+| — | dry | a short convolution plate, fed by the hats and clap only |
+| — | identical every bar | per-hit velocity wander |
+
+The bass sits at A2/C3/G2 — an octave above where a bass normally would — so it
+never fights the kick for the same few hertz.
+
+**Levels were set by measurement, not by ear-guessing in code.** Rendering each
+voice through an `OfflineAudioContext` found two things that reading the gain
+values would not: the kick peaked at **1.046 and clipped**, because its beater
+click connected straight to the bus and so summed *on top of* the waveshaper's
+ceiling instead of under it; and the clap sat **17 dB under the kick**, which on
+a tablet speaker meant the backbeat simply disappeared. Both are fixed, and the
+balance now runs clap −3.4 dB, bass −6.1 dB, hats −12.7 dB under the kick, with
+the summed groove peaking at 0.97. `RHYTHM_LEVEL` exists because a downbeat
+with kick, bass and an accented hat together still summed past 1.0, and a
+limiter catching every downbeat is how a mix starts breathing.
 
 ### Timing
 
 **The audio clock is the only clock.** Everything musical is scheduled on the
 `AudioContext` clock and nothing musical waits on `setTimeout`. A scheduler
-queues the next 1.2 s of audio ahead of the playhead, so the beat is
-sample-accurate while the main thread is busy laying out a flash. Visual cues
-fire from a rAF loop that compares against what is **currently being heard**
+queues the next 1.2 s ahead of the playhead, so the beat stays sample-accurate
+while the main thread lays out a flash. Visual cues fire from a rAF loop
+comparing against what is **currently being heard**
 (`getOutputTimestamp().contextTime`, which already carries the output latency
-that `currentTime` does not), so a pulse lands with its sound rather than with
-its scheduling.
+`currentTime` does not), and tap times come from that same clock. Animation
+timing is never consulted for anything judged.
 
 The 1.2 s lookahead against a 60 ms interval is twenty times the headroom it
-looks like it needs, on purpose: a browser is free to throttle both
-`setTimeout` *and* `requestAnimationFrame` to one call a second, and measured, a
-remote-debugged tab does exactly that. Queueing further ahead costs nothing — a
-teardown mutes the whole bus in one move, so audio already scheduled is never
-heard.
+looks like it needs, on purpose: a browser may throttle both `setTimeout` *and*
+`requestAnimationFrame` to one call a second, and measured, a remote-debugged
+tab does exactly that.
 
 ### Tuning dials
 
 | What | Where |
 | --- | --- |
-| The beat itself | `RHYTHM_BEAT` |
 | Tempo, meter | `RHYTHM_BPM`, `RHYTHM_METER` |
-| Turns per set | `RHYTHM_TURNS_PER_SET` |
-| The scripted first set | `RHYTHM_FIRST_SET` |
-| Turn lengths drawn after that | `RHYTHM_LENGTHS` |
-| Longest demonstration | `RHYTHM_DEMO_MAX` |
-| Count-in length | `RHYTHM_COUNT_IN` |
-| Light the shape on the student's turn | `RHYTHM_PRACTICE_GUIDE` |
+| The patterns | `RHYTHM_PATTERNS` |
+| The groove | `RHYTHM_HATS`, `RHYTHM_BASSLINE` |
+| Overall kit level | `RHYTHM_LEVEL` |
+| Timing tolerance | `RHYTHM_SLOT_SLOP` |
+| Chime on success | `RHYTHM_SUCCESS_CHIME` |
+| Call-and-responses per brain break | `RHYTHM_BREAK_TASKS` |
 | Which break activity runs | `breakRotation` |
 
 ### Options
 
-- `?mode=rhythm` opens the Rhythm section straight off the splash, skipping the
-  menu.
-- `?rhythm=1` previews the **brain-break** shape instead — one set, then it
-  hands back to the menu by itself.
-- `?rbreak=later` skips the scripted opening and goes straight to the random
-  lengths.
-- `?break=carl` / `?break=rhythm` pins the session to one break activity.
-- **Arrow keys**, or `Z` and `M`, play BOOM and CLAP. That is how an adult
-  checks the game on a laptop, and it is the path a student on a switch or a
-  keyboard takes.
+- `?mode=rhythm` opens it straight off the splash.
+- `?rtask=9` starts partway down the pattern list (1-based, as the banner counts).
+- `?rhythm=1` previews the **brain-break** shape — a few call-and-responses,
+  then it hands back to the menu. That form is not in the rotation; put
+  `'rhythm'` in `breakRotation` to use it.
+- **Arrow keys**, or `Z` and `M`, play BOOM and CLAP.
 
 ### Tests
 
@@ -540,32 +516,29 @@ heard.
 node tools/rhythm-tests/run.mjs
 ```
 
-39 assertions, no framework and no install step — node alone runs them, because
-a dependency that has to be installed is a dependency that will not be
-installed. **The module under test is sliced out of `index.html` at run time**
-and executed against a virtual clock with the DOM and Web Audio stubbed, so
-what is tested is the shipped code. The central test is that **a student who
-hammers both targets throughout gets a byte-identical break** to one who never
-touches them — same script, same length, same measures. That is the design,
-stated as an assertion. The activity is driven for seven virtual minutes to
-check it never ends on its own, never repeats the intro, and keeps its section
-list bounded.
+52 assertions, no framework and no install step. **The module is sliced out of
+`index.html` at run time** and run against a virtual clock, so there is no
+second copy of the judge to drift out of step. A simulated student who plays
+each pattern back advances through the list; one who does nothing, and one who
+mashes, pass nothing and stay on pattern 1. Taps during the lock are proven to
+be discarded, not banked.
 
-A browser cannot test this: a remote-controlled tab throttles
-`requestAnimationFrame` to one frame a second (measured), so anything
-time-sensitive is meaningless there. The browser is still the right place to
-check layout, stacking and teardown — just not timing.
+A browser cannot test the timing — a remote-controlled tab throttles
+`requestAnimationFrame` to one frame a second — but it is the right place for
+layout, the lock's appearance, teardown, and rendering the kit offline to
+measure it.
 
 ### Known limitations
 
-- **The spoken lines have not been signed off by ear.** They are generated,
-  normalized and in place, marked `generated_2026-10-19_awaiting_listen` in
-  `audio/manifest-tts.json`.
-- **One beat.** Rests, syncopation and "hold the clap" were built and removed
-  along with the scoring; the tokens that express them survive.
-- **No haptics.** A vibration on each beat would be a real addition for this
-  student; `navigator.vibrate` is unavailable on iOS Safari, which is why it is
-  not there.
+- **Nobody has listened to this on the classroom tablet yet.** The levels are
+  measured, not auditioned, and small speakers are exactly where a kick/clap
+  balance goes wrong.
+- **No swing.** Straight eighths throughout; a shuffle would feel better on
+  some of these patterns but would complicate the slot grid the judge uses.
+- **One tempo.** 84 bpm for every pattern, including the eighth-note ones,
+  which are the hardest.
+- **No haptics.** A buzz on each beat would be a real addition for this
+  student; `navigator.vibrate` is unavailable on iOS Safari.
 
 ## Tracing
 
@@ -583,9 +556,10 @@ school-print writing order.
 - `?mode=letters` / `?mode=words` / `?mode=numbers` — bookmark straight past the
   activity menu. `?mode=words&vowel=i` locks one vowel family.
 - `?letter=k` — lock to a single letter for targeted practice.
-- `?rhythm=1` opens the beat game (a brain break) straight off the splash;
-  `?rbreak=later` skips its scripted opening; `?break=carl` / `?break=rhythm`
-  pins which break activity the session uses. See *The beat game*.
+- `?mode=rhythm` opens the Rhythm section; `?rtask=N` starts partway down its
+  pattern list; `?rhythm=1` previews its brain-break shape; `?break=carl` /
+  `?break=rhythm` pins which break activity the session uses. See *The rhythm
+  section*.
 - The *Full screen* button hides browser chrome.
 - The `⌂` at the top **left** returns to the activity menu on a **double tap**.
   The **first** tap lights the button up and nothing else happens; a second tap
@@ -621,4 +595,4 @@ eye or ear:
 | Print letter size in its box | `--boxSize` on `#boxes` |
 | Which break activity runs | `breakRotation` |
 
-The beat game has its own table of dials — see *The beat game · Tuning dials*.
+The Rhythm section has its own table of dials — see *The rhythm section · Tuning dials*.

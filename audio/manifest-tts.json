@@ -1,7 +1,7 @@
 {
   "source": "Mixed. audio/sight/, audio/words/ and audio/numbers/ = local Chatterbox TTS (chatterbox-turbo), 'carlvoice' voice clone, seed 898, temperature 0.8, level-matched with tools/normalize_external_clips.py. audio/rhythm/ = local Chatterbox TTS, same 'carlvoice' clone, seed and temperature as the rest. audio/letters/ = local Kokoro-82M and MUTED by design. audio/phonemes/ = human recordings.",
   "format": "24 kHz 16-bit mono PCM WAV",
-  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.  2026-10-17: the ENTIRE sight-word section (8 words + 2 prompts) was re-recorded in Chatterbox with the 'carlvoice' clone because the Kokoro reads were rejected. Originals backed up at audio/.sight-kokoro-backup-20261017/.  2026-10-17: the 39 CVC words were re-recorded in Chatterbox too, same clone and seed as the sight words. Originals at audio/.words-kokoro-backup-20261017/. NOTE: this server runs chatterbox-turbo, which IGNORES exaggeration and cfg_weight - only temperature, seed and the reference audio affect the output.  2026-10-17: the 10 number names were re-recorded in Chatterbox as well. ⛔ audio/numbers/ files are named by DIGIT (8.wav) but SAY the word ('eight') - generate from the manifest text, never from the filename. Originals at audio/.numbers-kokoro-backup-20261017/.  2026-10-19: audio/rhythm/ holds the EIGHT spoken lines of the rhythm brain break - Chatterbox 'carlvoice' clone, seed 898, temperature 0.8, normalized with tools/normalize_external_clips.py to the same -1.0 dB peak as everything else. GENERATED BUT NOT YET SIGNED OFF BY EAR. All eight are ANNOUNCEMENTS of what is about to happen; the game scores nothing and says nothing about how the student played, so there are deliberately no praise, correction or timing lines. An earlier scored version had fifteen clips including nice/again/early/late/listen - those were deleted with the scoring. 'cha' became 'clap' throughout because Chatterbox mispronounced it. The DURATIONS are load-bearing: each line is given whole measures of the backing to itself and starting the next clip stops the one before it, so a longer re-record needs its `bars` raised in RHYTHM_SAY (index.html); where.wav at 4.43 s is the only one that needs two.",
+  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.  2026-10-17: the ENTIRE sight-word section (8 words + 2 prompts) was re-recorded in Chatterbox with the 'carlvoice' clone because the Kokoro reads were rejected. Originals backed up at audio/.sight-kokoro-backup-20261017/.  2026-10-17: the 39 CVC words were re-recorded in Chatterbox too, same clone and seed as the sight words. Originals at audio/.words-kokoro-backup-20261017/. NOTE: this server runs chatterbox-turbo, which IGNORES exaggeration and cfg_weight - only temperature, seed and the reference audio affect the output.  2026-10-17: the 10 number names were re-recorded in Chatterbox as well. ⛔ audio/numbers/ files are named by DIGIT (8.wav) but SAY the word ('eight') - generate from the manifest text, never from the filename. Originals at audio/.numbers-kokoro-backup-20261017/.  2026-10-19: audio/rhythm/ holds the EIGHT spoken lines of the rhythm brain break - Chatterbox 'carlvoice' clone, seed 898, temperature 0.8, normalized with tools/normalize_external_clips.py to the same -1.0 dB peak as everything else. GENERATED BUT NOT YET SIGNED OFF BY EAR. All eight are ANNOUNCEMENTS of what is about to happen; the game scores nothing and says nothing about how the student played, so there are deliberately no praise, correction or timing lines. An earlier scored version had fifteen clips including nice/again/early/late/listen - those were deleted with the scoring. 'cha' became 'clap' throughout because Chatterbox mispronounced it. The DURATIONS are load-bearing: each line is given whole measures of the backing to itself and starting the next clip stops the one before it, so a longer re-record needs its `bars` raised in RHYTHM_SAY (index.html); where.wav at 4.43 s is the only one that needs two.  2026-10-20: the rhythm section was rebuilt as simon-says and ALL SPEECH WAS REMOVED - the groove, the lights and the greyed-out targets carry it instead. The eight clips in audio/rhythm/ are now UNUSED. They are kept rather than deleted, the same way audio/treat/ and audio/letters/ are, so the spoken version can be restored without re-rendering; nothing fetches them at runtime, so they cost repo weight only, not page weight. If speech is ever wanted again, note that len1-len4 were written for a design where a turn could be 1-4 measures long, and every task is one measure now.",
   "clips": [
     {
       "text": "bag",
@@ -936,7 +936,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 1.829,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Boom is the circle on the left. Clap is the square on the right.",
@@ -945,7 +945,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 4.43,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Let's do one measure, like this.",
@@ -954,7 +954,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 2.337,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Let's do it for two measures, like this.",
@@ -963,7 +963,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 2.734,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Let's do it for three measures, like this.",
@@ -972,7 +972,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 2.725,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Let's do it for four measures, like this.",
@@ -981,7 +981,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 2.178,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Your turn!",
@@ -990,7 +990,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 0.91,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     },
     {
       "text": "Great beat. Back to work!",
@@ -999,7 +999,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 1.809,
       "engine": "chatterbox",
-      "status": "generated_2026-10-19_awaiting_listen"
+      "status": "UNUSED_2026-10-20_rhythm_section_has_no_speech"
     }
   ]
 }

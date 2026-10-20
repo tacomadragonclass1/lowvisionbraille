@@ -424,20 +424,26 @@
   #rhythmBoom.cue, #rhythmClap.cue {
     border-color:#fff; background:#2e2e2e; transform:scale(1.07);
   }
-  /* "That one was the band, not you." The opposite move from .cue - it shrinks
-     and goes dashed instead of growing and going solid - so a held CLAP is
-     distinguishable from a cued CLAP by shape of motion, not by colour. */
-  #rhythmBoom.cueband, #rhythmClap.cueband {
-    border-color:#6a6a6a; border-style:dashed; transform:scale(.93);
+  /* GREYED OUT while the band demonstrates. This is the "hands off" signal and
+     it has to read instantly and without colour: the whole target dims, the
+     ring goes flat grey and it shrinks slightly - three changes at once,
+     because a low-vision student may only catch one of them. The JS disables
+     the buttons as well; this is the visible half of a real gate. */
+  #rhythmBoom.locked, #rhythmClap.locked {
+    border-color:#3a3a3a; background:#070707; color:#4a4a4a;
+    transform:scale(.95); opacity:.55;
   }
   /* The student's own tap. Fires on every tap, always: the targets are an
      instrument and nothing about them is ever measured. */
   #rhythmBoom.hit, #rhythmClap.hit {
     border-color:#30d158; background:#13361f; transform:scale(.9);
   }
-  /* Unused by the current beat, kept for one that uses the lowercase tokens:
-     a shape the band plays and the student is not meant to. */
-  #rhythmBoom.hold, #rhythmClap.hold { border-style:dashed; opacity:.45; }
+  /* A cue must still read while the targets are locked - that IS the
+     demonstration - so it outranks .locked by being written after it. */
+  #rhythmBoom.locked.cue, #rhythmClap.locked.cue {
+    border-color:#fff; background:#2e2e2e; color:#fff;
+    transform:scale(1.04); opacity:1;
+  }
 </style>
 </head>
 <body>
@@ -1599,175 +1605,159 @@
   }
 
   // ========================================================= rhythm section ===
-  // A beat to play along to. It is its OWN activity, picked from the menu
-  // alongside Letters, Words, Numbers and Sight words, and it runs until the
-  // adult walks out with the ⌂ - set after set, the music never stopping.
+  // Simon says, with a drum kit. The band plays one measure, the student plays
+  // it back, and getting it right moves them on to a new one.
   //
-  // It can ALSO run as a brain break, in which case it plays exactly one set
-  // and hands back to the braille work. That form is built and tested but is
-  // NOT in the break rotation - see pickBreak() at the bottom of this section.
-  // It goes back in by adding 'rhythm' to breakRotation, once the activity has
-  // been dialled in by ear.
+  //   band's measure   targets GREYED OUT, shapes light on their beat
+  //   student's measure targets live, NO lights - that is the whole test
+  //   got it     -> the next pattern in the list
+  //   did not    -> the same pattern demonstrated again
   //
-  // THE SHAPE OF IT
-  //   Two enormous targets. BOOM is the circle on the left and plays a kick;
-  //   CLAP is the square on the right and plays a snare. Those three facts -
-  //   shape, side, sound - never change.
+  // BOOM is the circle on the left and plays the kick; CLAP is the square on
+  // the right and plays the clap. Shape, side and sound never change.
   //
-  //   The band plays the beat, then the student has a turn. That is all. The
-  //   round gets longer as the breaks go by - one measure, then two, then any
-  //   of one to four.
+  // NO SPEECH. Not an intro, not praise, not correction, not a count-in in
+  // words. Everything the student needs to know is carried by the groove, the
+  // lights and the lock. An earlier version talked constantly and it was the
+  // first thing that had to go.
   //
-  // NOTHING IS SCORED, AND THAT IS THE DESIGN
-  //   What the student plays is not measured, not judged and not spoken about.
-  //   There is no timing window, no accuracy, no mastery gate, no "a bit
-  //   early", no retry. If he gets it he gets it; if he does not, the break
-  //   ends anyway and the next one comes round. The ONLY coaching is visual:
-  //   the circle and the square light up on the beat they belong to.
-  //
-  //   A scored version of this existed and was removed on purpose - it turned a
-  //   rest between pieces of work into another thing to perform. Do not add
-  //   accuracy back in without asking. If a measured version is ever wanted, it
-  //   belongs in its own app, not in the break.
+  // WHAT IS JUDGED, AND WHAT IS NOT
+  //   Only WHICH SHAPE lands in WHICH SLOT. The measure is cut into equal
+  //   slots and a tap belongs to the nearest one, so the tolerance is half a
+  //   slot either side - about 395 ms at quarter notes. There is deliberately
+  //   no early/late reading, no accuracy percentage and nothing said about
+  //   timing; a learner needs the ORDER before they need the microseconds.
   //
   // WHY THE AUDIO CLOCK IS THE ONLY CLOCK
   //   Everything musical is scheduled on the AudioContext clock and nothing
   //   musical waits on setTimeout. A scheduler queues the next 1.2 s of audio
-  //   ahead of the playhead (the standard two-clocks pattern), so the beat is
-  //   sample-accurate even while the main thread is busy laying out a flash.
-  //   Visual cues are driven by a rAF loop that compares against what is
-  //   CURRENTLY BEING HEARD (getOutputTimestamp), not against currentTime, so a
-  //   pulse lands with its sound rather than with its scheduling.
+  //   ahead of the playhead, so the beat stays sample-accurate while the main
+  //   thread is busy laying out a flash. Visual cues fire from a rAF loop that
+  //   compares against what is CURRENTLY BEING HEARD (getOutputTimestamp), and
+  //   tap times come from that same clock. Animation timing is never consulted
+  //   for anything that is judged.
   //
-  // THE PULSE NEVER STOPS
-  //   One continuous grid runs the whole break. Speech lands in reserved
-  //   measures ON that grid, with the pulse ticking underneath it, so the
-  //   student never loses the beat between the band's turn and their own. The
-  //   only thing that stops the pulse is the end of the break.
-
-  // Which of the two shapes this run has: 'activity' plays sets until the
-  // adult leaves, 'break' plays one set and says goodbye.
-  let rMode='activity';
+  // THE GROOVE NEVER STOPS
+  //   One continuous grid runs from the moment the section opens until the ⌂
+  //   takes it back. Hats and bass play underneath everything, including the
+  //   student's own measure, so the pulse is never lost and nothing ever cuts
+  //   out to mark a mistake.
 
   // -------- dials ---------------------------------------------------------
-  const RHYTHM_BPM              = 76;
-  const RHYTHM_METER            = 4;
-  // The beat itself. One measure of slot tokens:
-  //   'B' BOOM   'C' CLAP   '-' a rest, nothing sounds
-  //   'b' / 'c'  the band plays it and the student is not meant to
-  // `div` is slots per beat, so slots.length must be RHYTHM_METER*div - div 1
-  // is quarter notes, div 2 is eighths. Lowercase and rests are supported by
-  // the player but unused by this beat; they are what a harder pattern would
-  // be built from, and they cost nothing to keep.
-  const RHYTHM_BEAT             = { slots:['B','C','B','C'], div:1 };
-  // Turns in a set. As a brain break a set is the whole thing, and a break is
-  // a REST - it has to end while it is still welcome. As an activity one set
-  // just runs into the next.
-  const RHYTHM_TURNS_PER_SET    = 2;
-  // The scripted opening: the first set a student ever gets is one measure,
-  // then two, so the shape of the game is taught by doing it.
-  const RHYTHM_FIRST_SET        = [1,2];
-  // After that, how many measures a turn lasts is drawn from here.
-  const RHYTHM_LENGTHS          = [1,2,3,4];
-  // The band never demonstrates for longer than this, however long the
-  // student's turn is. The beat is one measure, so two of them is a complete
-  // demonstration, and it stops a four-measure turn from costing eight.
-  const RHYTHM_DEMO_MAX         = 2;
-  // Measures of accented clicks between "Your turn" and the student's turn.
-  const RHYTHM_COUNT_IN         = 1;
-  // Light the shape the student owes during their own turn. This is the only
-  // coaching in the activity, so it is on.
-  const RHYTHM_PRACTICE_GUIDE   = true;
+  const RHYTHM_BPM            = 84;
+  const RHYTHM_METER          = 4;
+  // One tap's worth of slop either side of a slot, as a fraction of the slot.
+  // 0.5 means the slots simply tile the measure and the nearest one wins.
+  const RHYTHM_SLOT_SLOP      = 0.5;
+  // How many call-and-responses the BRAIN-BREAK shape runs before handing back.
+  // The activity ignores this and goes until the adult leaves.
+  const RHYTHM_BREAK_TASKS    = 3;
+  // A short rising figure when a measure comes back correct. Not speech, and
+  // not a score - just the sound of a door opening. false makes success silent.
+  const RHYTHM_SUCCESS_CHIME  = true;
   // Seconds of audio queued ahead of the playhead, and how often we top it up.
-  // The ratio between them is the headroom, and it is deliberately huge: a
-  // browser is free to throttle BOTH setTimeout and requestAnimationFrame to
-  // one call a second, and measured, that is exactly what a remote-debugged tab
-  // does. At 60 ms asked and 1.2 s queued, a timer can arrive twenty times late
-  // and the beat still does not gap. Queueing further ahead costs nothing: a
-  // teardown mutes the whole bus in one move, so audio that is already
-  // scheduled is never heard.
-  const RHYTHM_SCHEDULE_AHEAD   = 1.2;
-  const RHYTHM_SCHEDULE_EVERY   = 60;
-  // Beat 0 of the break, relative to the moment the layer appears.
-  const RHYTHM_LEAD_IN          = 0.25;
+  // The ratio is deliberately huge: a browser may throttle BOTH setTimeout and
+  // requestAnimationFrame to one call a second - measured, a remote-debugged
+  // tab does exactly that - and at 60 ms asked against 1.2 s queued the beat
+  // still does not gap. Queueing further ahead costs nothing, because a
+  // teardown mutes the whole bus in one move.
+  const RHYTHM_SCHEDULE_AHEAD = 1.2;
+  const RHYTHM_SCHEDULE_EVERY = 60;
+  const RHYTHM_LEAD_IN        = 0.35;
+  // Overall level for the whole kit. 0.9 because measured offline, a downbeat
+  // with the kick, the bass and an accented hat all landing together summed to
+  // 1.022 and clipped before it ever reached the limiter. The limiter would
+  // have caught it, but a limiter catching every downbeat is how a mix starts
+  // breathing in and out.
+  const RHYTHM_LEVEL          = 0.9;
 
-  // Spoken lines. carlvoice clone through Chatterbox, the same voice, engine,
-  // seed and level as the rest of the app's speech - see audio/manifest-tts.json.
-  // Every one is fire-and-forget: nothing in the game ever waits on speech, so
-  // a missing file costs the line and nothing else.
+  // -------- the patterns --------------------------------------------------
+  // One measure each, in a drummer's order rather than a programmer's: the
+  // backbeat first, then the kick variations a beginner actually meets, then
+  // the eighth-note placements that make a groove swing.
   //
-  // There are EIGHT of them, and the whole list is announcements - what is
-  // about to happen, never how the student did. `bars` is how many measures a
-  // line is given to itself, because starting the next clip stops the one
-  // before it: a line longer than its room gets cut off mid-sentence. The
-  // numbers are the MEASURED durations of the shipped recordings against a
-  // 3.16 s measure at 76 bpm. rhythmBars() widens this on its own once a clip's
-  // real duration is known, so a longer re-record corrects itself; `bars` is
-  // what gets the very first break right, before any metadata has loaded.
-  const RHYTHM_SAY = {
-    intro: { src:'audio/rhythm/intro.wav'    },      // 1.83  "Okay, let's make a beat!"
-    where: { src:'audio/rhythm/where.wav', bars:2 }, // 4.43  where the two shapes are
-    len1:  { src:'audio/rhythm/len1.wav'     },      // 2.34  "Let's do one measure, like this."
-    len2:  { src:'audio/rhythm/len2.wav'     },      // 2.73  "...two measures..."
-    len3:  { src:'audio/rhythm/len3.wav'     },      // 2.73  "...three measures..."
-    len4:  { src:'audio/rhythm/len4.wav'     },      // 2.18  "...four measures..."
-    yourturn:{ src:'audio/rhythm/yourturn.wav' },    // 0.91  "Your turn!"
-    bye:   { src:'audio/rhythm/bye.wav'      }       // 1.81  "Great beat. Back to work!"
-  };
+  //   'B' the student plays BOOM     'C' the student plays CLAP
+  //   '-' nothing on this slot
+  //
+  // `div` is slots per beat, so slots.length must be RHYTHM_METER*div - div 1
+  // is quarter notes, div 2 is eighths. Checked at load.
+  //
+  // The FIRST one is the one he is taught by being shown: boom clap boom clap.
+  // Everything after it is a variation on that, never longer than a measure.
+  const RHYTHM_PATTERNS = [
+    // --- quarters: the shape of the thing -------------------------------
+    { slots:['B','C','B','C'], div:1 },        // boom clap boom clap
+    { slots:['B','-','C','-'], div:1 },        // the basic backbeat: kick 1, snare 3
+    { slots:['B','B','C','-'], div:1 },        // double kick into the backbeat
+    { slots:['B','-','C','B'], div:1 },        // ...with a kick picking up beat 4
+    { slots:['B','C','C','B'], div:1 },
+    { slots:['B','B','C','C'], div:1 },
+    { slots:['B','C','B','B'], div:1 },
+    // --- eighths: standard rock and pop placements ----------------------
+    { slots:['B','-','-','-','C','-','-','-'], div:2 },   // bare backbeat
+    { slots:['B','-','-','B','C','-','-','-'], div:2 },   // kick on the "and of 2"
+    { slots:['B','-','-','-','C','-','B','-'], div:2 },   // kick picking up beat 4
+    { slots:['B','-','C','-','B','-','C','-'], div:2 },   // boots and cats
+    { slots:['B','-','-','B','C','-','B','-'], div:2 },   // the one most pop songs are
+    { slots:['B','B','-','-','C','-','-','B'], div:2 },   // double kick, pickup at the end
+    { slots:['B','-','-','C','-','B','C','-'], div:2 },   // syncopated clap
+    { slots:['B','-','C','B','-','-','C','-'], div:2 }
+  ];
 
-  const rhythmEl   = document.getElementById('rhythm');
-  const rBandEl    = document.getElementById('rhythmBand');
-  const rBannerEl  = document.getElementById('rhythmBanner');
-  const rBoomEl    = document.getElementById('rhythmBoom');
-  const rClapEl    = document.getElementById('rhythmClap');
-
-  let rOn=false, rOnFinish=null, rBus=null, rWhite=null;
-  let rGrid=null;        // { beat0, beatDur, stepDur, nextStep }
-  let rSections=[];      // the break's script, measure-aligned on rGrid
-  let rCues=[];          // pending visual/speech/callback events, time-sorted
-  let rNodes=[];         // started sources, so a teardown can silence them
-  let rSched=null, rRaf=0, rBandTimer=null;
-  let rNextMeasure=0;    // first measure of the grid not yet reserved
-  // How many times the rhythm has been entered, as an activity or as a break.
-  // The only progression there is: it chooses the scripted opening the first
-  // time and random lengths after that. It sits OUTSIDE the per-run reset so it
-  // survives from one run to the next.
-  let rTimesStarted=0;
-  // The length of the turn most recently announced, so the no-repeat rule
-  // survives the seam between one set and the next.
-  let rLastLength=0;
-
-  // slots.length must be meter*div or the beat does not fill its measure, which
-  // is the one mistake a new pattern can make that produces a plausible but
-  // musically wrong round rather than an obvious break. Caught at load.
-  if (RHYTHM_BEAT.slots.length !== RHYTHM_METER*RHYTHM_BEAT.div)
-    console.warn('rhythm: beat ['+RHYTHM_BEAT.slots.join(' ')+'] has '+
-                 RHYTHM_BEAT.slots.length+' slots, expected '+RHYTHM_METER*RHYTHM_BEAT.div);
-
-  function rhythmActive() { return rOn; }
-  function rhythmMeasureTime(m) { return rGrid.beat0 + m*RHYTHM_METER*rGrid.beatDur; }
-
-  // ---- the heard clock ---------------------------------------------------
-  // getOutputTimestamp().contextTime is the frame LEAVING the speaker right
-  // now, so it already carries the output latency that currentTime does not.
-  // That is the clock a visual pulse has to be fired on if it is to land with
-  // the sound rather than with the scheduling.
-  function rhythmHeardTime() {
-    const ac=audioCtx; if (!ac) return 0;
-    const ts = ac.getOutputTimestamp ? ac.getOutputTimestamp() : null;
-    if (ts && Number.isFinite(ts.contextTime) && ts.contextTime>0) return ts.contextTime;
-    return ac.currentTime - (ac.outputLatency || ac.baseLatency || 0);
-  }
-
-  // ---- the band ----------------------------------------------------------
-  // Everything the game makes goes through one gain node, so a teardown can
-  // silence audio that is already scheduled in a single move.
+  // The backing groove, one measure of eighths. Hats all the way through with
+  // the downbeats accented and the last eighth open, and a bass line on 1, the
+  // "and of 2" and 3 with a pickup at the end of the bar. It carries the pulse
+  // THROUGH the student's own measure, which is what keeps them in time when
+  // nothing is lighting up.
+  //
+  // Neither the kick nor the clap appears here, on purpose: those two sounds
+  // belong to the student, and a backing that used them would make it
+  // impossible to hear whose note was whose.
+  const RHYTHM_HATS = [  // one per eighth: accent level, or 'o' for open
+    1, .45, .6, .45, .9, .45, .6, 'o'
+  ];
+  const RHYTHM_BASSLINE = [  // [eighth index, frequency, length in beats]
+    [0,'A',.9], [3,'A',.45], [4,'C',.9], [7,'G',.4]
+  ];
+  // ---- the kit -----------------------------------------------------------
+  // Everything the section makes goes through one gain node, so a teardown can
+  // silence audio that is already scheduled in a single move. A short reverb
+  // hangs off it as a send: the hats and the clap go to it, the kick and the
+  // bass do not, which is how a real mix is balanced and is most of why this
+  // stops sounding like a test tone.
   function rhythmBus() {
     const ac=audio(); if (!ac) return null;
-    if (!rBus) { rBus=ac.createGain(); rBus.gain.value=1; rBus.connect(masterGain); }
+    if (rBus) return rBus;
+    rBus=ac.createGain(); rBus.gain.value=RHYTHM_LEVEL; rBus.connect(masterGain);
+    // A tiny plate: exponentially decaying noise as an impulse response. Half
+    // a second is enough to put the kit in a room rather than in a vacuum.
+    rVerb=ac.createConvolver();
+    const n=Math.floor(ac.sampleRate*.5);
+    const buf=ac.createBuffer(2,n,ac.sampleRate);
+    for (let c=0;c<2;c++) {
+      const d=buf.getChannelData(c);
+      for (let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.6);
+    }
+    rVerb.buffer=buf;
+    rVerbSend=ac.createGain(); rVerbSend.gain.value=.16;
+    rVerbSend.connect(rVerb); rVerb.connect(rBus);
     return rBus;
   }
   function rKeep(node) { rNodes.push(node); }
+
+  // A curve that rounds peaks off instead of clipping them. The kick is the
+  // loudest thing here and it is the one that would otherwise crackle.
+  function rhythmDrive(ac,amount) {
+    const sh=ac.createWaveShaper();
+    const n=1024, curve=new Float32Array(n);
+    for (let i=0;i<n;i++) {
+      const x=i*2/n-1;
+      curve[i]=Math.tanh(x*amount)/Math.tanh(amount);
+    }
+    sh.curve=curve; sh.oversample='2x';
+    return sh;
+  }
+
   function rhythmWhite(ac) {
     if (rWhite) return rWhite;
     const n=Math.floor(ac.sampleRate*1.5);
@@ -1776,103 +1766,185 @@
     for (let i=0;i<n;i++) d[i]=Math.random()*2-1;
     return rWhite;
   }
-  // A short burst of the shared noise buffer, started at a random offset so
-  // repeated hits are not identical.
   function rhythmNoise(ac,t,dur) {
     const n=ac.createBufferSource();
     n.buffer=rhythmWhite(ac);
-    n.start(t, Math.random()*(1.5-dur-0.02));
+    n.start(t, Math.random()*(1.5-dur-.02));
     n.stop(t+dur);
     rKeep(n);
     return n;
   }
 
-  // BOOM. A kick: 150 Hz swept down to 48 in a tenth of a second, plus a beater
-  // click on top. LOW and short, which is what keeps it clear of CLAP by
-  // register as well as by timbre - the student has to be able to tell them
-  // apart through a tablet speaker without seeing either one.
+  // BOOM. Two layers: a sub that sweeps 165 -> 45 Hz for the body, and a
+  // short mid thump at 90 Hz that gives it somewhere to sit on a tablet
+  // speaker, which reproduces almost nothing below ~150 Hz. Driven through
+  // tanh so the transient rounds over instead of clipping.
   function rhythmKick(t,vol=1) {
     const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
+    // One output for the whole drum, and EVERYTHING goes through it - the
+    // beater click included. The click used to connect straight to the bus,
+    // which meant it summed on top of the waveshaper's ceiling instead of
+    // under it, and the kick peaked at 1.046 however far the gain was pulled
+    // down. That is the kind of clipping you hear as "cheap" and never find
+    // by reading the gain values.
+    const out=ac.createGain(); out.gain.value=.78; out.connect(bus);
+    const drive=rhythmDrive(ac,2.2); drive.connect(out);
     const g=ac.createGain();
     g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(.95*vol,t+.004);
-    g.gain.exponentialRampToValueAtTime(.0008,t+.30);
-    g.connect(bus);
-    const o=ac.createOscillator(); o.type='sine';
-    o.frequency.setValueAtTime(150,t);
-    o.frequency.exponentialRampToValueAtTime(48,t+.10);
-    o.connect(g); o.start(t); o.stop(t+.34); rKeep(o);
-    // Without the click the kick is felt rather than heard on a small speaker.
-    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1100;
+    // 0.8, not 1.0: measured offline, the sub and the thump summed to a peak
+    // of 1.041 and clipped the buffer even through the tanh stage.
+    g.gain.linearRampToValueAtTime(.8*vol,t+.003);
+    g.gain.exponentialRampToValueAtTime(.0008,t+.34);
+    g.connect(drive);
+    const sub=ac.createOscillator(); sub.type='sine';
+    sub.frequency.setValueAtTime(165,t);
+    sub.frequency.exponentialRampToValueAtTime(45,t+.085);
+    sub.connect(g); sub.start(t); sub.stop(t+.38); rKeep(sub);
+    const thump=ac.createOscillator(); thump.type='triangle';
+    thump.frequency.setValueAtTime(220,t);
+    thump.frequency.exponentialRampToValueAtTime(90,t+.05);
+    const tg=ac.createGain();
+    tg.gain.setValueAtTime(.34*vol,t);
+    tg.gain.exponentialRampToValueAtTime(.0005,t+.1);
+    thump.connect(tg); tg.connect(drive); thump.start(t); thump.stop(t+.12); rKeep(thump);
+    // The beater. Without it the kick is felt rather than heard on a small speaker.
+    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400;
     const cg=ac.createGain();
-    cg.gain.setValueAtTime(.17*vol,t);
-    cg.gain.exponentialRampToValueAtTime(.0005,t+.035);
-    rhythmNoise(ac,t,.05).connect(hp); hp.connect(cg); cg.connect(bus);
+    cg.gain.setValueAtTime(.2*vol,t);
+    cg.gain.exponentialRampToValueAtTime(.0005,t+.025);
+    rhythmNoise(ac,t,.04).connect(hp); hp.connect(cg); cg.connect(out);
   }
 
-  // CLAP. A snare: bright noise plus two short tonal bodies, so it sits a clear
-  // register ABOVE the kick and reads as a different instrument rather than a
-  // louder one.
-  function rhythmSnare(t,vol=1) {
+  // CLAP. Not one noise burst but FOUR, 9 ms apart, with a longer tail on the
+  // last - which is what a room full of hands actually sounds like and is the
+  // single biggest reason the old one read as "computer". Bandpassed around
+  // 1.1 kHz, with a little of the reverb send.
+  const CLAP_OFFSETS=[0,.009,.019,.028];
+  function rhythmClap(t,vol=1) {
     const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
     const bp=ac.createBiquadFilter(); bp.type='bandpass';
-    bp.frequency.value=1900; bp.Q.value=.85;
+    bp.frequency.value=1150; bp.Q.value=1.6;
+    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=600;
+    bp.connect(hp);
+    // The bandpass at Q 1.6 throws most of a noise burst away, so this makes
+    // it back up. Measured: at 0.9 the clap peaked 17 dB under the kick, which
+    // on a tablet speaker meant the backbeat simply disappeared.
+    const out=ac.createGain(); out.gain.value=3.2*vol;
+    hp.connect(out); out.connect(bus); out.connect(rVerbSend);
+    CLAP_OFFSETS.forEach((off,i)=>{
+      const last=i===CLAP_OFFSETS.length-1;
+      const g=ac.createGain();
+      g.gain.setValueAtTime(0,t+off);
+      g.gain.linearRampToValueAtTime(last?.5:.42,t+off+.001);
+      g.gain.exponentialRampToValueAtTime(.0005,t+off+(last?.18:.012));
+      rhythmNoise(ac,t+off,last?.2:.02).connect(g); g.connect(bp);
+    });
+    // A little tonal body so it has a pitch to sit at, not just a hiss.
+    const o=ac.createOscillator(); o.type='triangle'; o.frequency.value=320;
+    const og=ac.createGain();
+    og.gain.setValueAtTime(.12*vol,t);
+    og.gain.exponentialRampToValueAtTime(.0005,t+.07);
+    o.connect(og); og.connect(bus); o.start(t); o.stop(t+.09); rKeep(o);
+  }
+
+  // Hi-hat, the analog way: six square waves at deliberately inharmonic
+  // ratios, squashed through a highpass. White noise through a filter - which
+  // is what this used to be - reads as hiss; this reads as metal.
+  const HAT_RATIOS=[2,3,4.16,5.43,6.79,8.21];
+  function rhythmHat(t,{open=false,vol=1}={}) {
+    const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
+    const bp=ac.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.value=open?8000:10000; bp.Q.value=.8;
+    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+    bp.connect(hp);
     const g=ac.createGain();
+    const dur=open?.34:.052;
     g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(.55*vol,t+.003);
-    g.gain.exponentialRampToValueAtTime(.0006,t+.17);
-    rhythmNoise(ac,t,.2).connect(bp); bp.connect(g); g.connect(bus);
-    for (const f of [185,330]) {
-      const o=ac.createOscillator(); o.type='triangle'; o.frequency.value=f;
-      const og=ac.createGain();
-      og.gain.setValueAtTime(.2*vol,t);
-      og.gain.exponentialRampToValueAtTime(.0006,t+.085);
-      o.connect(og); og.connect(bus); o.start(t); o.stop(t+.12); rKeep(o);
+    g.gain.linearRampToValueAtTime(.26*vol,t+.0012);
+    g.gain.exponentialRampToValueAtTime(.0004,t+dur);
+    hp.connect(g); g.connect(bus); g.connect(rVerbSend);
+    for (const r of HAT_RATIOS) {
+      const o=ac.createOscillator(); o.type='square'; o.frequency.value=40*r;
+      o.connect(bp); o.start(t); o.stop(t+dur+.02); rKeep(o);
     }
   }
 
-  // The backing pulse: a tick on every eighth, accented on the downbeat, with a
-  // soft shaker on the off-eighths so it grooves instead of metronoming.
-  // Deliberately HIGH and quiet - it is a clock the student has to be able to
-  // hear through their own playing, so it must not compete with either drum.
-  function rhythmTick(t,strength) {
+  // The bass. This is the part that makes it a TRACK rather than a metronome,
+  // and it is pitched at A2/C3/G2 on purpose - an octave above where a bass
+  // would normally sit - so it never fights the kick for the same few hertz.
+  const BASS_A=110, BASS_C=130.81, BASS_G=98;
+  function rhythmBass(t,freq,dur=.3,vol=1) {
     const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
-    const o=ac.createOscillator(); o.type='sine';
-    o.frequency.value = strength>=1 ? 2400 : 1800;
+    const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=6;
+    lp.frequency.setValueAtTime(freq*9,t);
+    lp.frequency.exponentialRampToValueAtTime(freq*2.2,t+.12);
     const g=ac.createGain();
     g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(.085*strength,t+.002);
-    g.gain.exponentialRampToValueAtTime(.0004,t+.045);
-    o.connect(g); g.connect(bus); o.start(t); o.stop(t+.06); rKeep(o);
+    g.gain.linearRampToValueAtTime(.22*vol,t+.012);
+    g.gain.setValueAtTime(.22*vol,t+dur*.6);
+    g.gain.exponentialRampToValueAtTime(.0006,t+dur);
+    lp.connect(g); g.connect(bus);
+    for (const [type,det,lvl] of [['sawtooth',0,.6],['square',0,.25],['sine',-12,.9]]) {
+      const o=ac.createOscillator(); o.type=type;
+      o.frequency.value=freq; o.detune.value=det;
+      const og=ac.createGain(); og.gain.value=lvl;
+      o.connect(og); og.connect(lp); o.start(t); o.stop(t+dur+.05); rKeep(o);
+    }
   }
-  function rhythmShaker(t) {
-    const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
-    const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6500;
-    const g=ac.createGain();
-    g.gain.setValueAtTime(.05,t);
-    g.gain.exponentialRampToValueAtTime(.0004,t+.03);
-    rhythmNoise(ac,t,.04).connect(hp); hp.connect(g); g.connect(bus);
+
+  const rhythmEl   = document.getElementById('rhythm');
+  const rBandEl    = document.getElementById('rhythmBand');
+  const rBannerEl  = document.getElementById('rhythmBanner');
+  const rBoomEl    = document.getElementById('rhythmBoom');
+  const rClapEl    = document.getElementById('rhythmClap');
+
+  let rOn=false, rOnFinish=null, rMode='activity';
+  let rBus=null, rVerb=null, rVerbSend=null, rWhite=null;
+  let rGrid=null;        // { beat0, beatDur, stepDur, nextStep }
+  let rSections=[];      // measure-aligned script
+  let rCues=[];          // pending visual / callback events, time-sorted
+  let rNodes=[];         // started sources, so a teardown can silence them
+  let rSched=null, rRaf=0, rBandTimer=null;
+  let rNextMeasure=0;
+  let rLive=null;        // the student's measure, while it is open
+  let rLocked=true;      // true while the band is demonstrating
+  // Which pattern they are on. Survives a trip to the menu and back, so the
+  // section is picked up where it was left rather than restarted.
+  let rTaskIdx=0, rAttempt=0, rPassed=0;
+
+  for (const p of RHYTHM_PATTERNS)
+    if (p.slots.length !== RHYTHM_METER*p.div)
+      console.warn('rhythm: pattern ['+p.slots.join(' ')+'] has '+p.slots.length+
+                   ' slots, expected '+RHYTHM_METER*p.div);
+
+  function rhythmActive() { return rOn; }
+  function rhythmTask() { return RHYTHM_PATTERNS[rTaskIdx % RHYTHM_PATTERNS.length]; }
+  function rhythmMeasureTime(m) { return rGrid.beat0 + m*RHYTHM_METER*rGrid.beatDur; }
+  function rhythmMeasureDur() { return RHYTHM_METER*rGrid.beatDur; }
+
+  // ---- the heard clock ---------------------------------------------------
+  // getOutputTimestamp().contextTime is the frame LEAVING the speaker right
+  // now, so it already carries the output latency that currentTime does not.
+  // That is the clock both a visual pulse and a tap have to be judged on.
+  function rhythmHeardTime() {
+    const ac=audioCtx; if (!ac) return 0;
+    const ts = ac.getOutputTimestamp ? ac.getOutputTimestamp() : null;
+    if (ts && Number.isFinite(ts.contextTime) && ts.contextTime>0) return ts.contextTime;
+    return ac.currentTime - (ac.outputLatency || ac.baseLatency || 0);
+  }
+  function rhythmTapTime(perfMs) {
+    const ac=audioCtx; if (!ac) return 0;
+    const now=performance.now();
+    const p=(Number.isFinite(perfMs) && Math.abs(now-perfMs)<2000) ? perfMs : now;
+    const ts = ac.getOutputTimestamp ? ac.getOutputTimestamp() : null;
+    if (ts && Number.isFinite(ts.contextTime) && ts.contextTime>0
+           && Number.isFinite(ts.performanceTime))
+      return ts.contextTime + (p - ts.performanceTime)/1000;
+    return ac.currentTime - (ac.outputLatency || ac.baseLatency || 0);
   }
 
   // ---- presentation ------------------------------------------------------
   function rBanner(text) { rBannerEl.textContent=text; }
-  function rSay(name) {
-    const line=RHYTHM_SAY[name];
-    if (line) playClip(line.src);
-  }
-  // How many measures a line needs. The declared `bars` is the floor; if the
-  // element has its real duration by now, that wins, so a re-recorded line that
-  // got longer widens its own gap instead of being cut off. A quarter second of
-  // air is added so a line never ends exactly on the next downbeat.
-  function rhythmBars(name) {
-    const line=RHYTHM_SAY[name];
-    if (!line) return 1;
-    let bars=line.bars||1;
-    const d=clip(line.src).duration;
-    if (Number.isFinite(d) && d>0)
-      bars=Math.max(bars, Math.ceil((d+.25)/(RHYTHM_METER*rGrid.beatDur)));
-    return bars;
-  }
   function rhythmBandFlash(kind) {
     rBandEl.classList.remove('beat','downbeat');
     rBandEl.classList.add(kind);
@@ -1885,40 +1957,77 @@
     el._rT=setTimeout(()=>el.classList.remove(cls),ms);
   }
   const rTargetEl = which => which==='B' ? rBoomEl : rClapEl;
+  // Greyed out = "the band is playing, your turn is coming". The lock is a
+  // real gate, not a hint: taps are ignored while it is on, so a student
+  // drumming along with the demonstration cannot accidentally spend their turn.
+  function rhythmSetLocked(v) {
+    rLocked=v;
+    rBoomEl.classList.toggle('locked',v);
+    rClapEl.classList.toggle('locked',v);
+    rBoomEl.disabled=v; rClapEl.disabled=v;
+  }
   function rhythmResetTargets() {
     for (const el of [rBoomEl,rClapEl]) {
       clearTimeout(el._rT);
-      el.classList.remove('cue','cueband','hit','hold');
+      el.classList.remove('cue','hit','locked');
+      el.disabled=false;
     }
     rBandEl.classList.remove('beat','downbeat');
   }
+  // The sound of getting one right. Three notes up, on the kit's own bus so a
+  // teardown silences it like everything else.
+  function rhythmChime(t) {
+    if (!RHYTHM_SUCCESS_CHIME) return;
+    const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
+    [[523.25,0],[659.26,.085],[783.99,.17]].forEach(([f,d])=>{
+      const o=ac.createOscillator(); o.type='triangle'; o.frequency.value=f;
+      const g=ac.createGain();
+      g.gain.setValueAtTime(0,t+d);
+      g.gain.linearRampToValueAtTime(.2,t+d+.01);
+      g.gain.exponentialRampToValueAtTime(.0005,t+d+.34);
+      o.connect(g); g.connect(bus); g.connect(rVerbSend);
+      o.start(t+d); o.stop(t+d+.36); rKeep(o);
+    });
+  }
 
   // ---- input -------------------------------------------------------------
-  // The targets are an INSTRUMENT, and that is the whole of it. They sound and
-  // flash on every touch - during the band's turn, during the talking, during
-  // a rest. Nothing is recorded and nothing is judged. A target that went dead
-  // outside some "scored" window would read as broken.
-  function rhythmTap(which) {
-    if (!rOn) return;
+  function rhythmTap(which,perfMs) {
+    if (!rOn || rLocked) return;
     const ac=audio(); if (!ac) return;
-    if (which==='B') rhythmKick(ac.currentTime+.001); else rhythmSnare(ac.currentTime+.001);
+    if (which==='B') rhythmKick(ac.currentTime+.001); else rhythmClap(ac.currentTime+.001);
     rhythmFlash(rTargetEl(which),'hit',120);
+    if (rLive) rLive.taps.push({ t:rhythmTapTime(perfMs), target:which });
   }
   for (const [el,which] of [[rBoomEl,'B'],[rClapEl,'C']]) {
-    el.addEventListener('pointerdown',ev=>{ ev.preventDefault(); rhythmTap(which); });
-    // A pointerdown that is really a click (keyboard activation of the button,
-    // a switch device) would otherwise do nothing at all.
+    el.addEventListener('pointerdown',ev=>{ ev.preventDefault(); rhythmTap(which,ev.timeStamp); });
     el.addEventListener('click',ev=>ev.preventDefault());
   }
-  // Keys as well as touch: an arrow pair, or Z and M. This is how an adult can
-  // check the game on a laptop, and it is the path a student on a switch or a
-  // keyboard takes.
+  // Keys as well as touch: an arrow pair, or Z and M. How an adult checks the
+  // section on a laptop, and the path a student on a switch or keyboard takes.
   document.addEventListener('keydown',ev=>{
     if (!rOn || ev.repeat || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     const k=ev.key.toLowerCase();
-    if (k==='arrowleft'||k==='z') { ev.preventDefault(); rhythmTap('B'); }
-    else if (k==='arrowright'||k==='m'||k==='x') { ev.preventDefault(); rhythmTap('C'); }
+    if (k==='arrowleft'||k==='z') { ev.preventDefault(); rhythmTap('B',ev.timeStamp); }
+    else if (k==='arrowright'||k==='m'||k==='x') { ev.preventDefault(); rhythmTap('C',ev.timeStamp); }
   });
+
+  // ---- judging -----------------------------------------------------------
+  // Pure, so it can be driven without a clock. Each tap belongs to whichever
+  // slot it is nearest; the measure passes only if every slot holds exactly
+  // what the pattern asked for and nothing else was played.
+  function rhythmJudge(slots,taps,start,measureDur) {
+    const n=slots.length, slotDur=measureDur/n;
+    const got=new Array(n).fill(null);
+    let stray=0;
+    for (const tap of taps) {
+      const i=Math.round((tap.t-start)/slotDur);
+      if (i<0 || i>=n || got[i]) { stray++; continue; }
+      got[i]=tap.target;
+    }
+    const want=slots.map(s=>(s==='B'||s==='C') ? s : null);
+    const wrong=want.filter((w,i)=>got[i]!==w).length;
+    return { pass: wrong===0 && stray===0, wrong, stray, got, want };
+  }
 
   // ---- the script --------------------------------------------------------
   function rhythmSectionAt(measure) {
@@ -1927,119 +2036,89 @@
     return null;
   }
 
-  // Reserve measures for talking. The pulse keeps running underneath, so these
-  // are gaps in the BEAT, never gaps in the beat.
-  function rhythmPlanFree(lines) {
-    const said=lines.filter(Boolean);
-    let m=rNextMeasure, total=0;
-    for (const name of said) {
-      rCues.push({ t:rhythmMeasureTime(m), say:name });
-      const bars=rhythmBars(name);
-      m+=bars; total+=bars;
-    }
-    const n=Math.max(1,total);
-    rSections.push({ kind:'free', startMeasure:rNextMeasure, measures:n, events:[], sent:0 });
-    rNextMeasure+=n;
+  // One call-and-response: the band's measure, then the student's. Planned as
+  // a pair so the two always sit on adjacent bars of the same grid.
+  function rhythmPlanTask() {
+    const task=rhythmTask();
+    const spm=task.slots.length;
+    const slotDur=rhythmMeasureDur()/spm;
+
+    const demo={ kind:'demo', startMeasure:rNextMeasure, measures:1,
+                 slots:task.slots, events:[], sent:0 };
+    for (let i=0;i<spm;i++)
+      demo.events.push({ t:rhythmMeasureTime(rNextMeasure)+i*slotDur, tok:task.slots[i] });
+    rSections.push(demo);
+    // Lock as the demonstration starts, unlock the instant it ends.
+    rCues.push({ t:rhythmMeasureTime(rNextMeasure)-.05, fn:()=>rhythmSetLocked(true) });
+    rNextMeasure+=1;
+
+    const startAt=rhythmMeasureTime(rNextMeasure);
+    const play={ kind:'play', startMeasure:rNextMeasure, measures:1,
+                 slots:task.slots, events:[], sent:0,
+                 taps:[], start:startAt, slotDur };
+    rSections.push(play);
+    rCues.push({ t:startAt-slotDur*RHYTHM_SLOT_SLOP, fn:()=>{
+      rLive=play; rhythmSetLocked(false);
+    }});
+    rNextMeasure+=1;
+    // Judged half a slot after the bar ends, so a tap that lands late on the
+    // final slot is still inside its own window when the books are closed.
+    rCues.push({ t:startAt+rhythmMeasureDur()+slotDur*RHYTHM_SLOT_SLOP,
+                 fn:()=>rhythmSettle(play) });
+    rBanner(rhythmPatternLabel(task)+'   ·   '+(rTaskIdx+1)+' of '+RHYTHM_PATTERNS.length+
+            (rAttempt?'   ·   again':''));
   }
 
-  function rhythmPlanSection(kind,measures) {
-    const slots=RHYTHM_BEAT.slots, spm=slots.length;
-    const slotDur=(RHYTHM_METER*rGrid.beatDur)/spm;
-    const sec={ kind, startMeasure:rNextMeasure, measures, slots, events:[], sent:0 };
-    for (let m=0;m<measures;m++) for (let i=0;i<spm;i++)
-      sec.events.push({ t:rhythmMeasureTime(rNextMeasure+m)+i*slotDur, tok:slots[i] });
-    rSections.push(sec);
-    rNextMeasure+=measures;
-    return sec;
+  function rhythmSettle(play) {
+    if (rLive!==play) return;
+    rLive=null;
+    const r=rhythmJudge(play.slots,play.taps,play.start,rhythmMeasureDur());
+    if (r.pass) {
+      rPassed++;
+      rAttempt=0;
+      rTaskIdx=(rTaskIdx+1)%RHYTHM_PATTERNS.length;
+      const ac=audioCtx;
+      if (ac) rhythmChime(ac.currentTime+.02);
+    } else {
+      rAttempt++;        // same pattern, demonstrated again
+    }
   }
 
-  // How long each turn of a set is. The first set a student ever gets is the
-  // scripted ramp; after that it is drawn at random, never the same length
-  // twice running, so it does not become a routine he can sleep through.
-  function rhythmTurnLengths(opening) {
-    if (opening && rTimesStarted===0) {
-      const first=RHYTHM_FIRST_SET.slice(0,RHYTHM_TURNS_PER_SET);
-      rLastLength=first[first.length-1];
-      return first;
-    }
-    const out=[];
-    let guard=0;
-    while (out.length<RHYTHM_TURNS_PER_SET && guard++<100) {
-      const n=RHYTHM_LENGTHS[Math.floor(Math.random()*RHYTHM_LENGTHS.length)];
-      // Compared against the previous turn WHEREVER it was - including the
-      // last turn of the previous set. In the activity one set runs straight
-      // into the next, so a guard that only looked inside the set would still
-      // let "four measures" be announced twice in a row across the seam.
-      const prev = out.length ? out[out.length-1] : rLastLength;
-      if (n===prev && RHYTHM_LENGTHS.length>1) continue;
-      out.push(n);
-    }
-    rLastLength=out[out.length-1];
-    return out;
-  }
-
-  // A whole SET is planned in one go. Nothing here is conditional on how the
-  // student plays, because nothing is measured - which is what lets the script
-  // be laid out end to end instead of being built a turn at a time.
-  //
-  // As a BREAK that set is the whole run and it ends with a goodbye. As the
-  // ACTIVITY the scheduler lays down another set as this one runs low, so the
-  // pulse carries straight through and the only way out is the ⌂.
-  function rhythmPlanSet(opening) {
-    const lengths=rhythmTurnLengths(opening);
-    // Where the shapes are is said once per session, with the opening line.
-    // Keyed off the run count rather than a flag of its own: a second flag
-    // could disagree with this one, and there is no state in which it should.
-    if (opening) rhythmPlanFree(['intro', rTimesStarted===0 ? 'where' : null]);
-    lengths.forEach((n,i)=>{
-      // The first turn of a student's first run needs no announcement:
-      // "Okay, let's make a beat!" has just said it, and the demo says the rest.
-      if (!(opening && rTimesStarted===0 && i===0)) rhythmPlanFree(['len'+n]);
-      rhythmPlanSection('demo', Math.min(n,RHYTHM_DEMO_MAX));
-      rhythmPlanFree(['yourturn']);
-      if (RHYTHM_COUNT_IN>0) {
-        rSections.push({ kind:'countin', startMeasure:rNextMeasure,
-                         measures:RHYTHM_COUNT_IN, events:[], sent:0 });
-        rNextMeasure+=RHYTHM_COUNT_IN;
-      }
-      rhythmPlanSection('play', n);
-    });
-    if (rMode==='break') {
-      rhythmPlanFree(['bye']);
-      rCues.push({ t:rhythmMeasureTime(rNextMeasure), fn:endRhythm });
-    }
-    rCues.sort((a,b)=>a.t-b.t);
-    rBanner(RHYTHM_BEAT.slots.map(s=>({B:'BOOM',C:'CLAP','-':'·',b:'(boom)',c:'(clap)'})[s]||s)
-              .join(' ')+'   ·   turns of '+lengths.join(' and ')+
-              (lengths.length===1?' measure':' measures'));
+  function rhythmPatternLabel(task) {
+    return task.slots.map(s=>({B:'BOOM',C:'CLAP','-':'·'})[s]||s).join(' ');
   }
 
   // ---- the two clocks ----------------------------------------------------
-  // Queue the next RHYTHM_SCHEDULE_AHEAD seconds of audio. Called on a timer,
-  // which is allowed to be late: everything it queues is stamped with an
-  // AudioContext time, so jitter here does not reach the beat.
+  // Queue the next RHYTHM_SCHEDULE_AHEAD seconds. Called on a timer that is
+  // allowed to be late: everything it queues carries an AudioContext time, so
+  // jitter here never reaches the beat.
   function rhythmSchedule() {
     const ac=audioCtx;
     if (!rOn || !ac || !rGrid) return;
     const until=ac.currentTime+RHYTHM_SCHEDULE_AHEAD;
     const stepsPerMeasure=RHYTHM_METER*2;     // the backing grid is always eighths
     const atMeasure=Math.floor(rGrid.nextStep/stepsPerMeasure);
-    // The ACTIVITY never runs out of script: lay down the next set while the
-    // current one still has measures left. Four measures of lead is many times
-    // the 1.2 s the scheduler reads ahead, so a new section is always planned
-    // long before anything needs to play it.
-    if (rMode==='activity' && rNextMeasure-atMeasure<4) rhythmPlanSet(false);
+    // Never run out of script. A task is two measures, so topping up with
+    // three left is always well ahead of the playhead.
+    if (rNextMeasure-atMeasure<3) rhythmPlanTask();
+
     let pushed=false, guard=0;
     while (rGrid.beat0+rGrid.nextStep*rGrid.stepDur<until && guard++<512) {
       const idx=rGrid.nextStep++;
       const t=rGrid.beat0+idx*rGrid.stepDur;
       const pos=idx%stepsPerMeasure;
-      const measure=Math.floor(idx/stepsPerMeasure);
-      if (pos%2===0) rhythmTick(t,pos===0?1:.5); else rhythmShaker(t);
-      const sec=rhythmSectionAt(measure);
-      // The count-in accents every beat. Four even clicks is the clearest
-      // "get ready" there is and it needs no words.
-      if (sec && sec.kind==='countin' && pos%2===0) rhythmTick(t,1);
+      // Hats and bass, every measure, under everything - including the
+      // student's own. A groove that stopped for their turn would take the
+      // pulse with it at exactly the moment they need it most.
+      const hat=RHYTHM_HATS[pos % RHYTHM_HATS.length];
+      // A touch of velocity wander. Identical hats for minutes on end is the
+      // other half of why a synthesised beat reads as a machine.
+      const wobble=.88+Math.random()*.24;
+      if (hat==='o') rhythmHat(t,{open:true,vol:.8*wobble});
+      else rhythmHat(t,{vol:hat*wobble});
+      for (const [step,note,len] of RHYTHM_BASSLINE)
+        if (pos===step)
+          rhythmBass(t,{A:BASS_A,C:BASS_C,G:BASS_G}[note],len*rGrid.beatDur,.9);
       rCues.push({ t, band: pos===0 ? 'downbeat' : (pos%2===0 ? 'beat' : null) });
       pushed=true;
     }
@@ -2049,64 +2128,49 @@
         pushed=true;
       }
     if (pushed) rCues.sort((a,b)=>a.t-b.t);
-    // Sources from measures already played are long finished; keeping them
-    // would grow the array for the whole run.
-    if (rNodes.length>600) rNodes=rNodes.slice(-200);
-    // Same for the script itself. A break is over before this matters, but the
-    // activity can run for as long as the adult leaves it running, and
-    // rhythmSectionAt() walks this list on every eighth note.
-    if (rSections.length>32)
+    if (rNodes.length>900) rNodes=rNodes.slice(-300);
+    // The section list would otherwise grow for as long as the student plays,
+    // and rhythmSectionAt() walks it on every eighth note.
+    if (rSections.length>16)
       rSections=rSections.filter(sec => sec.sent<sec.events.length ||
                                         sec.startMeasure+sec.measures>=atMeasure-1);
   }
 
+  // Only the DEMO sounds and lights. The student's measure is silent from the
+  // band and dark on the targets - no lights during their turn is exactly what
+  // makes this simon says rather than follow-the-dot.
   function rhythmSend(sec,e) {
-    const tok=e.tok, demo=sec.kind==='demo';
-    // The band plays the whole beat on its own turn. On the student's turn it
-    // plays only the lowercase tokens - the ones he is meant to leave alone.
-    const sound = demo ? (tok==='B'||tok==='b' ? 'B' : (tok==='C'||tok==='c' ? 'C' : null))
-                       : (tok==='b' ? 'B' : (tok==='c' ? 'C' : null));
-    if (sound==='B') rhythmKick(e.t);
-    else if (sound==='C') rhythmSnare(e.t);
-    // The light is the only coaching there is, so it fires on the band's turn
-    // AND on the student's.
-    if (tok==='B'||tok==='C') {
-      if (demo || RHYTHM_PRACTICE_GUIDE) rCues.push({ t:e.t, cue:tok, cueKind:'cue' });
-    } else if (tok==='b'||tok==='c') {
-      rCues.push({ t:e.t, cue: tok==='b'?'B':'C', cueKind:'cueband' });
-    }
+    if (sec.kind!=='demo') return;
+    if (e.tok==='B') { rhythmKick(e.t); rCues.push({ t:e.t, cue:'B' }); }
+    else if (e.tok==='C') { rhythmClap(e.t); rCues.push({ t:e.t, cue:'C' }); }
   }
 
-  // Fire visuals, speech and callbacks against what is BEING HEARD, so a pulse
-  // lands with its sound rather than with its scheduling.
+  // Fire visuals and callbacks against what is BEING HEARD, so a light lands
+  // with its sound rather than with its scheduling.
   function rhythmFrame() {
     if (!rOn) return;
-    // Second driver for the audio scheduler. The interval is the primary one,
-    // but a throttled timer must not be able to starve the beat, and this costs
-    // an early return on the frames where nothing is due.
+    // Second driver for the scheduler. The interval is the primary one, but a
+    // throttled timer must not be able to starve the beat, and this costs an
+    // early return on the frames where nothing is due.
     rhythmSchedule();
     const now=rhythmHeardTime();
     while (rCues.length && rCues[0].t<=now) {
       const e=rCues.shift();
       if (e.band) rhythmBandFlash(e.band);
-      if (e.cue) rhythmFlash(rTargetEl(e.cue),e.cueKind,170);
-      if (e.say) rSay(e.say);
+      if (e.cue) rhythmFlash(rTargetEl(e.cue),'cue',170);
       if (e.fn) e.fn();
-      if (!rOn) return;              // a callback may have ended the break
+      if (!rOn) return;              // a callback may have ended the section
     }
     rRaf=requestAnimationFrame(rhythmFrame);
   }
 
   // ---- start and stop ----------------------------------------------------
-  // The brain-break shape: one set, then it hands back to the braille work.
-  // Not currently in the rotation - see pickBreak().
+  // The brain-break shape: kept working and kept tested, but NOT in the break
+  // rotation - see pickBreak(). It differs only in ending itself.
   function startRhythmBreak(onFinish) {
-    // No Web Audio at all means no game. Carl's break is the fallback rather
-    // than a silent screen.
     if (!audio()) { startBrainBreak(onFinish); return; }
     startRhythm('break', onFinish);
   }
-  // The activity shape: sets until the adult leaves with the ⌂.
   function startRhythmActivity() {
     if (!audio()) return;
     startRhythm('activity', null);
@@ -2117,8 +2181,10 @@
     brushOff();
     rOnFinish=onFinish;
     rOn=true;
-    rSections=[]; rCues=[]; rNodes=[]; rNextMeasure=0;
+    rSections=[]; rCues=[]; rNodes=[]; rNextMeasure=0; rLive=null;
+    rAttempt=0; rPassed=0;
     rhythmResetTargets();
+    rhythmSetLocked(true);
     rBanner('');
     rhythmEl.classList.add('on');
     rhythmEl.setAttribute('aria-hidden','false');
@@ -2128,10 +2194,17 @@
     const bus=rhythmBus();
     if (bus) {
       bus.gain.cancelScheduledValues(ac.currentTime);
-      bus.gain.setValueAtTime(1,ac.currentTime);
+      bus.gain.setValueAtTime(RHYTHM_LEVEL,ac.currentTime);
     }
-    rhythmPlanSet(true);
-    rTimesStarted++;
+    // One empty measure of groove before the first demonstration, so the
+    // student hears the tempo before anything is asked of them.
+    rSections.push({ kind:'intro', startMeasure:0, measures:1, events:[], sent:0 });
+    rNextMeasure=1;
+    rhythmPlanTask();
+    // As a brain break it stops after a fixed number of call-and-responses.
+    if (rMode==='break')
+      rCues.push({ t:rhythmMeasureTime(1+RHYTHM_BREAK_TASKS*2), fn:endRhythm });
+    rCues.sort((a,b)=>a.t-b.t);
     rhythmSchedule();
     rSched=setInterval(rhythmSchedule,RHYTHM_SCHEDULE_EVERY);
     rRaf=requestAnimationFrame(rhythmFrame);
@@ -2153,7 +2226,7 @@
       } catch {}
     }
     for (const n of rNodes) { try { n.stop(); } catch {} }
-    rNodes=[]; rCues=[]; rSections=[]; rGrid=null;
+    rNodes=[]; rCues=[]; rSections=[]; rGrid=null; rLive=null;
     rhythmResetTargets();
     rBanner('');
     rhythmEl.classList.remove('on');
@@ -2164,12 +2237,13 @@
 
   // A test seam, not a feature. Nothing in the app reads it.
   window.__rhythm = {
-    beat:RHYTHM_BEAT, lengths:RHYTHM_LENGTHS, firstSet:RHYTHM_FIRST_SET,
-    turnsPerSet:RHYTHM_TURNS_PER_SET,
-    state:()=>({ on:rOn, mode:rMode, runs:rTimesStarted,
+    patterns:RHYTHM_PATTERNS, judge:rhythmJudge,
+    state:()=>({ on:rOn, mode:rMode, locked:rLocked, task:rTaskIdx,
+                 attempt:rAttempt, passed:rPassed, live:Boolean(rLive),
                  measuresPlanned:rNextMeasure, sections:rSections.length }),
     now:rhythmHeardTime,
-    tap:rhythmTap,
+    live:()=>rLive && { slots:rLive.slots, start:rLive.start, slotDur:rLive.slotDur },
+    tap:(w)=>rhythmTap(w,performance.now()),
     end:endRhythm
   };
 
@@ -2509,9 +2583,11 @@
   // Carl first; ?break=carl or ?break=rhythm pins it to one.
   const wantedBreak=(params.get('break')||'').toLowerCase();
   if (wantedBreak==='carl'||wantedBreak==='rhythm') breakRotation=[wantedBreak];
-  // Skip the beat game's scripted opening and go straight to the random
-  // lengths - for hearing a later break without taking the first one.
-  if (params.get('rbreak')==='later') rTimesStarted=1;
+  // Start the rhythm section partway down the pattern list, for hearing a
+  // harder one without playing up to it. 1-based, as the banner counts.
+  const wantedTask=parseInt(params.get('rtask'),10);
+  if (Number.isFinite(wantedTask))
+    rTaskIdx=Math.max(0,Math.min(RHYTHM_PATTERNS.length-1,wantedTask-1));
   // ?rhythm=1 previews the BRAIN-BREAK shape - one set, then it hands back to
   // the menu by itself. The activity shape is ?mode=rhythm, or the Rhythm card.
   const rhythmPreview=params.get('rhythm')==='1';
@@ -2527,11 +2603,10 @@
     // 1.8MB, and its duration is what the dance is timed to - fetch it now,
     // long before it is needed. preload alone is a hint; load() is not.
     try { clip(BRAIN_BREAK_SRC).load(); } catch {}
-    // The beat game's spoken lines, 1.4MB the pair of us: warmed for the same
-    // reason, except that here it is the LENGTH that is wanted. rhythmBars()
-    // widens a line's gap to fit its real duration, and that duration only
-    // exists once the element has its metadata.
-    try { for (const line of Object.values(RHYTHM_SAY)) clip(line.src).load(); } catch {}
+    // The rhythm section used to warm a set of spoken lines here. It has no
+    // speech at all now - the groove, the lights and the lock carry it - so
+    // there is nothing to preload. audio/rhythm/ is kept on disk but unused;
+    // see the note in README.
     if (rhythmPreview) { startRhythmBreak(openChooser); return; }
     if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null,
                           wantedBraille);

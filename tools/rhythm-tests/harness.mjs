@@ -19,22 +19,13 @@
 //
 //   Run:  node tools/rhythm-tests/run.mjs
 //
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SRC_FILE = join(REPO, 'index.html');
 
-// The shipped clips' real durations, straight off the WAV headers - the
-// speech-gap test is only meaningful against the files that actually ship.
-export const CLIP_DURATIONS = Object.fromEntries(
-  readdirSync(join(REPO, 'audio', 'rhythm'))
-    .filter(f => f.endsWith('.wav'))
-    .map(f => {
-      const b = readFileSync(join(REPO, 'audio', 'rhythm', f));
-      return [f, (b.length - 44) / (24000 * 2)];   // 24 kHz 16-bit mono
-    }));
 
 export function loadModule() {
   const s = readFileSync(SRC_FILE, 'utf8');
@@ -62,9 +53,12 @@ function makeEl(id) {
     classList:{
       add:(...c)=>c.forEach(x=>cls.add(x)),
       remove:(...c)=>c.forEach(x=>cls.delete(x)),
+      toggle:(x,on)=>{ const want = on===undefined ? !cls.has(x) : Boolean(on);
+                       if (want) cls.add(x); else cls.delete(x); return want; },
       contains:x=>cls.has(x),
       _set:cls
     },
+    disabled:false,
     setAttribute(){}, animate(){ return {finished:Promise.resolve()}; },
     addEventListener(){},
   };
@@ -90,12 +84,15 @@ export function run(opts) {
     createBiquadFilter(){ return node('biquad'); },
     createBufferSource(){ return node('buf'); },
     createBuffer(c,n,sr){ return { getChannelData:()=>new Float32Array(n), length:n }; },
+    createConvolver(){ return node('convolver'); },
+    createWaveShaper(){ return node('shaper'); },
     resume(){ return Promise.resolve(); },
   };
   function param(){ const p={value:0}; for (const m of ['setValueAtTime','linearRampToValueAtTime',
     'exponentialRampToValueAtTime','setTargetAtTime','cancelScheduledValues']) p[m]=()=>p; return p; }
   function node(kind){
-    const n={ kind, gain:param(), frequency:param(), Q:param(), type:'', buffer:null,
+    const n={ kind, gain:param(), frequency:param(), Q:param(), detune:param(),
+      type:'', buffer:null, curve:null, oversample:'',
       connect(x){ return x; }, start(t){ n._t=t; }, stop(){} };
     return n;
   }
@@ -117,7 +114,7 @@ export function run(opts) {
     get audioCtx(){ return audioCtx; },
     masterGain: node('gain'),
     playClip: (src) => { clips.push({ t:+vt.toFixed(4), src }); },
-    clip: (src) => ({ duration: CLIP_DURATIONS[src.split('/').pop()] ?? NaN, load(){} }),
+    clip: () => ({ duration: NaN, load(){} }),
     brushOff(){},
     startBrainBreak(cb){ log.push({ t:vt, ev:'fellBackToCarl' }); cb && cb(); },
     setInterval: (fn, ms) => { timers.push({fn, ms}); return timers.length-1; },
@@ -139,19 +136,12 @@ export function run(opts) {
   // `breaks` runs that many consecutive BREAKS (each one set, self-ending).
   // `activity` instead starts the rhythm section, which never ends on its own;
   // the driver stops when maxSeconds of virtual time have passed.
-  const wanted = opts.breaks || 1;
-  let done = 0, finished = false;
-  const marks = [];
-  if (opts.activity) {
-    marks.push(0);
-    mod.startRhythmActivity();
-  } else {
-    const nextBreak = () => {
-      marks.push(clips.length);
-      mod.startRhythmBreak(() => { if (++done >= wanted) finished = true; else nextBreak(); });
-    };
-    nextBreak();
-  }
+  // `activity` starts the section, which never ends on its own - the driver
+  // stops after `runFor` virtual seconds. Otherwise the brain-break shape runs
+  // and ends itself.
+  let finished = false;
+  if (opts.activity) mod.startRhythmActivity();
+  else mod.startRhythmBreak(() => { finished = true; });
 
   const STEP = 1/120;              // 8.3 ms of virtual time per frame
   const taps = [];
@@ -171,17 +161,47 @@ export function run(opts) {
     }
     if (onEvent) onEvent(vt, mod.api, els);
   }
-  return { finished, seconds:+vt.toFixed(2), taps, clips, els, marks,
+  return { finished, seconds:+vt.toFixed(2), taps, clips, els,
            history: els.rhythmBanner.history,
            banner: els.rhythmBanner.history[0] || '',
            sections: mod.api.sections ? mod.api.sections() : null,
            state: mod.api.state(), log };
 }
 
-// A student who hammers both targets throughout. Used to prove the break runs
-// identically whatever he does, which is the point of the design.
+// A student who hammers both targets throughout. Should never pass a measure.
 export function masher(everyNFrames=7) {
   let n = 0;
   return () => (n++ % everyNFrames === 0) ? [n % 2 ? 'B' : 'C'] : [];
 }
 
+// A student who plays the CURRENT pattern back perfectly, on the beat. Reads
+// the live measure out of the test seam rather than being told the answer, so
+// it follows the section wherever its progression goes.
+export function copycat(offsetSec = 0) {
+  const done = new Set();
+  return (now, api) => {
+    const s = api.live && api.live();
+    if (!s) return [];
+    const out = [];
+    s.slots.forEach((tok, i) => {
+      if (tok !== 'B' && tok !== 'C') return;
+      const key = s.start.toFixed(5) + ':' + i;
+      if (done.has(key)) return;
+      if (now >= s.start + i * s.slotDur + offsetSec) { done.add(key); out.push(tok); }
+    });
+    return out;
+  };
+}
+
+
+// The judge on its own, for tests that want it without the section around it.
+// Extracted from the same file at run time, so there is no second copy to
+// drift out of step with the one that ships.
+export function loadJudge() {
+  const src = readFileSync(SRC_FILE, 'utf8');
+  const a = src.indexOf('  function rhythmJudge(');
+  if (a < 0) throw new Error('rhythmJudge not found in index.html');
+  const end = src.indexOf('\n  }', a);
+  if (end < 0) throw new Error('rhythmJudge has no end');
+  return new Function(src.slice(a, end + 4) + '\nreturn rhythmJudge;')();
+}

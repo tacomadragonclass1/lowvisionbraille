@@ -3,7 +3,7 @@
 // There is no build step and no test framework on purpose - the app does not
 // have either, and a dependency that has to be installed is a dependency that
 // will not be installed. Node alone runs this.
-const suites = ['test_break.mjs','test_speech.mjs','test_rotation.mjs'];
+const suites = ['test_simon.mjs','test_judge.mjs','test_rotation.mjs'];
 let pass=0, fail=0;
 for (const s of suites) {
   console.log(`\n${'='.repeat(60)}\n${s}\n${'='.repeat(60)}`);
