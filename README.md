@@ -9,7 +9,7 @@ and `img/` folders next to it — **copy all three or nothing works.**
 
 Designed for a tablet in landscape, full screen, held in two hands.
 
-## The four activities
+## The five activities
 
 After the *Tap to start* splash, an adult picks one. There is deliberately **no
 mode button on the activity screen** — a student would hit it, and would hit it
@@ -18,12 +18,26 @@ in the middle of a word.
 | | Trace | Braille | Speaks |
 | --- | --- | --- | --- |
 | **Letters** `abc` | a–z | one cell | the letter's phoneme |
-| **Words** `cat` | — | three cells, in order | each phoneme, then the whole word |
+| **CVC** `cat` | — | three cells, in order | each phoneme, then the whole word |
 | **Numbers** `123` | 0–9 | two cells, in order | the number's name |
-| **Sight words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
+| **High Frequency Words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
+| **Rhythm** `●■` | — | — | announces the turn, then plays a beat |
 
-Picking **Words** then asks which short vowel to drill; picking **Sight words**
-asks which braille convention to use.
+Every letter sample on a menu card is **drawn from `PATHS`, not set in a font**
+— `glyphWord()` — for the same reason the CVC boxes and the sight word are:
+it guarantees the single-story `a` whatever the tablet has installed. The two
+strings that cannot be drawn (`Which braille?`, `UEB contractions` — no
+uppercase, space or `?` in `PATHS`) fall back to a font stack led by Andika,
+and that part is best effort. The Rhythm card carries an **under construction**
+note.
+
+**Rhythm is the odd one out** and is deliberately kept that way: no braille, no
+print, no items, nothing scored. It owns the whole screen until the adult takes
+it back with the ⌂. It is under development — see *The beat game* — and it is
+**not** in the brain-break rotation today, though it can still run as one.
+
+Picking **CVC** then asks which short vowel to drill; picking **High Frequency
+Words** asks which braille convention to use.
 
 ### Letters
 
@@ -32,7 +46,7 @@ while the braille cell lights the dots that letter needs. **Both** are required
 to advance. New: finishing the cell now plays that letter's sound — `/b/`, not
 "bee".
 
-### Words (CVC)
+### CVC
 
 The three print letters sit in boxes along the top. **There is no tracing
 here** — the student reads them and answers in braille.
@@ -65,7 +79,7 @@ the number sign (dots 3-4-5-6) followed by the letter `a`–`j` — so the stude
 number sign first, then the digit cell, and traces the printed numeral. All
 three must be done before it advances, then the number's name is spoken.
 
-### Sight words
+### High Frequency Words
 
 Eight high-frequency words — **the, is, it, said, and, as, a, I** — in two
 rounds. Round 1 shows the word in print above the dots; **round 2 shows the
@@ -151,7 +165,10 @@ and the only glyph in `PATHS` that is not lowercase.
 | A sight word completed, round 1 | The whole word, spoken |
 | A sight word completed, round 2 | "What is this word?", five seconds, "The word is …" |
 | Shape touched in the minigame | A pop, then the next note of that mode's tune |
-| Every 4th completed task | Carl's music, while he dances across the screen |
+| Every 6th completed task | A brain break: Carl's dance, or the beat game |
+| BOOM touched in the beat game | A kick drum |
+| CLAP touched in the beat game | A snare |
+| The beat game's backing | A tick on every eighth, accented on the downbeat, a shaker between |
 
 The brush follows the **finger**, not the gesture: wander off the guide and it
 drops out, come back and it returns, with no restart gap. It is pink noise
@@ -251,7 +268,7 @@ the reward round that says which activity the student is in:
 | Letters | Mary Had a Little Lamb | E D C D E E E |
 | Numbers | Mary Had a Little Lamb | E D C D E E E |
 | Words (CVC) | Twinkle Twinkle Little Star | C C G G A A G |
-| Sight words | London Bridge Is Falling Down | G A G F E F G |
+| High Frequency Words | London Bridge Is Falling Down | G A G F E F G |
 
 Numbers shares the tracing tune because it *is* a tracing activity — a digit is
 traced exactly the way a letter is. Both phrases sit an octave above the braille
@@ -274,7 +291,23 @@ change:** always left to right, always the same notes in order.
 
 ## The brain break
 
-Every **sixth completed task**, Carl dances across the screen to his own music
+Every **sixth completed task** the activity pauses for a break. Today that is
+always Carl's dance.
+
+The beat game was built as a second break and then **promoted out of the
+rotation on 2026-10-20** to its own menu section, so it can be developed as
+something you practise rather than something that interrupts you. Its break
+form still works and is still tested — one set, then it hands back — and
+putting `'rhythm'` back into `breakRotation` is the whole of re-enabling it.
+`?break=rhythm` pins it for a session without editing anything.
+
+`pickBreak()` is the only thing that decides *which* break runs; `taskDone()`
+and `BRAIN_BREAK_EVERY` still own *when* one happens. Keeping those two
+decisions apart is what made the promotion a one-line change.
+
+### Carl's dance
+
+**The only break there is today.** Carl dances across the screen to his own music
 (`audio/brainbreak/carlwin.wav`, 10.23s) and then the activity resumes by itself.
 
 A *task* is any finished piece of work — a letter, a word, a number — **and a
@@ -332,6 +365,208 @@ How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
 a reward twice as often as a single letter. The brain break has its own
 `BRAIN_BREAK_EVERY` (6), counted in tasks rather than items.
 
+## The beat game
+
+**Its own activity, picked from the menu — under development.** The band plays
+a beat, then the student has a turn on two enormous targets, and it runs set
+after set until the adult walks out with the ⌂. The turns change length as it
+goes.
+
+It has a second shape: run as a **brain break** it plays exactly one set and
+hands back to the braille work. That form is built and tested but is not in the
+rotation — put `'rhythm'` in `breakRotation` to use it, once this has been
+dialled in by ear. `startRhythmActivity()` and `startRhythmBreak()` are the two
+entry points; everything below is common to both.
+
+**BOOM is the circle on the left and plays a kick. CLAP is the square on the
+right and plays a snare.** Those three facts — shape, side, sound — never
+change, in either orientation. A student who cannot see the screen well learns
+where the targets are by position and keeps that knowledge; moving them, or
+swapping which is which, would throw away the only spatial fact the activity
+teaches. **Do not make them responsive in a way that reorders them.**
+
+### Nothing is scored, and that is the design
+
+What the student plays is **not measured, not judged and not spoken about.**
+There is no timing window, no accuracy, no mastery gate, no "a bit early", no
+retry, no failure. If he gets it he gets it; if he does not, the break ends
+anyway and the next one comes round. **The only coaching is visual:** the
+circle and the square light up on the beat they belong to.
+
+The targets are an **instrument**, and that is the whole of it. They sound and
+flash on every touch — during the band's turn, during the talking, during a
+rest. A target that went dead outside some "scored" window would read as
+broken.
+
+> A fully scored version of this existed — ±225 ms windows, 75% mastery gates,
+> five levels, early/late feedback — and was **removed on purpose on
+> 2026-10-19**. It turned a rest between pieces of work into another thing to
+> perform. Do not add accuracy back in without asking. If a measured version is
+> ever wanted it belongs in its own app, not in the break. The removed design
+> is in the git history of this file if it is ever needed.
+
+### A break
+
+The pulse runs continuously from the first measure to the last. Speech lands in
+*reserved measures on the same grid*, with the ticks going underneath it, so
+the student never loses the beat between the band's turn and his own. The only
+thing that stops the pulse is the end of the break.
+
+A **set** is two turns (`RHYTHM_TURNS_PER_SET`). As a break, one set *is* the
+whole thing. As the activity, the scheduler lays down the next set while the
+current one still has four measures to run, so the pulse carries straight
+through the seam and there is no gap to hear. Each turn is:
+
+| | |
+| --- | --- |
+| an announcement | *"Let's do it for two measures, like this."* |
+| **the band** | up to two measures of BOOM CLAP BOOM CLAP |
+| | *"Your turn!"* |
+| **count-in** | one measure, every beat accented — four even clicks needs no words |
+| **the student** | one to four measures. Whatever he plays, the break moves on |
+
+The **first set a student ever gets** is a scripted ramp — one measure, then
+two — so the shape of the game is taught by doing it, and the first turn needs
+no announcement because *"Okay, let's make a beat!"* has just made it. Every
+set after that draws its lengths at random from 1–4, **never the same length
+twice running, across the seam between sets as well as inside one.** That
+cross-seam case only started mattering when sets began chaining, and it is
+easy to miss: a guard that only looked inside a set would still announce "four
+measures" twice in a row.
+
+```
+activity:  intro → where → yourturn → len2 → yourturn → len4 → yourturn → …
+                                                          (until the ⌂)
+as a break: intro → where → yourturn → len2 → yourturn → bye        (48s)
+            intro → len3  → yourturn → len1 → yourturn → bye
+```
+
+As a break it runs 44–60 s. The band never demonstrates for more than
+`RHYTHM_DEMO_MAX` (2) measures however long the turn is — the beat is one
+measure, so two of them is a complete demonstration, and it stops a
+four-measure turn from costing eight.
+
+A long activity session would otherwise grow its own script forever, so
+sections that have been fully scheduled and played are pruned;
+`rhythmSectionAt()` walks that list on every eighth note. Measured over seven
+minutes of continuous play: 140 measures, section list bounded.
+
+### The eight spoken lines
+
+All eight are **announcements of what is about to happen** — never how the
+student did. `intro`, `where`, `len1`–`len4`, `yourturn`, `bye`. That is the
+whole vocabulary.
+
+`where` ("Boom is the circle on the left. Clap is the square on the right.") is
+said **once per session**, on the very first break, keyed off the break count
+rather than a flag of its own — a second flag could disagree with the count,
+and there is no state in which it should.
+
+**Clip length is load-bearing.** Each line is given whole measures of backing to
+itself and starting the next clip stops the one before it, so a line longer
+than its room is cut off mid-sentence — which is silent, invisible in the code,
+and only audible. `bars` in `RHYTHM_SAY` carries the measured durations;
+`rhythmBars()` widens a gap on its own once a clip's real duration has loaded,
+so a longer re-record self-corrects from the second break onwards, and `bars`
+is what gets the *first* one right. `where.wav` (4.43 s) is the only line
+needing two.
+
+### The beat
+
+One measure of slot tokens in `RHYTHM_BEAT`, repeated. `div` is slots per beat,
+so `slots.length` must be `RHYTHM_METER * div` — checked at load and warned to
+the console, because it is the one mistake a new pattern can make that sounds
+plausible but is musically wrong rather than obviously broken.
+
+| token | means |
+| --- | --- |
+| `B` | BOOM |
+| `C` | CLAP |
+| `-` | a rest — nothing sounds |
+| `b` / `c` | the band plays it and the student is not meant to |
+
+The current beat is `B C B C` and uses none of the lowercase or rest tokens.
+They are supported by the player anyway, at a cost of about six lines, because
+they are what a harder beat would be built from.
+
+### Timing
+
+**The audio clock is the only clock.** Everything musical is scheduled on the
+`AudioContext` clock and nothing musical waits on `setTimeout`. A scheduler
+queues the next 1.2 s of audio ahead of the playhead, so the beat is
+sample-accurate while the main thread is busy laying out a flash. Visual cues
+fire from a rAF loop that compares against what is **currently being heard**
+(`getOutputTimestamp().contextTime`, which already carries the output latency
+that `currentTime` does not), so a pulse lands with its sound rather than with
+its scheduling.
+
+The 1.2 s lookahead against a 60 ms interval is twenty times the headroom it
+looks like it needs, on purpose: a browser is free to throttle both
+`setTimeout` *and* `requestAnimationFrame` to one call a second, and measured, a
+remote-debugged tab does exactly that. Queueing further ahead costs nothing — a
+teardown mutes the whole bus in one move, so audio already scheduled is never
+heard.
+
+### Tuning dials
+
+| What | Where |
+| --- | --- |
+| The beat itself | `RHYTHM_BEAT` |
+| Tempo, meter | `RHYTHM_BPM`, `RHYTHM_METER` |
+| Turns per set | `RHYTHM_TURNS_PER_SET` |
+| The scripted first set | `RHYTHM_FIRST_SET` |
+| Turn lengths drawn after that | `RHYTHM_LENGTHS` |
+| Longest demonstration | `RHYTHM_DEMO_MAX` |
+| Count-in length | `RHYTHM_COUNT_IN` |
+| Light the shape on the student's turn | `RHYTHM_PRACTICE_GUIDE` |
+| Which break activity runs | `breakRotation` |
+
+### Options
+
+- `?mode=rhythm` opens the Rhythm section straight off the splash, skipping the
+  menu.
+- `?rhythm=1` previews the **brain-break** shape instead — one set, then it
+  hands back to the menu by itself.
+- `?rbreak=later` skips the scripted opening and goes straight to the random
+  lengths.
+- `?break=carl` / `?break=rhythm` pins the session to one break activity.
+- **Arrow keys**, or `Z` and `M`, play BOOM and CLAP. That is how an adult
+  checks the game on a laptop, and it is the path a student on a switch or a
+  keyboard takes.
+
+### Tests
+
+```
+node tools/rhythm-tests/run.mjs
+```
+
+39 assertions, no framework and no install step — node alone runs them, because
+a dependency that has to be installed is a dependency that will not be
+installed. **The module under test is sliced out of `index.html` at run time**
+and executed against a virtual clock with the DOM and Web Audio stubbed, so
+what is tested is the shipped code. The central test is that **a student who
+hammers both targets throughout gets a byte-identical break** to one who never
+touches them — same script, same length, same measures. That is the design,
+stated as an assertion. The activity is driven for seven virtual minutes to
+check it never ends on its own, never repeats the intro, and keeps its section
+list bounded.
+
+A browser cannot test this: a remote-controlled tab throttles
+`requestAnimationFrame` to one frame a second (measured), so anything
+time-sensitive is meaningless there. The browser is still the right place to
+check layout, stacking and teardown — just not timing.
+
+### Known limitations
+
+- **The spoken lines have not been signed off by ear.** They are generated,
+  normalized and in place, marked `generated_2026-10-19_awaiting_listen` in
+  `audio/manifest-tts.json`.
+- **One beat.** Rests, syncopation and "hold the clap" were built and removed
+  along with the scoring; the tokens that express them survive.
+- **No haptics.** A vibration on each beat would be a real addition for this
+  student; `navigator.vibrate` is unavailable on iOS Safari, which is why it is
+  not there.
+
 ## Tracing
 
 Tracing is deliberately loose, and this is load-bearing: a generous halo around
@@ -348,6 +583,9 @@ school-print writing order.
 - `?mode=letters` / `?mode=words` / `?mode=numbers` — bookmark straight past the
   activity menu. `?mode=words&vowel=i` locks one vowel family.
 - `?letter=k` — lock to a single letter for targeted practice.
+- `?rhythm=1` opens the beat game (a brain break) straight off the splash;
+  `?rbreak=later` skips its scripted opening; `?break=carl` / `?break=rhythm`
+  pins which break activity the session uses. See *The beat game*.
 - The *Full screen* button hides browser chrome.
 - The `⌂` at the top **left** returns to the activity menu on a **double tap**.
   The **first** tap lights the button up and nothing else happens; a second tap
@@ -381,3 +619,6 @@ eye or ear:
 | How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |
 | Beat before the word is spoken | the `700` in `checkCompletion()` |
 | Print letter size in its box | `--boxSize` on `#boxes` |
+| Which break activity runs | `breakRotation` |
+
+The beat game has its own table of dials — see *The beat game · Tuning dials*.
