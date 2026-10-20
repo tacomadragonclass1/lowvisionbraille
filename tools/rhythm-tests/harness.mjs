@@ -72,7 +72,11 @@ export function run(opts) {
     els[id] = makeEl(id);
 
   let vt = 0;                      // the virtual AudioContext clock, seconds
-  const scheduled = [];            // every drum/tick the band queued
+  // Every oscillator the kit starts, with the time it was scheduled for. The
+  // voices are told apart by frequency, which is how a test can assert that
+  // the bass really does drop out on a separator bar without the module
+  // having to report it.
+  const scheduled = [];
   const audioCtx = {
     get currentTime(){ return vt; },
     sampleRate: 48000,
@@ -93,7 +97,9 @@ export function run(opts) {
   function node(kind){
     const n={ kind, gain:param(), frequency:param(), Q:param(), detune:param(),
       type:'', buffer:null, curve:null, oversample:'',
-      connect(x){ return x; }, start(t){ n._t=t; }, stop(){} };
+      connect(x){ return x; },
+      start(t){ n._t=t; if (kind==='osc') scheduled.push({t, hz:n.frequency.value}); },
+      stop(){} };
     return n;
   }
 
@@ -161,7 +167,7 @@ export function run(opts) {
     }
     if (onEvent) onEvent(vt, mod.api, els);
   }
-  return { finished, seconds:+vt.toFixed(2), taps, clips, els,
+  return { finished, seconds:+vt.toFixed(2), taps, clips, els, scheduled,
            history: els.rhythmBanner.history,
            banner: els.rhythmBanner.history[0] || '',
            sections: mod.api.sections ? mod.api.sections() : null,

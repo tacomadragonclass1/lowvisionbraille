@@ -516,12 +516,19 @@ tab does exactly that.
 node tools/rhythm-tests/run.mjs
 ```
 
-52 assertions, no framework and no install step. **The module is sliced out of
+62 assertions, no framework and no install step. **The module is sliced out of
 `index.html` at run time** and run against a virtual clock, so there is no
 second copy of the judge to drift out of step. A simulated student who plays
 each pattern back advances through the list; one who does nothing, and one who
 mashes, pass nothing and stay on pattern 1. Taps during the lock are proven to
 be discarded, not banked.
+
+The three-answer cycle is checked by asserting that **no two student bars ever
+run back to back** — which is what "the band demonstrates before every go"
+means in testable terms. The separator is checked by reading back the scheduled
+oscillator frequencies: the bass voices are identifiable by pitch, so the test
+proves the bass really is absent on those bars rather than trusting the code to
+read correctly.
 
 A browser cannot test the timing — a remote-controlled tab throttles
 `requestAnimationFrame` to one frame a second — but it is the right place for

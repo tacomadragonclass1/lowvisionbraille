@@ -1646,6 +1646,11 @@
   // -------- dials ---------------------------------------------------------
   const RHYTHM_BPM            = 84;
   const RHYTHM_METER          = 4;
+  // How many times the student has to play a pattern back correctly before the
+  // next one arrives. Each go is a full call and response - the band always
+  // demonstrates first, so this is never three unassisted measures in a row.
+  // A wrong measure does not count and does not reset the tally.
+  const RHYTHM_REPS_TO_ADVANCE = 3;
   // One tap's worth of slop either side of a slot, as a fraction of the slot.
   // 0.5 means the slots simply tile the measure and the nearest one wins.
   const RHYTHM_SLOT_SLOP      = 0.5;
@@ -1916,6 +1921,10 @@
   // Which pattern they are on. Survives a trip to the menu and back, so the
   // section is picked up where it was left rather than restarted.
   let rTaskIdx=0, rAttempt=0, rPassed=0;
+  // Correct measures on the CURRENT pattern, and the results that have settled
+  // but not yet been counted. The queue exists because the counting happens
+  // when the next cycle is planned, which is a moment later than the judging.
+  let rReps=0, rResults=[];
 
   for (const p of RHYTHM_PATTERNS)
     if (p.slots.length !== RHYTHM_METER*p.div)
@@ -2048,9 +2057,31 @@
     return null;
   }
 
-  // One call-and-response: the band's measure, then the student's. Planned as
-  // a pair so the two always sit on adjacent bars of the same grid.
-  function rhythmPlanTask() {
+  // One call and response: the band's bar, the student's bar, and a bar of
+  // groove to turn around in.
+  //
+  // THE TURNAROUND IS LOAD-BEARING, not padding. The judge cannot run until
+  // the student's bar is over, but the scheduler is already a bar ahead by
+  // then - so whatever follows the student's bar was queued before anyone
+  // knew how they did. The turnaround is that bar. The decision is made
+  // inside it, and everything that depends on the decision goes after it.
+  //
+  // A pattern is answered RHYTHM_REPS_TO_ADVANCE times before the next one
+  // arrives, each time with its own demonstration. When that count is reached
+  // an extra bar is laid down with the bass dropped out - the groove keeps
+  // time but the floor falls away - which is the only signal that says "new
+  // pattern coming". It cannot be the turnaround itself: the turnaround's bass
+  // is already scheduled by the time the third answer has been judged.
+  function rhythmPlanCycle() {
+    // Count whatever has settled since the last time we planned.
+    while (rResults.length) if (rResults.shift()) rReps++;
+    if (rReps>=RHYTHM_REPS_TO_ADVANCE) {
+      rReps=0;
+      rTaskIdx=(rTaskIdx+1)%RHYTHM_PATTERNS.length;
+      rSections.push({ kind:'sep', startMeasure:rNextMeasure, measures:1,
+                       events:[], sent:0 });
+      rNextMeasure+=1;
+    }
     const task=rhythmTask();
     const spm=task.slots.length;
     const slotDur=rhythmMeasureDur()/spm;
@@ -2077,7 +2108,14 @@
     // final slot is still inside its own window when the books are closed.
     rCues.push({ t:startAt+rhythmMeasureDur()+slotDur*RHYTHM_SLOT_SLOP,
                  fn:()=>rhythmSettle(play) });
+    // The turnaround. Full groove, bass and all - it is the normal sound of
+    // the activity, which is what makes the stripped-back bar at a pattern
+    // change audible as a change.
+    rSections.push({ kind:'turn', startMeasure:rNextMeasure, measures:1,
+                     events:[], sent:0 });
+    rNextMeasure+=1;
     rBanner(rhythmPatternLabel(task)+'   ·   '+(rTaskIdx+1)+' of '+RHYTHM_PATTERNS.length+
+            '   ·   '+Math.min(rReps+1,RHYTHM_REPS_TO_ADVANCE)+' of '+RHYTHM_REPS_TO_ADVANCE+
             (rAttempt?'   ·   again':''));
   }
 
@@ -2088,12 +2126,21 @@
     if (r.pass) {
       rPassed++;
       rAttempt=0;
-      rTaskIdx=(rTaskIdx+1)%RHYTHM_PATTERNS.length;
       const ac=audioCtx;
+      // Immediately, on every correct measure - not only on the third. The
+      // band demonstrates again whether they were right or wrong, so without
+      // this there is nothing at all to tell those two cases apart.
       if (ac) rhythmChime(ac.currentTime+.02);
     } else {
       rAttempt++;        // same pattern, demonstrated again
     }
+    rResults.push(r.pass);
+    // Plan the next cycle HERE rather than leaving it to the scheduler's
+    // top-up. This is the moment the result is known, and the turnaround bar
+    // that follows gives about 1.3 s of room before the scheduler needs the
+    // bar after it - which is what lets a pattern change take effect on the
+    // very next demonstration instead of one cycle late.
+    rhythmPlanCycle();
   }
 
   function rhythmPatternLabel(task) {
@@ -2110,15 +2157,18 @@
     const until=ac.currentTime+RHYTHM_SCHEDULE_AHEAD;
     const stepsPerMeasure=RHYTHM_METER*2;     // the backing grid is always eighths
     const atMeasure=Math.floor(rGrid.nextStep/stepsPerMeasure);
-    // Never run out of script. A task is two measures, so topping up with
-    // three left is always well ahead of the playhead.
-    if (rNextMeasure-atMeasure<3) rhythmPlanTask();
+    // A BACKSTOP ONLY. The next cycle is normally planned by rhythmSettle, at
+    // the moment the student's measure has been judged - which is what makes a
+    // pattern change land on the very next demonstration. This catches the
+    // case where no judging happened at all, so the script cannot run dry.
+    if (rNextMeasure-atMeasure<1) rhythmPlanCycle();
 
     let pushed=false, guard=0;
     while (rGrid.beat0+rGrid.nextStep*rGrid.stepDur<until && guard++<512) {
       const idx=rGrid.nextStep++;
       const t=rGrid.beat0+idx*rGrid.stepDur;
       const pos=idx%stepsPerMeasure;
+      const measure=Math.floor(idx/stepsPerMeasure);
       // Hats and bass, every measure, under everything - including the
       // student's own. A groove that stopped for their turn would take the
       // pulse with it at exactly the moment they need it most.
@@ -2128,9 +2178,15 @@
       const wobble=.88+Math.random()*.24;
       if (hat==='o') rhythmHat(t,{open:true,vol:.8*wobble});
       else rhythmHat(t,{vol:hat*wobble});
-      for (const [step,note,len] of RHYTHM_BASSLINE)
-        if (pos===step)
-          rhythmBass(t,{A:BASS_A,C:BASS_C,G:BASS_G}[note],len*rGrid.beatDur,.9);
+      // The separator bar keeps the drums and drops the bass. The pulse is
+      // unbroken - it has to be, it is what the student counts on - but the
+      // floor falls away, and that is the whole signal for "that pattern is
+      // finished, a new one is coming".
+      const atSec=rhythmSectionAt(measure);
+      if (!atSec || atSec.kind!=='sep')
+        for (const [step,note,len] of RHYTHM_BASSLINE)
+          if (pos===step)
+            rhythmBass(t,{A:BASS_A,C:BASS_C,G:BASS_G}[note],len*rGrid.beatDur,.9);
       rCues.push({ t, band: pos===0 ? 'downbeat' : (pos%2===0 ? 'beat' : null) });
       pushed=true;
     }
@@ -2212,10 +2268,12 @@
     // student hears the tempo before anything is asked of them.
     rSections.push({ kind:'intro', startMeasure:0, measures:1, events:[], sent:0 });
     rNextMeasure=1;
-    rhythmPlanTask();
+    rReps=0; rResults=[];
+    rhythmPlanCycle();
     // As a brain break it stops after a fixed number of call-and-responses.
+    // A cycle is three bars now (demonstration, answer, turnaround).
     if (rMode==='break')
-      rCues.push({ t:rhythmMeasureTime(1+RHYTHM_BREAK_TASKS*2), fn:endRhythm });
+      rCues.push({ t:rhythmMeasureTime(1+RHYTHM_BREAK_TASKS*3), fn:endRhythm });
     rCues.sort((a,b)=>a.t-b.t);
     rhythmSchedule();
     rSched=setInterval(rhythmSchedule,RHYTHM_SCHEDULE_EVERY);
@@ -2251,8 +2309,9 @@
   window.__rhythm = {
     patterns:RHYTHM_PATTERNS, judge:rhythmJudge,
     state:()=>({ on:rOn, mode:rMode, locked:rLocked, task:rTaskIdx,
-                 attempt:rAttempt, passed:rPassed, live:Boolean(rLive),
-                 measuresPlanned:rNextMeasure, sections:rSections.length }),
+                 reps:rReps, attempt:rAttempt, passed:rPassed,
+                 live:Boolean(rLive), measuresPlanned:rNextMeasure,
+                 sections:rSections.length }),
     now:rhythmHeardTime,
     live:()=>rLive && { slots:rLive.slots, start:rLive.start, slotDur:rLive.slotDur },
     tap:(w)=>rhythmTap(w,performance.now()),
