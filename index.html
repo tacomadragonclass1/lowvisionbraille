@@ -1880,8 +1880,13 @@
     lp.frequency.exponentialRampToValueAtTime(freq*2.2,t+.12);
     const g=ac.createGain();
     g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(.22*vol,t+.012);
-    g.gain.setValueAtTime(.22*vol,t+dur*.6);
+    // 0.11. The bass is BACKING - it carries the pulse and it is meant to be
+    // felt more than listened to. At 0.22 it measured 6 dB under the kick,
+    // which sounds reasonable written down and in practice sat right on top of
+    // the student's own boom and clap and buried them. Halved, it is about
+    // 12 dB down and the two drums are clearly in front of it again.
+    g.gain.linearRampToValueAtTime(.11*vol,t+.012);
+    g.gain.setValueAtTime(.11*vol,t+dur*.6);
     g.gain.exponentialRampToValueAtTime(.0006,t+dur);
     lp.connect(g); g.connect(bus);
     for (const [type,det,lvl] of [['sawtooth',0,.6],['square',0,.25],['sine',-12,.9]]) {
@@ -1974,20 +1979,27 @@
     }
     rBandEl.classList.remove('beat','downbeat');
   }
-  // The sound of getting one right. Three notes up, on the kit's own bus so a
-  // teardown silences it like everything else.
+  // The sound of getting one right. ONE note, and a quiet one.
+  //
+  // It was a three-note rising figure, which took half a second, arrived
+  // exactly as the next demonstration began and pulled attention off it. A
+  // single ding says the same thing and is gone before the downbeat. G5 is the
+  // note the splash chime ends on, so it is already this app's "yes".
   function rhythmChime(t) {
     if (!RHYTHM_SUCCESS_CHIME) return;
     const ac=audio(); const bus=rhythmBus(); if (!ac||!bus) return;
-    [[523.25,0],[659.26,.085],[783.99,.17]].forEach(([f,d])=>{
-      const o=ac.createOscillator(); o.type='triangle'; o.frequency.value=f;
-      const g=ac.createGain();
-      g.gain.setValueAtTime(0,t+d);
-      g.gain.linearRampToValueAtTime(.2,t+d+.01);
-      g.gain.exponentialRampToValueAtTime(.0005,t+d+.34);
-      o.connect(g); g.connect(bus); g.connect(rVerbSend);
-      o.start(t+d); o.stop(t+d+.36); rKeep(o);
-    });
+    const g=ac.createGain();
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(.16,t+.006);
+    g.gain.exponentialRampToValueAtTime(.0005,t+.3);
+    g.connect(bus); g.connect(rVerbSend);
+    // A touch of the octave above keeps it bell-like rather than flute-like,
+    // the same trick playTone() uses for the braille dot tones.
+    for (const [f,lvl,type] of [[783.99,1,'triangle'],[1567.98,.22,'sine']]) {
+      const o=ac.createOscillator(); o.type=type; o.frequency.value=f;
+      const og=ac.createGain(); og.gain.value=lvl;
+      o.connect(og); og.connect(g); o.start(t); o.stop(t+.33); rKeep(o);
+    }
   }
 
   // ---- input -------------------------------------------------------------
