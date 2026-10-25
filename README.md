@@ -137,17 +137,17 @@ otherwise beat the prompt on a one-cell word and cut it off. Then:
 the last cell is answered
   ↓
 THE LOOK          5 seconds. Every cell comes forward together - same size,
-                  same brightness - and the ghosted dots are HIDDEN, so the
-                  only thing on the screen is the word's dot pattern.
-                  Nothing is said. The silence is the activity.
+                  same brightness - the ghosted dots are HIDDEN, and each cell
+                  is FRAMED in its own rectangle. Nothing is said. The silence
+                  is the activity.
   ↓
 "The word is"  ->  the word
   ↓
 "Good job reading with me!"
   ↓
-THE SWELL         the dots grow into full size over 2.2s, then fade over 0.7s
+THE HOLD          2.2s more of the framed word, still
   ↓
-the next word
+                  it fades over 0.7s, and the next word comes up
 ```
 
 The look **hides** the ghosts rather than dimming them, because what is being
@@ -157,10 +157,37 @@ keeps its six-position geometry — the real dots must not slide into a new
 layout the moment the ghosts leave, or the shape changes while it is being
 looked at.
 
-The swell starts at 84% and grows **into** full size rather than past it. The
-round-2 `--d` values are already sized so that N *full-width* cells fit the
-screen, so scaling past 1 runs a four-cell word off both edges; growing into
-the full size is the whole range there is.
+#### ⭐ Every cell is framed, and it has to be
+
+Hiding the ghosts on its own was **confusing in use**, and the reason is in the
+measurements: the gap *between* two cells is about 21px on a four-cell word,
+and the gap between the two dot **columns inside one cell** is about 34px. They
+are the same order of size. With the ghosts gone, a lone dot 4 reads just as
+easily as its neighbour's dot 1 — which letter a dot belongs to stops being
+visible at all. The ghosted dots had been carrying that grouping, and nothing
+replaced them.
+
+Each cell now gets its own rounded rectangle. Two things make it work:
+
+- It is an **`outline`**, not a border or padding. An outline is drawn outside
+  the border box *without reflow*, so adding it cannot move a single dot — the
+  shape being studied must not shift at the moment it is framed.
+- The cells sit at **86%** during the look, and that is what makes room for the
+  frame. A transform does not change the width a cell *occupies* (see the
+  four-cell note above), so scaling down frees visual space inside each cell's
+  own slot without moving the slots. Measured on the worst case — "said",
+  four cells, round-2 sizes — the frames end up **26px apart and never
+  overlap**.
+
+The frame is deliberately visible rather than tasteful. It is the only thing
+carrying which dot belongs to which letter, so a line too polite to be seen at
+arm's length fails the whole purpose of it; it stays dimmer than the dots,
+which are the content.
+
+> **There used to be a swell here** — the dots grew into full size over the
+> 2.2s before the fade. It was dropped on 2026-10-25: the movement was the
+> wrong idea, but the *pacing* was right, so the 2.2s is kept as a still hold
+> and the chain is the same length it was.
 
 Every step waits on the clip before it ending rather than on a timer of its
 own. The five-second look and the two animation legs are the only real timers,
@@ -209,7 +236,7 @@ and the only glyph in `PATHS` that is not lowercase.
 | A sight-word cell completed | **Nothing — muted.** Should be that letter's *name*, "tee" not /t/; see the warning above |
 | A round-2 sight card appearing | "Let's read this word together…" — dots inert until it ends |
 | A sight word completed, round 1 | The whole word, spoken |
-| A sight word completed, round 2 | Five seconds of silence, "The word is …", the word, "Good job reading with me!", then the dots swell and fade |
+| A sight word completed, round 2 | Five seconds of silence, "The word is …", the word, "Good job reading with me!", then the framed word holds and fades |
 | A braille dot touched in the Assessment section | That dot's tone — but **only** if it is the next one in reading order |
 | Shape touched in the minigame | A pop, then the next note of that mode's tune |
 | Every 6th completed task | A brain break: Carl's dance |
@@ -705,11 +732,12 @@ stores nothing cannot leak it.
 
 `audio/assessment/background.mp3` — the owner's own file, shipped as supplied
 (192 kbps stereo, 3:26) — loops under the whole round at `ASSESS_MUSIC_LEVEL`
-(0.18), fading in and out over 900 ms. Low enough to sit under a spoken prompt
-and a dot tone without masking either, loud enough to be company rather than a
-rumour. It keeps playing through the snapshot and stops when the section
-closes. It is the one tuning dial here most likely to want an ear on a real
-tablet.
+(**0.4**), fading in and out over 900 ms. It keeps playing through the snapshot
+and stops when the section closes.
+
+The level was **set by ear on the classroom tablet**, which is the only place
+that counts. It shipped at 0.18 first, which was a reasonable number on paper
+and simply too quiet in the room.
 
 ## Tracing
 
@@ -800,7 +828,8 @@ eye or ear:
 | How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |
 | Beat before the word is spoken | the `700` in `checkCompletion()` |
 | Round 2's silent look at the finished word | `SIGHT_LOOK_MS` |
-| How long the round-2 dots swell, then fade | `SIGHT_GROW_MS`, `SIGHT_FADE_MS` |
+| The still hold after the praise, then the fade | `SIGHT_HOLD_MS`, `SIGHT_FADE_MS` |
+| The round-2 cell frame | the `outline` on `body.sightLook #braille .cell` |
 | Assessment background music level | `ASSESS_MUSIC_LEVEL` |
 | How fast that music fades in and out | `ASSESS_MUSIC_FADE` |
 | Assessment cell size | `--ad` on `#assessCell` |

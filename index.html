@@ -332,23 +332,33 @@
   body.sightLook #braille .cell.done,
   body.sightLook #braille.cells-2 .cell.done,
   body.sightLook #braille.cells-3 .cell.done,
-  body.sightLook #braille.cells-4 .cell.done { opacity:1; transform:scale(.84); }
+  body.sightLook #braille.cells-4 .cell.done {
+    opacity:1; transform:scale(.86);
+    /* ⭐ EACH CELL IS FRAMED, and it has to be. With the ghosts gone, the gap
+       BETWEEN two cells (21px on a 4-cell word) and the gap between the two
+       dot COLUMNS inside one cell (34px) are the same order of size, so a lone
+       dot 4 reads just as easily as its neighbour's dot 1 -- which letter a
+       dot belongs to stops being visible at all. The rectangle restores the
+       grouping that the ghosted dots used to carry.
+
+       `outline`, not `border` or `padding`: an outline is drawn outside the
+       border box WITHOUT reflow, so adding it cannot move a single dot. The
+       shape being studied must not shift at the moment it is framed.
+
+       The .86 is what makes room for it. A transform does not change the width
+       a cell OCCUPIES (see the note above on four-cell words), so scaling down
+       frees visual space inside each cell's own slot without moving the slots
+       -- which is the only way to fit a frame into a 21px gap. */
+    /* Visible, not tasteful. This frame is the only thing carrying which dot
+       belongs to which letter, so a line too polite to be seen at arm's
+       length fails the whole purpose of it. Still dimmer than the dots -
+       they are the content, this is the container. */
+    outline:clamp(3px,.5vw,6px) solid rgba(255,255,255,.48);
+    outline-offset:clamp(6px,1.2vw,14px);
+    border-radius:clamp(14px,3vw,34px);
+  }
   body.sightLook #braille .dot:not(.required) { visibility:hidden; }
   body.sightLook #braille { pointer-events:none; }
-  /* ...and then they grow, slowly, as the send-off. The look deliberately
-     starts at .84 so that the growth has somewhere to GO: the round-2 --d
-     values above are already sized for N full-width cells, so scaling past 1
-     runs a four-cell word off both edges. Growing INTO the full size is the
-     whole range there is, and 2.2s of it reads as a swell rather than as an
-     animation. Written after the .sightLook block on purpose -- the two sets
-     have equal specificity, so source order is what makes grow win. */
-  body.sightGrow #braille .cell,
-  body.sightGrow #braille .cell.done,
-  body.sightGrow #braille.cells-2 .cell.done,
-  body.sightGrow #braille.cells-3 .cell.done,
-  body.sightGrow #braille.cells-4 .cell.done {
-    transform:scale(1); transition:transform 2.2s cubic-bezier(.33,.1,.2,1);
-  }
   body.sightFade #braille { opacity:0; transition:opacity .7s ease-in; }
   /* Sight-word dots are sized off the space they actually have rather than off
      the shared cells-N ceilings, because this section's two rounds give the
@@ -2706,24 +2716,27 @@
   // looked at in silence BEFORE anything names it, and the praise lands after
   // the name rather than instead of it.
   const SIGHT_LOOK_MS = 5000;   // the silent look at the finished word
-  const SIGHT_GROW_MS = 2200;   // how long the dots take to swell
-  const SIGHT_FADE_MS = 700;    // and then to go
+  const SIGHT_HOLD_MS = 2200;   // a last still look, after the praise
+  const SIGHT_FADE_MS = 700;    // and then it goes
 
   // Called from setupItem() and goHome(), so neither a normal advance nor a
   // walk-out can leave the braille row parked mid-swell or invisible. The
   // transitions live inside the class rules, so dropping the classes snaps
   // back instantly rather than animating in reverse.
   function sightLookOff() {
-    document.body.classList.remove('sightLook','sightGrow','sightFade');
+    document.body.classList.remove('sightLook','sightFade');
   }
 
-  function sightGrowAndFade(myRun,then) {
-    document.body.classList.add('sightGrow');
+  // The dots used to swell here. They don't any more - the word simply holds,
+  // framed and still, and then goes. The 2200ms the swell took is kept as the
+  // hold, because the pacing of the whole chain was right and only the moving
+  // part was wrong.
+  function sightHoldAndFade(myRun,then) {
     setTimeout(()=>{
       if (myRun!==runId) return;
       document.body.classList.add('sightFade');
       setTimeout(()=>{ if (myRun===runId) then(); },SIGHT_FADE_MS);
-    },SIGHT_GROW_MS);
+    },SIGHT_HOLD_MS);
   }
 
   // `flash` ends round 1 (white flash, then on). `plain` ends round 2, which
@@ -2751,7 +2764,7 @@
       playClip(SIGHT_REVEAL,sayWord(()=>{
         if (!alive()) return;
         playClip(SIGHT_GOODJOB,()=>{
-          if (alive()) sightGrowAndFade(myRun,plain);
+          if (alive()) sightHoldAndFade(myRun,plain);
         });
       }));
     },SIGHT_LOOK_MS);
@@ -3044,9 +3057,9 @@
   const ASSESS_LETTERS = Object.keys(BRAILLE);   // all 26, reshuffled per round
   const ASSESS_PROMPT  = 'audio/assessment/prompt-letter.wav';
   const ASSESS_MUSIC   = 'audio/assessment/background.mp3';
-  // Low enough to sit under a spoken prompt and a dot tone without masking
-  // either, loud enough to be company rather than a rumour. Tuning dial.
-  const ASSESS_MUSIC_LEVEL = 0.18;
+  // Set by ear on the classroom tablet, which is the only place that counts:
+  // 0.18 was measured-reasonable and simply too quiet in the room. Tuning dial.
+  const ASSESS_MUSIC_LEVEL = 0.4;
   const ASSESS_MUSIC_FADE  = 900;   // ms, both directions
 
   const assessEl  = document.getElementById('assess');
