@@ -23,6 +23,9 @@ in the middle of a word.
 | **High Frequency Words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
 | **Rhythm** `●■` | — | — | plays a beat; the student plays it back |
 
+There is a sixth screen, **Assessment**, which is deliberately *not* on this
+menu — it is an adult's control in the corner. See *Assessment*.
+
 Every letter sample on a menu card is **drawn from `PATHS`, not set in a font**
 — `glyphWord()` — for the same reason the CVC boxes and the sight word are:
 it guarantees the single-story `a` whatever the tablet has installed. The two
@@ -123,11 +126,53 @@ the right read-back for `said` and `/s/ /a/ /i/ /d/` is not.
 > indicator behave. The dot tones still sound, the cell still advances, and the
 > word is still spoken at the end.
 
-Round 2's chain is: the last cell is answered → *"What is this word?"* → **five
-seconds of silence** → *"The word is"* → the word. The silence is the activity.
+#### Round 2's chain
+
+The question comes **first**, not last. A round-2 card arrives, *"Let's read
+this word together. Say the letter name for each braille letter you touch."*
+plays, and **the dots are inert until it finishes** — a quick student could
+otherwise beat the prompt on a one-cell word and cut it off. Then:
+
+```
+the last cell is answered
+  ↓
+THE LOOK          5 seconds. Every cell comes forward together - same size,
+                  same brightness - and the ghosted dots are HIDDEN, so the
+                  only thing on the screen is the word's dot pattern.
+                  Nothing is said. The silence is the activity.
+  ↓
+"The word is"  ->  the word
+  ↓
+"Good job reading with me!"
+  ↓
+THE SWELL         the dots grow into full size over 2.2s, then fade over 0.7s
+  ↓
+the next word
+```
+
+The look **hides** the ghosts rather than dimming them, because what is being
+studied is the shape of the word in dots and six faint circles per cell is most
+of what is on the screen. They go with `visibility`, not `display`, so the cell
+keeps its six-position geometry — the real dots must not slide into a new
+layout the moment the ghosts leave, or the shape changes while it is being
+looked at.
+
+The swell starts at 84% and grows **into** full size rather than past it. The
+round-2 `--d` values are already sized so that N *full-width* cells fit the
+screen, so scaling past 1 runs a four-cell word off both edges; growing into
+the full size is the whole range there is.
+
 Every step waits on the clip before it ending rather than on a timer of its
-own; the five-second think is the one real timer, and it is cancelled by a trip
-to the menu like everything else.
+own. The five-second look and the two animation legs are the only real timers,
+and a trip to the menu invalidates all of them — `sightLookOff()` is called
+from `setupItem()` and `goHome()`, so neither a normal advance nor a walk-out
+can leave the braille row parked mid-swell or invisible.
+
+Round 1 is unchanged: the spelling, a 700 ms beat, then the word, then on.
+
+> This section of the README described the **pre-2026-10-17** order for a
+> while — question last, five seconds, answer — after the code had already been
+> re-sequenced to ask first. It is correct as written above.
 
 #### Which braille, and why it is asked
 
@@ -162,8 +207,10 @@ and the only glyph in `PATHS` that is not lowercase.
 | A CVC word completed | The whole word, spoken |
 | A number completed | The number's name, spoken |
 | A sight-word cell completed | **Nothing — muted.** Should be that letter's *name*, "tee" not /t/; see the warning above |
+| A round-2 sight card appearing | "Let's read this word together…" — dots inert until it ends |
 | A sight word completed, round 1 | The whole word, spoken |
-| A sight word completed, round 2 | "What is this word?", five seconds, "The word is …" |
+| A sight word completed, round 2 | Five seconds of silence, "The word is …", the word, "Good job reading with me!", then the dots swell and fade |
+| A braille dot touched in the Assessment section | That dot's tone — but **only** if it is the next one in reading order |
 | Shape touched in the minigame | A pop, then the next note of that mode's tune |
 | Every 6th completed task | A brain break: Carl's dance |
 | BOOM touched in the Rhythm section | A kick drum |
@@ -213,11 +260,16 @@ file `carl.png`). It plays through plain `<audio>` rather than
   nursery tunes replaced it; the slices and the tool are kept so that round can
   be brought back without redoing the beat analysis. Nothing fetches them at
   runtime, so they cost page weight only in the repo, not in the browser.
+- `audio/assessment/` — `prompt-letter.wav`, the only spoken line in the
+  assessment section, and `background.mp3`, its backing music (the owner's own
+  file, shipped as supplied). Carl frames the card and deliberately does not
+  name the letter; see *Assessment*.
 - `audio/letters/` — the spoken letter **names**, for the sight-word section.
   **Rejected and unused** — see the warning above. Kept so a human recording
   drops straight in.
-- `audio/sight/` — the eight sight words, plus the two round-2 prompts
-  ("What is this word?" and "The word is").
+- `audio/sight/` — the eight sight words, plus the three round-2 prompts: the
+  ask ("Let's read this word together…"), the reveal ("The word is") and the
+  send-off ("Good job reading with me!").
 - `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
   Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
   highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
@@ -547,6 +599,118 @@ measure it.
 - **No haptics.** A buzz on each beat would be a real addition for this
   student; `navigator.vibrate` is unavailable on iOS Safari.
 
+## Assessment
+
+**A sitting, not an activity.** Nothing is taught, nothing advances by itself,
+and the student cannot move through it — every step is the assessor's. It is
+reached by **double-tapping the small `assess` pill directly below the `⌂`**,
+which is live both on the activity menu and inside an activity.
+
+It is deliberately not a sixth menu card. A card can be picked by a student
+working through the menu, and an assessment started by accident is a wasted
+sitting; the double tap is the same guard the `⌂` uses, for the same reason.
+
+### The contrast is flipped
+
+White ground, dark dots. That is not decoration — every other mode in this app
+is dark, so the flip is the clearest possible signal to everyone in the room
+that practice has stopped. The colour tokens are local to `#assess` rather than
+an override of `:root`, so nothing here can leak back into an activity if a
+teardown is ever missed.
+
+### What is on the screen
+
+One braille cell, centred, inside a **faint rectangle**. Six dots with nothing
+round them read as six separate things; the frame makes them one cell. The
+frame is also the only place a finished cell is acknowledged — acknowledging it
+in the dots would say something about the letter.
+
+The letter's own dots are drawn dark; the rest are ghosted, exactly as in the
+activities.
+
+### Reading order, and why it is not the assessment
+
+**A dot lights only when it is the next one owed** — 1, 2, 3 down the left
+column, then 4, 5, 6 down the right. Out of order does nothing at all: no
+light, no tone, no buzz. A ghosted dot does nothing either.
+
+That is a habit being kept honest, **not** the thing being measured. What is
+being measured is what the student *says* the letter is. A wrong move that
+produced a sound would just be a sound to play with instead of a letter to
+read, which is the same reasoning that keeps ghosted dots silent everywhere
+else.
+
+Carl frames each card with *"This is the letter…"* and **deliberately does not
+name it**. No phoneme, no letter name, no word — any of them would answer the
+question. The student says the letter aloud to the assessor.
+
+### The assessor's panel
+
+Top left, under the `⌂`. Small, low contrast, and in the corner on purpose: the
+assessor can read it because they know it is there and they are an arm's length
+away looking for it, and a student reading the cell in the middle of the screen
+should never have it pull their eye — or be able to read the answer out of it.
+
+It holds the position (`7 / 26`), a **ghost of the print letter** drawn from the
+same centerlines the rest of the app draws from, two pills — **Got it!** and
+**Needs More Practice!** — and **Back**, **Next**, **Finish**.
+
+- Re-tapping the chosen pill **clears** it. A mis-tap on a panel this small is
+  likely, and leaving no way back from one would quietly put a wrong mark in
+  the snapshot.
+- **Back does not replay the prompt.** Going back is the assessor correcting a
+  mark, not presenting the letter again — and re-asking would tell the student
+  their last answer was being reconsidered.
+- A letter left unmarked is **not judged**, which is not the same as wrong. It
+  is left out of the percentage.
+
+**Below 900px wide the panel becomes a strip along the bottom.** The cell is
+centred on the screen and is 3.65 × `--ad` wide, so on a narrow screen its left
+edge crosses the panel's right edge and the controls end up on top of the thing
+being read. The cell has to stay where the student expects it, so the panel
+moves instead. The pills stay stacked in the strip: side by side they get about
+95px each on a phone, and "Needs More Practice!" does not fit in 95px — it
+would clip, on the one control that must not be misread.
+
+### A round is 26 letters, and can end anywhere
+
+The order is reshuffled every round. **Finish** ends it wherever it has got to
+and still gives the snapshot — a short sitting is a real outcome, not an
+abandoned one.
+
+### The snapshot
+
+Letters known, letters needing practice, a percentage, and the letters still to
+work on in a readable typeface at a readable size — this is a list for an adult
+to copy down, so it is typeset, not taught, and it reads alphabetically rather
+than in the random order they were shown.
+
+The percentage is **out of what was actually judged**, not out of 26, because
+Finish is allowed to end a round early and scoring the letters nobody got to as
+failures would turn a short sitting into a bad result. When some letters were
+left unmarked a line says so — `9 of 26 letters marked` — because otherwise the
+percentage is a number out of an unstated total on a page whose entire purpose
+is being copied onto paper by hand.
+
+Leaving is a **double tap** on the button at the bottom.
+
+### Nothing is recorded
+
+The snapshot is read once, written down by hand, and thrown away when the round
+closes. There is no storage, no export and no history. A disability record
+about a child is not something this app should be accumulating, and an app that
+stores nothing cannot leak it.
+
+### The background music
+
+`audio/assessment/background.mp3` — the owner's own file, shipped as supplied
+(192 kbps stereo, 3:26) — loops under the whole round at `ASSESS_MUSIC_LEVEL`
+(0.18), fading in and out over 900 ms. Low enough to sit under a spoken prompt
+and a dot tone without masking either, loud enough to be company rather than a
+rumour. It keeps playing through the snapshot and stops when the section
+closes. It is the one tuning dial here most likely to want an ear on a real
+tablet.
+
 ## Tracing
 
 Tracing is deliberately loose, and this is load-bearing: a generous halo around
@@ -567,7 +731,8 @@ school-print writing order.
   pattern list; `?rhythm=1` previews its brain-break shape; `?break=carl` /
   `?break=rhythm` pins which break activity the session uses. See *The rhythm
   section*.
-- The *Full screen* button hides browser chrome.
+- The *Full screen* button hides browser chrome. **It is the only thing that
+  changes the page's scale** — see *No zoom, ever*.
 - The `⌂` at the top **left** returns to the activity menu on a **double tap**.
   The **first** tap lights the button up and nothing else happens; a second tap
   inside 650ms goes back. It is 40×32 in the very corner — small, but legible
@@ -575,12 +740,47 @@ school-print writing order.
   was `#555` on `#121212` at 48% opacity until 2026-10-06 and was effectively
   invisible at arm's length; don't dim it again. The **double tap is what
   protects the activity**, not the camouflage.
+- The small `assess` pill **below** the `⌂` opens the assessment section, also
+  on a double tap. Unlike the `⌂` it is live on the activity menu too, so the
+  assessor does not have to enter a drill in order to leave it. See
+  *Assessment*.
 - The `×` at the top right exits, also on a double tap, and **stays dim on
   purpose.** The asymmetry is deliberate: going back to the menu is routine,
   quitting the app is not.
 - Going home mid-word, mid-reward-round or mid-brain-break is safe — a session
   counter invalidates any timer still in flight, so nothing advances behind the
   menu, and the break's music and dance are torn down with it.
+
+## No zoom, ever
+
+A student half-hitting a braille dot twice in quick succession was zooming the
+page. The size is now locked: the only thing that changes it is entering or
+leaving full screen.
+
+Five layers, because no single one holds everywhere:
+
+| Layer | Why it alone is not enough |
+| --- | --- |
+| `user-scalable=no, maximum-scale=1` in the viewport meta | Android respects it; iOS Safari has ignored it since 10 |
+| **`touch-action:none` on `*`** | was per-element, which left the gaps BETWEEN them open |
+| `gesturestart` / `gesturechange` / `gestureend` refused | WebKit's own pinch events — the technique that holds on an iPad when `touch-action` does not |
+| a 2nd finger refused at `touchstart` *and* `touchmove` | a pinch about to happen, not only one in progress |
+| a 2nd `touchend` within 350ms and 45px refused | double-tap zoom is a separate mechanism from pinch and survives `touch-action` on some builds |
+
+Plus `dblclick` and ctrl/meta-wheel for a laptop, and a `visualViewport` watcher
+that snaps the scale back if an OS gesture gets through anyway.
+
+**The layer that was actually broken was `touch-action`.** It was set on `body`
+and on each tappable element by name, which left `.brailleCol` — the flex
+column holding dots 1-2-3 — with none at all, and that is precisely the surface
+a double tap lands on when it half-misses a dot. It is on `*` now. Nothing in
+this app scrolls, so there is no panning to preserve; `#snapLetters`, the one
+thing that can legitimately overflow, asks for `pan-y` back by name.
+
+**Only the second tap of a rapid pair is refused**, so every first tap still
+produces its `click` — which is what the menu cards listen on. The adult's
+double-tap controls are unaffected either way: they fire on `pointerup`, which
+has already happened by then.
 
 ## Tuning dials
 
@@ -599,6 +799,11 @@ eye or ear:
 | How high Carl hops, how fast | `carlHop` keyframes |
 | How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |
 | Beat before the word is spoken | the `700` in `checkCompletion()` |
+| Round 2's silent look at the finished word | `SIGHT_LOOK_MS` |
+| How long the round-2 dots swell, then fade | `SIGHT_GROW_MS`, `SIGHT_FADE_MS` |
+| Assessment background music level | `ASSESS_MUSIC_LEVEL` |
+| How fast that music fades in and out | `ASSESS_MUSIC_FADE` |
+| Assessment cell size | `--ad` on `#assessCell` |
 | Print letter size in its box | `--boxSize` on `#boxes` |
 | Which break activity runs | `breakRotation` |
 

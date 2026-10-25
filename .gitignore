@@ -8,3 +8,6 @@ audio/.numbers-kokoro-backup-*/
 
 # Local audio-review page (generated, not part of the app)
 _review.html
+
+# Local backup of the superseded round-2 ask prompt (2026-10-25).
+audio/.sight-prompt-backup-*/

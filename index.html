@@ -7,8 +7,18 @@
 <title>Trace + Braille Alphabet</title>
 <style>
   :root { --bg:#000; --letter:#ff453a; --trace:#30d158; --inactive:#505050; }
-  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
-  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); overscroll-behavior:none; }
+  /* touch-action:none is UNIVERSAL here, not per-element, and that is the fix
+     for the accidental double-tap zoom. It used to be set on body and on each
+     tappable element by name, which left the gaps BETWEEN them unprotected --
+     .brailleCol, the flex column holding dots 1-2-3, had none at all, and that
+     is exactly the surface a double tap lands on when it half-misses a dot.
+     Nothing in this app scrolls (every container is overflow:hidden), so there
+     is no panning to preserve; the one place that can overflow asks for
+     pan-y back by name. See the `no zoom` block in the script for the rest. */
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;
+      -webkit-user-select:none; touch-action:none; }
+  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); overscroll-behavior:none;
+              -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   body { font-family:Arial,Helvetica,sans-serif; touch-action:none; }
   #app {
     position:fixed; inset:0; width:100vw; height:100dvh; overflow:hidden; background:var(--bg);
@@ -310,6 +320,36 @@
      a shadow, so there is nothing else to neutralise. */
   body.asking #braille { opacity:.45; pointer-events:none; transition:opacity .18s ease; }
   body.mode-sight.round2 #braille { grid-row:1; grid-column:1; padding:2vh 3vw; }
+  /* Round 2's five-second look, after the last cell is answered. Every cell
+     comes forward together -- same size, same brightness, no active/done
+     distinction left -- and the ghosted dots are hidden OUTRIGHT rather than
+     dimmed, so what remains on the screen is the word's dot pattern and
+     nothing else. That pattern is the thing being soaked in.
+     `visibility` and not `display`, so the cell keeps its six-position
+     geometry: the real dots must not slide into a new layout the instant the
+     ghosts leave, or the shape being studied changes as it is being studied. */
+  body.sightLook #braille .cell,
+  body.sightLook #braille .cell.done,
+  body.sightLook #braille.cells-2 .cell.done,
+  body.sightLook #braille.cells-3 .cell.done,
+  body.sightLook #braille.cells-4 .cell.done { opacity:1; transform:scale(.84); }
+  body.sightLook #braille .dot:not(.required) { visibility:hidden; }
+  body.sightLook #braille { pointer-events:none; }
+  /* ...and then they grow, slowly, as the send-off. The look deliberately
+     starts at .84 so that the growth has somewhere to GO: the round-2 --d
+     values above are already sized for N full-width cells, so scaling past 1
+     runs a four-cell word off both edges. Growing INTO the full size is the
+     whole range there is, and 2.2s of it reads as a swell rather than as an
+     animation. Written after the .sightLook block on purpose -- the two sets
+     have equal specificity, so source order is what makes grow win. */
+  body.sightGrow #braille .cell,
+  body.sightGrow #braille .cell.done,
+  body.sightGrow #braille.cells-2 .cell.done,
+  body.sightGrow #braille.cells-3 .cell.done,
+  body.sightGrow #braille.cells-4 .cell.done {
+    transform:scale(1); transition:transform 2.2s cubic-bezier(.33,.1,.2,1);
+  }
+  body.sightFade #braille { opacity:0; transition:opacity .7s ease-in; }
   /* Sight-word dots are sized off the space they actually have rather than off
      the shared cells-N ceilings, because this section's two rounds give the
      braille row very different amounts of it. Three terms, one per way the row
@@ -444,6 +484,201 @@
     border-color:#fff; background:#2e2e2e; color:#fff;
     transform:scale(1.04); opacity:1;
   }
+
+  /* ---------------------------------------------------- assessment section ---
+     Flipped contrast: white ground, dark dots. That is not decoration. It is
+     the one signal that works at a glance and from across the room for
+     everybody in it - student, assessor and anyone walking past - that this
+     is not practice. Every other mode in this app is dark.
+
+     The tokens are local rather than an override of :root, so nothing here can
+     leak back into an activity if a teardown is ever missed. */
+  #assess {
+    --abg:#ffffff; --aink:#15181d; --afaint:rgba(16,20,26,.30);
+    --aline:rgba(16,20,26,.13); --aghost:rgba(16,20,26,.085);
+    --ahit:#0f8a3d; --aneeds:#c2660a;
+    display:none; position:absolute; inset:0; z-index:55;
+    background:var(--abg); color:var(--aink);
+    grid-template-rows:minmax(0,1fr);
+    font-family:Andika,'Century Gothic',ui-rounded,'Segoe UI',Arial,sans-serif;
+  }
+  #assess.on { display:grid; }
+  /* The assess pill lives under the ⌂, in the same corner and with the same
+     double-tap arm. It is hidden while an assessment is actually running -
+     there is nothing to toggle into from inside it. */
+  #assessBtn {
+    position:absolute; z-index:60; top:calc(max(3px,env(safe-area-inset-top)) + 36px);
+    left:3px; height:24px; padding:0 7px;
+    border:1px solid #4a4a4a; border-radius:6px;
+    background:#1c1c1c; color:#b4b4b4; font:600 12px/22px Arial,sans-serif;
+    letter-spacing:.02em; touch-action:none;
+    transition:background .12s linear, color .12s linear, border-color .12s linear;
+  }
+  #assessBtn.armed { background:#3f3f3f; color:#fff; border-color:#8f8f8f; }
+  #assessBtn[hidden], body.assessing #assessBtn { display:none; }
+
+  /* The cell owns the middle of the screen and the panel floats over the
+     corner, rather than the two sharing a grid: the cell must be centred on
+     the SCREEN, not centred in what the panel leaves behind, or a student who
+     has learned where to look has to relearn it here. */
+  #assessStage { display:grid; place-items:center; min-height:0; padding:2vh 3vw; }
+  #assessCell {
+    /* MEASURED, not derived: the cell renders 4.6x --ad tall and 3.65x wide,
+       because every length inside it is a multiple of --ad. So the vh term is
+       what has to clear the screen: 20vh x 4.6 is 92% of the height, and the
+       stage's 2vh top and bottom make up the rest. 23vh was 106% and spilled
+       off a short screen. */
+    --ad:min(132px, 17vw, 20vh);
+    display:flex; gap:calc(var(--ad)*.62);
+    padding:calc(var(--ad)*.42) calc(var(--ad)*.5);
+    /* The faint rectangle. It frames the cell as one object - six dots with
+       nothing round them read as six separate things - and it is the only
+       place a completion is acknowledged, because acknowledging it in the
+       dots would say something about the letter. */
+    border:2px solid var(--aline); border-radius:calc(var(--ad)*.22);
+    transition:border-color .25s linear;
+  }
+  #assessCell.done { border-color:rgba(15,138,61,.42); }
+  #assess .brailleCol { gap:calc(var(--ad)*.34); }
+  #assess .dot {
+    width:var(--ad); border-width:calc(var(--ad)/9);
+    border-color:var(--aghost); background:transparent;
+  }
+  #assess .dot.required { border-color:var(--aink); background:var(--abg); }
+  #assess .dot.hit { border-color:var(--ahit); background:var(--ahit); transform:scale(1.08); }
+
+  /* Low contrast ON PURPOSE, and small, and in the corner. The assessor can
+     read it because they know it is there and they are an arm's length away
+     looking for it; a student reading the cell in the middle of the screen
+     should never have it pull their eye, and must never be able to read the
+     answer out of it. */
+  #assessPanel {
+    position:absolute; z-index:56;
+    top:calc(max(3px,env(safe-area-inset-top)) + 36px); left:3px;
+    width:clamp(132px,19vw,196px);
+    display:grid; gap:5px; padding:7px 8px 8px;
+    border:1px solid var(--aline); border-radius:8px;
+    background:rgba(255,255,255,.72); color:var(--afaint);
+    font:500 11px/1.25 Arial,Helvetica,sans-serif;
+  }
+  #assessCount { font-variant-numeric:tabular-nums; letter-spacing:.03em; }
+  /* The answer, for the assessor only. A ghost of the PRINT letter, drawn from
+     the same centerlines the rest of the app draws from, so it is the same
+     single-story `a` the student has been taught. */
+  /* Sized from ONE absolute value, never a percentage. A percentage height on
+     an <svg> does not resolve here -- measured, `height:100%` was ignored, the
+     glyph took the panel's full width instead and rendered 275px tall inside a
+     30px box. Same rule as #boxes and --boxSize. */
+  #assessGhost { --aghostH:30px; height:var(--aghostH); display:grid; place-items:center; }
+  #assessGhost svg {
+    height:var(--aghostH); width:auto; max-width:100%;
+    display:block; overflow:visible;
+  }
+  #assessGhost svg path {
+    fill:none; stroke:rgba(16,20,26,.26); stroke-width:10;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
+  #assessPills { display:grid; gap:4px; }
+  .aPill {
+    min-height:26px; padding:3px 6px; text-align:left;
+    border:1px solid var(--aline); border-radius:13px;
+    background:transparent; color:var(--afaint);
+    font:600 11px/1.2 Arial,Helvetica,sans-serif; touch-action:none;
+    transition:background .12s linear, border-color .12s linear, color .12s linear;
+  }
+  /* Chosen state is a muted tint, not a bright one. It has to be obvious to
+     somebody already looking at the panel and invisible to somebody who is
+     not. */
+  #assessGot.picked { background:rgba(15,138,61,.16); border-color:rgba(15,138,61,.45); color:rgba(13,94,44,.85); }
+  #assessNeeds.picked { background:rgba(194,102,10,.16); border-color:rgba(194,102,10,.45); color:rgba(140,74,8,.85); }
+  #assessNav { display:flex; gap:4px; }
+  .aNav {
+    flex:1 1 0; min-height:24px; padding:2px 4px;
+    border:1px solid var(--aline); border-radius:6px;
+    background:transparent; color:var(--afaint);
+    font:600 11px/1.2 Arial,Helvetica,sans-serif; touch-action:none;
+  }
+  .aNav:disabled { opacity:.38; }
+
+  /* The snapshot. Read once, copied out by hand, gone. */
+  /* Auto rows, not a 1fr filler row: with a 1fr row the content pinned itself
+     to the top and left the Done button alone at the bottom of a tall empty
+     screen. Auto rows plus align-content:center floats the whole block as one
+     thing, which is what a page that is read in ten seconds wants. */
+  #assessSnap {
+    position:absolute; inset:0; z-index:57; background:var(--abg);
+    display:grid; align-content:center; justify-items:center;
+    gap:clamp(10px,2.4vh,26px); padding:4vh 5vw;
+    text-align:center; color:var(--aink);
+  }
+  #assessSnap[hidden] { display:none; }
+  #snapStats { display:flex; flex-wrap:wrap; justify-content:center; gap:clamp(18px,6vw,70px); }
+  .snapStat { display:grid; gap:2px; }
+  .snapStat b { font:700 clamp(34px,8vh,74px)/1 inherit; font-variant-numeric:tabular-nums; }
+  .snapStat span { font:500 clamp(12px,1.9vh,17px)/1.2 inherit; color:var(--afaint); }
+  #snapLabel { font:600 clamp(13px,2vh,18px)/1.2 inherit; color:var(--afaint); letter-spacing:.04em; }
+  /* Shown only when some letters were never marked. Without it the percentage
+     is a number out of an unstated total, and the whole point of this page is
+     that it gets copied onto paper by hand. */
+  #snapOf { font:500 clamp(12px,1.8vh,16px)/1.3 inherit; color:var(--afaint); margin-top:-4px; }
+  #snapOf[hidden] { display:none; }
+  /* The letters still to work on, in a readable face at a readable size - not
+     the huge drawn glyphs the activities use. This is a list for an adult to
+     copy down, so it is typeset, not taught.
+     pan-y is given back here by name: this is the one thing in the app that
+     can legitimately be taller than its box, and it is the assessor who would
+     be scrolling it, never the student. */
+  #snapLetters {
+    display:flex; flex-wrap:wrap; align-content:flex-start; justify-content:center;
+    gap:clamp(6px,1.4vw,14px); max-width:100%; max-height:40vh;
+    /* A few px of vertical padding, because without it the line box rounds up
+       a hair past the container and a single row of letters shows a scrollbar
+       it does not need -- measured at 57px of content in a 53px box. */
+    padding:4px 0; overflow-y:auto; touch-action:pan-y;
+    font:600 clamp(20px,4.4vh,38px)/1.15 Andika,'Century Gothic',Georgia,serif;
+    letter-spacing:.04em;
+  }
+  #snapLetters span {
+    min-width:1.5em; padding:.12em .2em; border-radius:6px;
+    background:rgba(194,102,10,.10); color:var(--aneeds);
+  }
+  #snapEmpty { font:500 clamp(14px,2.2vh,20px)/1.3 inherit; color:var(--afaint); }
+  #snapEmpty[hidden] { display:none; }
+  #snapDone {
+    min-height:46px; padding:10px 22px; margin-top:clamp(8px,2.5vh,28px);
+    border:1px solid var(--aline); border-radius:10px;
+    background:transparent; color:var(--afaint);
+    font:600 clamp(13px,2vh,17px)/1.2 Arial,Helvetica,sans-serif; touch-action:none;
+    transition:background .12s linear, color .12s linear, border-color .12s linear;
+  }
+  #snapDone.armed { background:rgba(16,20,26,.08); color:var(--aink); border-color:rgba(16,20,26,.34); }
+
+  /* On a narrow screen the corner panel and the cell want the same pixels. The
+     cell is centred on the SCREEN and is 3.65x --ad wide, so below about 900px
+     its left edge crosses the panel's right edge and the assessor's controls
+     end up on top of the thing being read. Rather than shrink the cell or move
+     it off centre - it has to stay where the student expects it - the panel
+     becomes a strip along the bottom and gets a band of its own.
+     --ad then has to clear the strip as well as the stage padding. */
+  @media (max-width:900px) {
+    #assessPanel {
+      top:auto; bottom:max(3px,env(safe-area-inset-bottom));
+      left:3px; right:3px; width:auto;
+      grid-auto-flow:column; grid-template-columns:auto auto minmax(0,1fr) auto;
+      align-items:center; gap:8px; padding:6px 8px;
+    }
+    /* The pills stay STACKED in the strip. Side by side they get about 95px
+       each on a phone, and "Needs More Practice!" does not fit in 95px at
+       11px - it would wrap or clip, on the one control that must not be
+       misread. Two rows of pills is what sets the strip's 56px height. */
+    #assessGhost { --aghostH:26px; }
+    /* The strip MEASURES 69px tall (two stacked pills plus its padding) and
+       sits 3px off the bottom, so the stage has to give back 72px. 80 is that
+       with a margin, and the --ad term subtracts the same so the cell shrinks
+       to fit rather than sliding under the controls. */
+    #assessStage { padding:2vh 3vw calc(80px + 1vh); }
+    #assessCell { --ad:min(132px, 17vw, calc((96vh - 86px)/4.7)); }
+  }
 </style>
 </head>
 <body>
@@ -455,6 +690,13 @@
   <button id="fullscreen" type="button">⛶ Full screen</button>
   <div id="fullscreenStatus" role="status"></div>
   <button id="home" aria-label="Double tap to return to the activity menu">⌂</button>
+  <!-- Directly below the ⌂ and guarded the same way. It is an adult's control,
+       not a sixth menu card: a card could be picked by a student working
+       through the menu, and an assessment started by accident is a wasted
+       sitting. Unlike the ⌂ it is also live on the activity menu, so the
+       assessor does not have to enter a drill in order to leave it. -->
+  <button id="assessBtn" type="button"
+          aria-label="Double tap to open the assessment section">assess</button>
   <button id="exit" aria-label="Double tap to exit">×</button>
   <div id="success"></div>
   <div id="minigame" aria-hidden="true"></div>
@@ -471,6 +713,53 @@
               aria-label="Boom. The circle, on the left.">BOOM</button>
       <button id="rhythmClap" class="rhythmTarget" type="button"
               aria-label="Clap. The square, on the right.">CLAP</button>
+    </div>
+  </div>
+  <!-- The assessment section. Not an activity: nothing is taught here, nothing
+       advances by itself, and the student cannot move through it - every step
+       is the assessor's. The contrast is FLIPPED (white ground, dark dots)
+       because it is a different kind of sitting, and the flip is the clearest
+       possible signal to everyone in the room that practice has stopped.
+
+       z-index 55: above the activities and the breaks (50), still below the
+       ⌂ and × (60), so the adult can always walk out.
+
+       Nothing here is recorded anywhere. The round ends in a snapshot the
+       assessor reads and writes down by hand, and closing it throws the
+       numbers away. That is deliberate: a disability record about a child is
+       not something this app should be accumulating. -->
+  <div id="assess" aria-hidden="true">
+    <!-- The assessor's panel. Faint, small and jammed in the corner, for the
+         same reason the ⌂ is: it is not for the student, and it must not
+         compete with the one cell in the middle of the screen. -->
+    <div id="assessPanel">
+      <div id="assessCount"></div>
+      <div id="assessGhost" aria-hidden="true"></div>
+      <div id="assessPills">
+        <button id="assessGot" class="aPill" type="button">Got it!</button>
+        <button id="assessNeeds" class="aPill" type="button">Needs More Practice!</button>
+      </div>
+      <div id="assessNav">
+        <button id="assessBack" class="aNav" type="button">Back</button>
+        <button id="assessNext" class="aNav" type="button">Next</button>
+        <button id="assessFinish" class="aNav" type="button">Finish</button>
+      </div>
+    </div>
+    <div id="assessStage">
+      <div id="assessCell" aria-label="Braille cell"></div>
+    </div>
+    <!-- The snapshot. Read once, written down by hand, and gone. -->
+    <div id="assessSnap" hidden>
+      <div id="snapStats">
+        <div class="snapStat"><b id="snapKnown">0</b><span>letters known</span></div>
+        <div class="snapStat"><b id="snapNeeds">0</b><span>need practice</span></div>
+        <div class="snapStat"><b id="snapPct">—</b><span>known</span></div>
+      </div>
+      <div id="snapOf" hidden></div>
+      <div id="snapLabel">Still needs practice</div>
+      <div id="snapLetters"></div>
+      <div id="snapEmpty" hidden>Nothing left on the practice list.</div>
+      <button id="snapDone" type="button">Double tap for the menu</button>
     </div>
   </div>
   <div id="splash" role="button" tabindex="0" aria-label="Tap anywhere to start">
@@ -523,6 +812,38 @@
   document.addEventListener('gestureend', killGesture);
   document.addEventListener('touchmove', ev => {
     if (ev.touches.length > 1) ev.preventDefault();
+  }, { passive:false });
+  // A second finger landing at ALL, not just moving, is a pinch about to
+  // happen. touchstart is where it can still be refused outright.
+  document.addEventListener('touchstart', ev => {
+    if (ev.touches.length > 1) ev.preventDefault();
+  }, { passive:false });
+  // Double-tap zoom is a separate mechanism from pinch and survives
+  // touch-action on some builds, so it gets its own guard: a second tap
+  // landing within 350ms and 45px of the first is the gesture, and refusing
+  // THAT touchend is what cancels the zoom. Only the second tap is refused,
+  // so every first tap still produces its click -- which is what the menu
+  // cards listen on. The adult's double-tap controls are unaffected either
+  // way: they fire on pointerup, which has already happened by here.
+  let lastTapAt = 0, lastTapXY = null;
+  document.addEventListener('touchend', ev => {
+    const t = ev.changedTouches[0];
+    if (!t) return;
+    const now = performance.now();
+    const near = lastTapXY &&
+      Math.hypot(t.clientX - lastTapXY[0], t.clientY - lastTapXY[1]) < 45;
+    if (now - lastTapAt < 350 && near) {
+      ev.preventDefault();
+      lastTapAt = 0; lastTapXY = null;   // a triple tap is two pairs, not three
+      return;
+    }
+    lastTapAt = now; lastTapXY = [t.clientX, t.clientY];
+  }, { passive:false });
+  // The desktop/trackpad equivalent, and the event some engines fire instead.
+  document.addEventListener('dblclick', killGesture);
+  // Ctrl/meta + wheel is browser zoom on a laptop running the app.
+  document.addEventListener('wheel', ev => {
+    if (ev.ctrlKey || ev.metaKey) ev.preventDefault();
   }, { passive:false });
   // Belt-and-braces: if the page still ends up zoomed (an OS gesture we
   // didn't catch), snap it back to scale 1 ourselves so the adult in the
@@ -649,6 +970,10 @@
   const sightSrc=w=>`audio/sight/${w.toLowerCase()}.wav`;
   const SIGHT_ASK='audio/sight/prompt-what.wav';
   const SIGHT_REVEAL='audio/sight/prompt-reveal.wav';
+  // The send-off at the end of a round-2 word. It praises the READING, not the
+  // answer, because by the time it plays the answer has already been given and
+  // confirmed -- there is nothing left to get right or wrong.
+  const SIGHT_GOODJOB='audio/sight/prompt-goodjob.wav';
 
   // Short filtered noise transient: the "pop" of a shape bursting.
   let popBuffer=null;
@@ -1165,6 +1490,7 @@
 
   function setupItem() {
     stopDrawing();
+    sightLookOff();
     const item=order[orderIndex];
     colorPair=COLOR_PAIRS[Math.floor(Math.random()*COLOR_PAIRS.length)];
     cssVar('--letter',colorPair[0]); cssVar('--trace',colorPair[1]);
@@ -1203,7 +1529,7 @@
       // card falling back to the 2600 ms floor and opening the gate ~80 ms
       // early, which is the bug the gate exists to prevent. Round 1 runs the
       // whole list first, so by round 2 both durations are known.
-      clip(SIGHT_ASK); clip(SIGHT_REVEAL);
+      clip(SIGHT_ASK); clip(SIGHT_REVEAL); clip(SIGHT_GOODJOB);
       if (sightRound===2) {
         const myRun=runId;
         setInputLocked(true);
@@ -2375,17 +2701,60 @@
     document.body.classList.toggle('asking',v);
   }
 
-  function sightReveal(myRun,done) {
+  // Round 2's closing sequence. The three phases are named rather than inlined
+  // because their ORDER is the teaching: the whole word's dot pattern is
+  // looked at in silence BEFORE anything names it, and the praise lands after
+  // the name rather than instead of it.
+  const SIGHT_LOOK_MS = 5000;   // the silent look at the finished word
+  const SIGHT_GROW_MS = 2200;   // how long the dots take to swell
+  const SIGHT_FADE_MS = 700;    // and then to go
+
+  // Called from setupItem() and goHome(), so neither a normal advance nor a
+  // walk-out can leave the braille row parked mid-swell or invisible. The
+  // transitions live inside the class rules, so dropping the classes snaps
+  // back instantly rather than animating in reverse.
+  function sightLookOff() {
+    document.body.classList.remove('sightLook','sightGrow','sightFade');
+  }
+
+  function sightGrowAndFade(myRun,then) {
+    document.body.classList.add('sightGrow');
+    setTimeout(()=>{
+      if (myRun!==runId) return;
+      document.body.classList.add('sightFade');
+      setTimeout(()=>{ if (myRun===runId) then(); },SIGHT_FADE_MS);
+    },SIGHT_GROW_MS);
+  }
+
+  // `flash` ends round 1 (white flash, then on). `plain` ends round 2, which
+  // has just spent three seconds fading the dots out and does not want a
+  // flash on top of that.
+  function sightReveal(myRun,flash,plain) {
     const alive=()=>myRun===runId;
-    const sayWord=()=>{ if (alive()) playClip(sightSrc(word),done); };
+    const sayWord=after=>()=>{ if (alive()) playClip(sightSrc(word),after); };
     // Round 1: the spelling, a beat, then the word - the same shape the CVC
     // blend has, so it lands as "t... h... e... THE" rather than running
     // the letters straight into the word.
-    if (sightRound===1) { setTimeout(sayWord,700); return; }
-    // Round 2: the question was asked when the card came up, and the dots ARE
-    // the answer - so once they are in, confirm immediately. Same 700 ms beat
-    // as round 1 so the two rounds feel alike.
-    setTimeout(()=>{ if (alive()) playClip(SIGHT_REVEAL,sayWord); },700);
+    if (sightRound===1) { setTimeout(sayWord(flash),700); return; }
+    // Round 2: the question was asked when the card came up and the dots ARE
+    // the answer, so nothing more is being waited for. The word is finished on
+    // the screen; all of it comes forward, the ghosts go, and for five seconds
+    // nothing happens at all. The silence is the activity -- the same reason
+    // round 2 shows no print.
+    document.body.classList.add('sightLook');
+    setTimeout(()=>{
+      if (!alive()) return;
+      // "The word is" -> the word -> "Good job reading with me" -> the swell.
+      // Every link waits on the clip before it ending rather than on a timer
+      // of its own, and every link re-checks runId, so a trip to the menu
+      // cuts the chain wherever it has got to.
+      playClip(SIGHT_REVEAL,sayWord(()=>{
+        if (!alive()) return;
+        playClip(SIGHT_GOODJOB,()=>{
+          if (alive()) sightGrowAndFade(myRun,plain);
+        });
+      }));
+    },SIGHT_LOOK_MS);
   }
 
   function checkCompletion() {
@@ -2426,7 +2795,7 @@
     // BEFORE the screen moves on - the flash waits for the voice to finish.
     // A deliberate beat between the final consonant and the whole word, so the
     // blend lands as "n... u... t... NUT" rather than running together.
-    if (mode==='sight') { sightReveal(myRun,flashAndAdvance); return; }
+    if (mode==='sight') { sightReveal(myRun,flashAndAdvance,advance); return; }
     if (mode==='cvc') { setTimeout(()=>playClip(wordSrc(word),flashAndAdvance),700); return; }
     if (mode==='numbers') { setTimeout(()=>playClip(numberSrc(glyph),flashAndAdvance),200); return; }
     flashAndAdvance();
@@ -2576,6 +2945,7 @@
   function start(picked,vowel,convention) {
     runId++;
     setInputLocked(false);
+    if (assessActive()) endAssessment();
     mode=picked; cvcVowel=vowel;
     sightConvention = convention==='ueb' ? 'ueb' : 'grapheme';
     sightRound=1;
@@ -2602,6 +2972,10 @@
   function openChooser() {
     chooser.classList.add('on');
     homeBtn.hidden=true;
+    // The assess pill STAYS. The ⌂ is hidden here because there is nowhere
+    // further back to go; the assessment is somewhere to go, and making the
+    // assessor enter a drill first in order to leave it would be silly.
+    assessBtn.hidden=false;
   }
 
   // Back to the activity menu. Top-left, tiny, dull, and double-tap only - the
@@ -2627,6 +3001,7 @@
     disarmHome();
     runId++;
     setInputLocked(false);
+    sightLookOff();
     advancing=false;
     brushOff();
     stopDrawing();
@@ -2636,10 +3011,276 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    if (assessActive()) endAssessment();
     vowelPanel.hidden=true;
     sightPanel.hidden=true;
     openChooser();
   }
+
+  /* ------------------------------------------------------ assessment ---
+     A sitting, not an activity. Nothing is taught here, nothing advances by
+     itself, and the student cannot move through it: every step is the
+     assessor's. Carl frames each card and deliberately does NOT name the
+     letter - naming it is the thing being assessed - and no letter sound,
+     phoneme or name is ever played, because any of them would answer the
+     question for the student.
+
+     Three decisions worth keeping:
+
+     - It is built on its own cell rather than on buildCells(). The shared
+       sequencer exists to teach the ORDER of cells in a word; here there is
+       one cell and the order being watched is the order of the DOTS inside
+       it. Bending the sequencer to that would have made both harder to read.
+
+     - Nothing is recorded. The round ends in a snapshot the assessor reads
+       and copies down by hand, and leaving it throws the numbers away. A
+       disability record about a child is not something this app should be
+       accumulating, and an app that stores nothing cannot leak it.
+
+     - A round is all 26 letters, but Finish ends it wherever it has got to
+       and still gives the snapshot. A short sitting is a real outcome, not an
+       abandoned one. */
+
+  const ASSESS_LETTERS = Object.keys(BRAILLE);   // all 26, reshuffled per round
+  const ASSESS_PROMPT  = 'audio/assessment/prompt-letter.wav';
+  const ASSESS_MUSIC   = 'audio/assessment/background.mp3';
+  // Low enough to sit under a spoken prompt and a dot tone without masking
+  // either, loud enough to be company rather than a rumour. Tuning dial.
+  const ASSESS_MUSIC_LEVEL = 0.18;
+  const ASSESS_MUSIC_FADE  = 900;   // ms, both directions
+
+  const assessEl  = document.getElementById('assess');
+  const assessBtn = document.getElementById('assessBtn');
+  const aCellEl   = document.getElementById('assessCell');
+  const aCountEl  = document.getElementById('assessCount');
+  const aGhostEl  = document.getElementById('assessGhost');
+  const aGotEl    = document.getElementById('assessGot');
+  const aNeedsEl  = document.getElementById('assessNeeds');
+  const aBackEl   = document.getElementById('assessBack');
+  const aNextEl   = document.getElementById('assessNext');
+  const aFinishEl = document.getElementById('assessFinish');
+  const aSnapEl   = document.getElementById('assessSnap');
+  const aSnapDone = document.getElementById('snapDone');
+
+  let aOn=false;
+  let aOrder=[];      // this round's letters, shuffled
+  let aIdx=0;
+  let aVerdict={};    // letter -> 'got' | 'needs'. Absent means NOT JUDGED, which
+                      // is not the same as wrong and is left out of the percentage.
+  let aNeed=[];       // the current letter's dots, ascending
+  let aStep=0;        // how far along that order the student has got
+  let aMusic=null, aMusicRamp=null;
+
+  function assessActive() { return aOn; }
+
+  // Plain <audio> and a volume ramp on it, for the same reason the rest of the
+  // app's recorded sound is: it must still work opened off a USB stick, where
+  // fetch() is blocked and decodeAudioData therefore cannot be fed. Nothing
+  // here is musically timed, so a 40 ms interval is a perfectly good ramp.
+  function assessMusicRamp(to,then) {
+    if (aMusicRamp) { clearInterval(aMusicRamp); aMusicRamp=null; }
+    if (!aMusic) return;
+    const from=aMusic.volume, t0=performance.now();
+    aMusicRamp=setInterval(()=>{
+      if (!aMusic) { clearInterval(aMusicRamp); aMusicRamp=null; return; }
+      const k=Math.min(1,(performance.now()-t0)/ASSESS_MUSIC_FADE);
+      aMusic.volume=Math.max(0,Math.min(1,from+(to-from)*k));
+      if (k>=1) { clearInterval(aMusicRamp); aMusicRamp=null; then&&then(); }
+    },40);
+  }
+  function assessMusicOn() {
+    if (!aMusic) { aMusic=new Audio(ASSESS_MUSIC); aMusic.loop=true; }
+    aMusic.volume=0;
+    const played=aMusic.play();
+    if (played&&played.catch) played.catch(()=>{});
+    assessMusicRamp(ASSESS_MUSIC_LEVEL,null);
+  }
+  function assessMusicOff() {
+    if (!aMusic) return;
+    assessMusicRamp(0,()=>{ try { aMusic.pause(); aMusic.currentTime=0; } catch {} });
+  }
+
+  function assessBuildCell(ch) {
+    aNeed=BRAILLE[ch].slice().sort((x,y)=>x-y);
+    aStep=0;
+    aCellEl.textContent='';
+    aCellEl.classList.remove('done');
+    // Same markup the activities use, so the geometry a student has learned -
+    // two columns, three rows, this gap - is the geometry they meet here.
+    for (const column of [[1,2,3],[4,5,6]]) {
+      const col=document.createElement('div');
+      col.className='brailleCol';
+      for (const n of column) {
+        const dot=document.createElement('div');
+        dot.className='dot'+(aNeed.includes(n)?' required':'');
+        dot.dataset.dot=String(n);
+        col.appendChild(dot);
+      }
+      aCellEl.appendChild(col);
+    }
+  }
+
+  // Reading order - 1,2,3 down the left column then 4,5,6 down the right - is
+  // the habit this is here to build, so a dot lights ONLY when it is the next
+  // one owed. Out of order does nothing at all: no light, no tone, no buzz.
+  // That is deliberate and it is not the assessment. What is being assessed is
+  // what the student SAYS the letter is; this is just the hand being kept
+  // honest while they work it out, and a wrong move that produced a sound
+  // would be a sound the student could play with instead.
+  aCellEl.addEventListener('pointerdown',ev=>{
+    const d=ev.target.closest('.dot');
+    if (!d) return;
+    ev.preventDefault();
+    if (!aOn || !aSnapEl.hidden) return;
+    const n=Number(d.dataset.dot);
+    if (aStep>=aNeed.length || n!==aNeed[aStep]) return;
+    playTone(DOT_TONE[n],{dur:.62,vol:.3});
+    d.classList.add('hit');
+    aStep++;
+    // The frame is where a finished cell is acknowledged. The dots cannot be,
+    // because anything they did would be a statement about the letter.
+    if (aStep>=aNeed.length) aCellEl.classList.add('done');
+  });
+
+  function assessPaintPills() {
+    const v=aVerdict[aOrder[aIdx]];
+    aGotEl.classList.toggle('picked',v==='got');
+    aNeedsEl.classList.toggle('picked',v==='needs');
+  }
+
+  function assessShow(speak) {
+    const ch=aOrder[aIdx];
+    assessBuildCell(ch);
+    aCountEl.textContent=(aIdx+1)+' / '+aOrder.length;
+    // The answer, for the assessor. Drawn from PATHS like every other letter
+    // in this app, so it is the single-story `a` the student was taught.
+    aGhostEl.textContent='';
+    const svg=glyphWord(ch);
+    if (svg) aGhostEl.appendChild(svg);
+    assessPaintPills();
+    aBackEl.disabled = aIdx===0;
+    aNextEl.textContent = aIdx===aOrder.length-1 ? 'Done' : 'Next';
+    if (speak) playClip(ASSESS_PROMPT);
+  }
+
+  // Re-tapping the chosen pill clears it. A mis-tap on a panel this small and
+  // this faint is likely, and leaving no way back from one would quietly put a
+  // wrong mark in the snapshot.
+  function assessMark(verdict) {
+    const ch=aOrder[aIdx];
+    aVerdict[ch] = aVerdict[ch]===verdict ? undefined : verdict;
+    if (!aVerdict[ch]) delete aVerdict[ch];
+    assessPaintPills();
+  }
+  aGotEl.addEventListener('click',()=>assessMark('got'));
+  aNeedsEl.addEventListener('click',()=>assessMark('needs'));
+
+  aNextEl.addEventListener('click',()=>{
+    if (!aOn) return;
+    if (aIdx>=aOrder.length-1) { assessSnapshot(); return; }
+    aIdx++; assessShow(true);
+  });
+  // Back does NOT replay the prompt. Going back is the assessor correcting a
+  // mark they already made, not presenting the letter again - and re-asking
+  // "this is the letter..." would tell the student their last answer was being
+  // reconsidered.
+  aBackEl.addEventListener('click',()=>{
+    if (!aOn || aIdx<=0) return;
+    aIdx--; assessShow(false);
+  });
+  aFinishEl.addEventListener('click',()=>{ if (aOn) assessSnapshot(); });
+
+  function assessSnapshot() {
+    const judged=aOrder.filter(ch=>aVerdict[ch]);
+    const known=judged.filter(ch=>aVerdict[ch]==='got');
+    const needs=judged.filter(ch=>aVerdict[ch]==='needs');
+    document.getElementById('snapKnown').textContent=String(known.length);
+    document.getElementById('snapNeeds').textContent=String(needs.length);
+    // Out of what was actually judged, not out of 26: Finish is allowed to end
+    // a round early, and scoring the letters nobody got to as failures would
+    // turn a short sitting into a bad result.
+    document.getElementById('snapPct').textContent =
+      judged.length ? Math.round(known.length/judged.length*100)+'%' : '—';
+    const row=document.getElementById('snapLetters');
+    row.textContent='';
+    // Alphabetical, not in the order they were shown: that order was random
+    // and means nothing, and a list to copy down is easier to check against
+    // a-z.
+    for (const ch of needs.slice().sort()) {
+      const el=document.createElement('span');
+      el.textContent=ch;
+      row.appendChild(el);
+    }
+    const of=document.getElementById('snapOf');
+    of.hidden = judged.length===aOrder.length;
+    of.textContent = judged.length+' of '+aOrder.length+' letters marked';
+    document.getElementById('snapEmpty').hidden = needs.length>0;
+    aSnapEl.hidden=false;
+  }
+
+  function startAssessment() {
+    // Whatever was running is walked away from, exactly as the ⌂ does it: the
+    // run counter invalidates any timer still in flight, so nothing advances
+    // behind the white screen.
+    runId++;
+    setInputLocked(false);
+    sightLookOff();
+    advancing=false;
+    brushOff();
+    stopDrawing();
+    if (currentClip) { try { currentClip.pause(); } catch {} }
+    if (minigameActive()) { mgOnFinish=null; endMinigame(); }
+    if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
+    if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    chooser.classList.remove('on');
+    vowelPanel.hidden=true;
+    sightPanel.hidden=true;
+    // The ⌂ comes back even if we came from the menu, because it is the only
+    // way out of here other than the snapshot.
+    homeBtn.hidden=false;
+    aOn=true;
+    document.body.classList.add('assessing');
+    assessEl.classList.add('on');
+    assessEl.setAttribute('aria-hidden','false');
+    aSnapEl.hidden=true;
+    aOrder=shuffle(ASSESS_LETTERS.slice());
+    aIdx=0; aVerdict={};
+    assessMusicOn();
+    assessShow(true);
+  }
+
+  function endAssessment() {
+    if (!aOn) return;
+    aOn=false;
+    assessMusicOff();
+    if (currentClip) { try { currentClip.pause(); } catch {} }
+    assessEl.classList.remove('on');
+    assessEl.setAttribute('aria-hidden','true');
+    aSnapEl.hidden=true;
+    document.body.classList.remove('assessing');
+    // The numbers go with it. See the note at the top of this section.
+    aCellEl.textContent='';
+    aOrder=[]; aVerdict={}; aIdx=0; aNeed=[]; aStep=0;
+  }
+
+  // Both new adult controls are double-tap, for the same reason the ⌂ is: a
+  // stray palm must not be able to start or end an assessment. The ⌂ and ×
+  // above predate this helper and are left spelled out rather than rewritten.
+  function armDoubleTap(el,run) {
+    let last=0, timer=null;
+    const disarm=()=>{ clearTimeout(timer); timer=null; last=0; el.classList.remove('armed'); };
+    el.addEventListener('pointerup',ev=>{
+      ev.preventDefault();
+      const now=performance.now();
+      if (now-last<650) { disarm(); run(); return; }
+      last=now;
+      el.classList.add('armed');
+      clearTimeout(timer);
+      timer=setTimeout(disarm,650);
+    });
+  }
+  armDoubleTap(assessBtn,()=>{ if (!aOn) startAssessment(); });
+  armDoubleTap(aSnapDone,()=>{ if (aOn) goHome(); });
 
   // A teacher can bookmark straight past the menu: ?mode=cvc&vowel=i
   const params=new URLSearchParams(location.search);
