@@ -495,6 +495,51 @@
     transform:scale(1.04); opacity:1;
   }
 
+  /* -------------------------------------------------------- write section ---
+     A playground, not an activity. No objective, nothing to get right, nothing
+     that advances - it is a white page for practising letter formation with a
+     finger or a stylus, and it ends when the adult takes it back with the ⌂.
+
+     White ground, like the assessment and for a related reason: every teaching
+     mode in this app is dark, so a light screen says plainly that this is not
+     a drill. The tokens are local to #write so nothing can leak back out. */
+  #write {
+    --wbg:#ffffff; --wedge:rgba(16,20,26,.14); --wdim:rgba(16,20,26,.34);
+    display:none; position:absolute; inset:0; z-index:52; background:var(--wbg);
+    font-family:Andika,'Century Gothic',ui-rounded,'Segoe UI',Arial,sans-serif;
+  }
+  #write.on { display:block; }
+  /* touch-action:none on the canvas is what stops a drawing gesture becoming a
+     scroll or a pinch. The global `*` rule already sets it; it is repeated here
+     because this is the one surface in the app whose entire purpose is a drag,
+     and losing it would make the section silently useless. */
+  #writeCanvas { display:block; width:100%; height:100%; touch-action:none; }
+  /* The only control. Dim and cornered like the ⌂ - it is the adult's - and
+     double-tap guarded because a stray palm must never wipe a page someone has
+     just filled. Bottom RIGHT, as far from the ⌂ as the screen allows, so the
+     two adult controls cannot be confused for one another. */
+  #writeClear {
+    position:absolute; z-index:54;
+    right:max(6px,env(safe-area-inset-right)); bottom:max(6px,env(safe-area-inset-bottom));
+    min-height:30px; padding:5px 12px;
+    border:1px solid var(--wedge); border-radius:8px;
+    background:rgba(255,255,255,.84); color:var(--wdim);
+    font:600 12px/1.2 Arial,Helvetica,sans-serif; letter-spacing:.02em;
+    touch-action:none;
+    transition:background .12s linear, color .12s linear, border-color .12s linear;
+  }
+  #writeClear.armed { background:rgba(16,20,26,.10); color:#15181d; border-color:rgba(16,20,26,.42); }
+  /* A hint, shown only until the first stroke lands. It is not an instruction
+     to follow - there is nothing to do here - just a nudge that the page is
+     live, for an adult handing the tablet over. */
+  #writeHint {
+    position:absolute; z-index:53; left:0; right:0; top:50%;
+    transform:translateY(-50%); text-align:center; pointer-events:none;
+    color:var(--wdim); font:600 clamp(14px,2.4vh,20px)/1.4 inherit;
+    letter-spacing:.02em; transition:opacity .3s linear;
+  }
+  #writeHint.gone { opacity:0; }
+
   /* ---------------------------------------------------- assessment section ---
      Flipped contrast: white ground, dark dots. That is not decoration. It is
      the one signal that works at a glance and from across the room for
@@ -504,6 +549,9 @@
      The tokens are local rather than an override of :root, so nothing here can
      leak back into an activity if a teardown is ever missed. */
   #assess {
+    /* The panel's width lives here so #assessWord can reserve against the same
+       number the panel actually uses. Two copies of it would drift. */
+    --apanelW:clamp(132px,19vw,196px);
     --abg:#ffffff; --aink:#15181d; --afaint:rgba(16,20,26,.30);
     --aline:rgba(16,20,26,.13); --aghost:rgba(16,20,26,.085);
     --ahit:#0f8a3d; --aneeds:#c2660a;
@@ -557,6 +605,120 @@
   #assess .dot.required { border-color:var(--aink); background:var(--abg); }
   #assess .dot.hit { border-color:var(--ahit); background:var(--ahit); transform:scale(1.08); }
 
+  /* The print word, for the visual round. No braille, nothing to tap.
+
+     NO FRAME, deliberately. The rectangle round the braille cell is there
+     because six loose dots read as six separate things; a word does not have
+     that problem - it already reads as one thing. A frame here would just be
+     another edge competing for the space the letters are meant to fill.
+
+     Sized from ONE absolute custom property and then fitted by the SVG's own
+     preserveAspectRatio="xMidYMid meet". That is what keeps the letters
+     un-kerned: the glyph scales, the spacing between letters scales with it,
+     and what is left over is empty margin. Nothing is ever squeezed to fit,
+     which is the whole difference between this and stretching a word to fill a
+     box. Percentages resolve here because the height is definite - same rule
+     as #sightWord, and the trap #assessGhost documents.
+
+     The word is centred on the SCREEN, not in what the panel leaves behind,
+     for the same reason the cell is.
+
+     ⛔ RESERVING THE PANEL'S WIDTH IS WHAT KEEPS THE WORD OFF IT, and two
+     earlier attempts at this were wrong in ways worth recording.
+
+     The first was to reserve nothing, reasoning that a word can only reach
+     that corner by being WIDE, and a wide word must be SHORT because the
+     viewBox is its own ink. True, but it does not save you: a word whose
+     aspect ratio matches the box fills BOTH dimensions. `and` and `you` are
+     2.29 against a box of 2.28, and six of the thirteen words put ink in the
+     panel's band at 1280x800.
+
+     The second was to cap the HEIGHT by the panel's measured band, which gave
+     `min(66vh, calc(100vh - 414px))`. That is correct at 1280x800 and falls
+     apart everywhere else, because an absolute subtrahend does not scale: on a
+     SHORT viewport it eats the whole budget. Measured - 246px on a 1366x768
+     laptop, 114px at 125% display scaling, 26px at 150%, and at phone
+     LANDSCAPE (915x412) it goes NEGATIVE and the word disappears entirely.
+
+     So the width is reserved instead, and the guarantee is arithmetic rather
+     than measured. The stage is 94vw wide, the word is centred on the screen,
+     and it gives back the panel's width plus a gap on each side, so:
+
+         left edge - panel right = 0.03vw + 11px
+
+     which is positive at every viewport size. Nothing to re-derive when the
+     panel's CONTENTS change, because only its width is involved, and that is
+     --apanelW, shared with the panel itself. The height is then free to be a
+     plain proportion.
+
+     This costs width on a wide screen and buys a word that is legible on every
+     screen instead of one that is optimal on one and broken on the rest.
+     Measured x-heights: 363px on the laptop (was 205), 242px at 150% scaling
+     (was 22), 227px in phone landscape (was nothing at all). */
+  #assessWord {
+    /* ⛔⛔ THE max() FLOOR IS LOAD-BEARING. A length that goes <= 0 is INVALID
+       for `height` at computed-value time, which drops the declaration and
+       leaves height:auto - and an auto height is the one thing this element
+       must never have. The svg below would then have no definite parent to
+       resolve against, fall back to INTRINSIC sizing, and take the full width
+       at its own ratio: on a 390px-tall viewport that renders `I` at 1830px,
+       469% of the screen. The app is position:fixed and overflow:hidden, so
+       there is no scrolling out of it - you simply see part of one letter.
+       Reported from a laptop, and it is why `calc(100vh - 414px)` had to go.
+       Keep every term here positive, and keep the floor. */
+    --awordH:max(80px, min(66vh,560px));
+    display:none; place-items:center;
+    width:100%; height:var(--awordH);
+    /* The reservation. See above - this is the whole collision guarantee. */
+    max-width:calc(100% - 2*(var(--apanelW) + 14px));
+  }
+  body.assessWords #assessWord { display:grid; }
+  /* Sized from the same ABSOLUTE custom property the box uses, never a
+     percentage - the rule #assessGhost and #boxes already follow. A percentage
+     height on an <svg> needs a definite parent, and when it does not get one
+     it silently takes the full width and overflows instead of failing. This is
+     the third time that has cost this repo a bug. */
+  #assessWord svg {
+    width:100%; height:var(--awordH); max-height:100%;
+    display:block; overflow:visible;
+  }
+  #assessWord svg path {
+    fill:none; stroke:var(--aink); stroke-width:10;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
+  /* The cell and the word are the two halves of this stage; only one is ever
+     up, and the body class is the single switch. */
+  body.assessWords #assessCell { display:none; }
+
+  /* The picker. There are two kinds of round now, so the double tap opens this
+     instead of committing to one. It is the only screen in the assessment that
+     is openly an adult's - full contrast, real button sizes, plain words -
+     because nobody is being assessed while it is up. Single tap is enough
+     here: the double tap on the pill has already happened. */
+  #assessPick {
+    position:absolute; inset:0; z-index:58; background:var(--abg);
+    display:grid; align-content:center; justify-items:center;
+    gap:clamp(14px,3.4vh,34px); padding:4vh 5vw; text-align:center;
+  }
+  #assessPick[hidden] { display:none; }
+  #pickTitle {
+    font:600 clamp(15px,2.6vh,22px)/1.25 inherit;
+    color:var(--afaint); letter-spacing:.03em;
+  }
+  #pickBtns { display:flex; flex-wrap:wrap; justify-content:center; gap:clamp(12px,3vw,26px); }
+  .pickBtn {
+    display:grid; gap:5px; min-width:clamp(136px,26vw,210px); min-height:98px;
+    padding:16px 20px; border:2px solid var(--aline); border-radius:14px;
+    background:transparent; color:var(--aink); touch-action:none;
+    transition:background .12s linear, border-color .12s linear;
+  }
+  .pickBtn:active { background:rgba(16,20,26,.06); border-color:rgba(16,20,26,.34); }
+  .pickBtn b { font:700 clamp(15px,2.5vh,21px)/1.2 inherit; }
+  .pickBtn span { font:500 clamp(11px,1.7vh,14px)/1.2 inherit; color:var(--afaint); }
+  /* The counts are filled from the lists themselves, so they cannot drift from
+     what a round actually deals out. <i> only to carry the number. */
+  .pickBtn i { font-style:normal; font-variant-numeric:tabular-nums; }
+
   /* Low contrast ON PURPOSE, and small, and in the corner. The assessor can
      read it because they know it is there and they are an arm's length away
      looking for it; a student reading the cell in the middle of the screen
@@ -565,12 +727,16 @@
   #assessPanel {
     position:absolute; z-index:56;
     top:calc(max(3px,env(safe-area-inset-top)) + 36px); left:3px;
-    width:clamp(132px,19vw,196px);
+    width:var(--apanelW);
     display:grid; gap:5px; padding:7px 8px 8px;
     border:1px solid var(--aline); border-radius:8px;
     background:rgba(255,255,255,.72); color:var(--afaint);
     font:500 11px/1.25 Arial,Helvetica,sans-serif;
   }
+  /* Spelled out because `display:grid` above beats the UA's [hidden] rule, and
+     the panel is genuinely hidden while the picker is up. Same trap the
+     chooser hit once. */
+  #assessPanel[hidden] { display:none; }
   #assessCount { font-variant-numeric:tabular-nums; letter-spacing:.03em; }
   /* The answer, for the assessor only. A ghost of the PRINT letter, drawn from
      the same centerlines the rest of the app draws from, so it is the same
@@ -688,6 +854,10 @@
        to fit rather than sliding under the controls. */
     #assessStage { padding:2vh 3vw calc(80px + 1vh); }
     #assessCell { --ad:min(132px, 17vw, calc((96vh - 86px)/4.7)); }
+    /* The panel is a bottom strip down here, so there is nothing beside the
+       word to reserve against - it takes the full width back, and gives back
+       the same 80px strip the cell does. */
+    #assessWord { --awordH:max(80px, min(calc(94vh - 86px),560px)); max-width:100%; }
   }
 </style>
 </head>
@@ -738,6 +908,14 @@
        assessor reads and writes down by hand, and closing it throws the
        numbers away. That is deliberate: a disability record about a child is
        not something this app should be accumulating. -->
+  <!-- The writing playground. Its own canvas, deliberately not the tracing
+       canvas: that one repaints itself from glyph geometry every frame, and
+       this one must simply keep what has been drawn on it. -->
+  <div id="write" aria-hidden="true">
+    <canvas id="writeCanvas"></canvas>
+    <div id="writeHint">Draw anywhere</div>
+    <button id="writeClear" type="button">Double tap to clear</button>
+  </div>
   <div id="assess" aria-hidden="true">
     <!-- The assessor's panel. Faint, small and jammed in the corner, for the
          same reason the ⌂ is: it is not for the student, and it must not
@@ -757,11 +935,29 @@
     </div>
     <div id="assessStage">
       <div id="assessCell" aria-label="Braille cell"></div>
+      <!-- The visual round: print only, nothing to tap. Drawn from the app's
+           own centerlines, so it is the same school print - single-story `a` -
+           that the student traces and reads everywhere else. -->
+      <div id="assessWord" aria-hidden="true"></div>
+    </div>
+    <!-- Which kind of round. Shown on entry instead of starting one, because
+         there are two now and an assessment started by accident is a wasted
+         sitting. -->
+    <div id="assessPick" hidden>
+      <div id="pickTitle">What are we assessing?</div>
+      <div id="pickBtns">
+        <button id="pickLetters" class="pickBtn" type="button">
+          <b>Braille letters</b><span><i id="pickLettersN">26</i> cards</span>
+        </button>
+        <button id="pickWords" class="pickBtn" type="button">
+          <b>Print words</b><span><i id="pickWordsN">13</i> cards</span>
+        </button>
+      </div>
     </div>
     <!-- The snapshot. Read once, written down by hand, and gone. -->
     <div id="assessSnap" hidden>
       <div id="snapStats">
-        <div class="snapStat"><b id="snapKnown">0</b><span>letters known</span></div>
+        <div class="snapStat"><b id="snapKnown">0</b><span id="snapKnownLabel">letters known</span></div>
         <div class="snapStat"><b id="snapNeeds">0</b><span>need practice</span></div>
         <div class="snapStat"><b id="snapPct">—</b><span>known</span></div>
       </div>
@@ -786,6 +982,7 @@
         <button class="card" type="button" data-mode="numbers" data-sample="123"><b></b><span>Numbers</span></button>
         <button class="card" type="button" data-mode="sight" data-sample="the"><b></b><span>High Frequency Words</span></button>
         <button class="card" type="button" data-mode="rhythm"><b class="sym">●■</b><span>Rhythm</span><em>under construction</em></button>
+        <button class="card" type="button" data-mode="write"><b class="sym" id="writeCardSample"></b><span>Write</span></button>
       </div>
       <div class="chooserRow" id="chooserVowels" hidden>
         <div class="chooserLabel">Which vowel?</div>
@@ -1096,9 +1293,16 @@
   const CAPITAL_SIGN = [6];
 
   // ---------------------------------------------------------- sight words ---
-  // First tranche, as given. "I" is capitalised throughout: capital in print,
+  // Both tranches, as given. "I" is capitalised throughout: capital in print,
   // capital indicator in braille.
-  const SIGHT_WORDS = ['the','is','it','said','and','as','a','I'];
+  //
+  // The list is shuffled every round, so the order here is for reading the
+  // source, not for teaching: the first eight are the original tranche and the
+  // last five were added after. Adding a word costs three things - an entry
+  // here, a SIGHT_UEB spelling below, and a recorded clip at
+  // audio/sight/<word>.wav named by the LOWERCASED word.
+  const SIGHT_WORDS = ['the','is','it','said','and','as','a','I',
+                       'you','has','was','to','one'];
 
   // The teacher picks the convention for the whole session. `grapheme` spells
   // every word out, one cell per print letter, and is the default because it
@@ -1118,8 +1322,36 @@
     and:  [{ dots:[1,2,3,4,6] }],                  // strong wordsign
     as:   [{ dots:[1,3,5,6] }],                    // alphabetic wordsign (z)
     a:    [{ name:'a' }],
-    I:    [{ dots:CAPITAL_SIGN }, { name:'i' }]
+    I:    [{ dots:CAPITAL_SIGN }, { name:'i' }],
+    // Second tranche. Dots cross-checked against the alphabet table above the
+    // same way the first tranche was.
+    you:  [{ dots:[1,3,4,5,6] }],                  // alphabetic wordsign (y)
+    // No contraction in UEB, so it is spelled in full - which matters here,
+    // because `h` STANDING ALONE is the wordsign for "have". Spelling it out
+    // is both correct UEB and the reading that cannot be confused for another
+    // word.
+    has:  [{ name:'h' }, { name:'a' }, { name:'s' }],
+    // Lower wordsign: the letter j dropped one row (j is 2-4-5, this is
+    // 3-5-6). No letter occupies 3-5-6, so there is nothing to confuse it
+    // with, and it is silent here for the same reason every wordsign cell is.
+    was:  [{ dots:[3,5,6] }],
+    // UEB removed the old unspaced "to", so it is simply spelled.
+    to:   [{ name:'t' }, { name:'o' }],
+    one:  [{ name:'o' }, { name:'n' }, { name:'e' }]   // no contraction, spelled
   };
+
+  // The write playground's ink. Lives here with the other palettes rather than
+  // in its own section, because the menu card's artwork is built before that
+  // section is reached and a const cannot be used before it is declared.
+  //
+  // Dark and saturated because the ground there is WHITE - every one of these
+  // clears WCAG AA against white (worst 5.13:1, near-black 17.4:1), and they
+  // are ordered so consecutive strokes are as unlike each other as possible
+  // (adjacent pairs are at least 67 ΔE apart). That ordering is the point: the
+  // colour changes on every pen-up, so two strokes in a row must never be
+  // mistakable for one.
+  const WRITE_INK = ['#1a1a1a','#c62828','#1565c0','#bf360c',
+                     '#2e7d32','#6a1b9a','#00695c','#ad1457'];
 
   const COLOR_PAIRS = [
     ['#ff453a','#30d158'], // red / green
@@ -2850,10 +3082,21 @@
   }
   document.addEventListener('fullscreenchange',fullscreenChanged);
   document.addEventListener('webkitfullscreenchange',fullscreenChanged);
-  window.addEventListener('resize',resizeCanvas);
-  window.visualViewport?.addEventListener('resize',resizeCanvas);
+  // Both canvases follow the viewport. The write page REPAINTS from its stored
+  // strokes on resize rather than losing them - a tablet rotating mid-session
+  // must not wipe what someone has written.
+  function resizeAll() { resizeCanvas(); if (writeActive()) writeResize(); }
+  window.addEventListener('resize',resizeAll);
+  window.visualViewport?.addEventListener('resize',resizeAll);
   new ResizeObserver(resizeCanvas).observe(document.getElementById('traceWrap'));
-  window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,120));
+  // getElementById, NOT the writeEl const: that const is declared further down
+  // and would be in its temporal dead zone here, which throws at load and takes
+  // the whole app with it. The element itself exists - this script runs at the
+  // end of <body>. The callback is async, so everything it touches is live by
+  // the time it first fires.
+  new ResizeObserver(()=>{ if (writeActive()) writeResize(); })
+    .observe(document.getElementById('write'));
+  window.addEventListener('orientationchange',()=>setTimeout(resizeAll,120));
 
   // ---------------------------------------------------------- tap to start ---
   // Browsers refuse to start audio without a user gesture, so without this gate
@@ -2939,6 +3182,43 @@
   for (const card of document.querySelectorAll('#chooser .card[data-sample]'))
     fillSample(card,card.dataset.sample);
 
+  // The Write card's sample. Deliberately NOT a letter and NOT a data-sample:
+  // the section is not about any particular letter, and the one thing worth
+  // showing on the card is the thing that makes it different - three marks,
+  // three colours, because the ink changes every time you lift off. Drawn
+  // rather than typed, like every other sample in this menu.
+  (function writeCardArt() {
+    const host=document.getElementById('writeCardSample');
+    if (!host) return;
+    const svg=document.createElementNS(SVGNS,'svg');
+    svg.setAttribute('viewBox','0 0 166 60');
+    svg.setAttribute('aria-hidden','true');
+    // ⛔ The white page behind the marks is NOT decoration. WRITE_INK is built
+    // for a white ground, and its first entry is near-black - drawn straight
+    // onto this menu's #1d1d1d card it is invisible, which is the same
+    // black-on-black mistake the ⌂ button shipped with once. The card needs the
+    // page as well as the ink, and showing it also says what the section is.
+    const page=document.createElementNS(SVGNS,'rect');
+    page.setAttribute('x','0'); page.setAttribute('y','0');
+    page.setAttribute('width','166'); page.setAttribute('height','60');
+    page.setAttribute('rx','10'); page.setAttribute('fill','#ffffff');
+    svg.appendChild(page);
+    ['M14 48 C26 14 42 14 54 48','M62 48 C74 14 90 14 102 48','M110 48 C122 14 138 14 150 48']
+      .forEach((d,i)=>{
+        const path=document.createElementNS(SVGNS,'path');
+        path.setAttribute('d',d);
+        // Inline, because the menu's shared `.card b svg path` rule paints every
+        // other sample a single colour and this one must not inherit that.
+        path.setAttribute('stroke',WRITE_INK[i]);
+        path.setAttribute('fill','none');
+        path.setAttribute('stroke-width','9');
+        path.setAttribute('stroke-linecap','round');
+        svg.appendChild(path);
+      });
+    host.textContent='';
+    host.appendChild(svg);
+  })();
+
   for (const b of sightPanel.querySelectorAll('.card')) {
     b.addEventListener('click',()=>start('sight',null,b.dataset.convention));
   }
@@ -2959,11 +3239,12 @@
     runId++;
     setInputLocked(false);
     if (assessActive()) endAssessment();
+    if (writeActive()) endWrite();
     mode=picked; cvcVowel=vowel;
     sightConvention = convention==='ueb' ? 'ueb' : 'grapheme';
     sightRound=1;
     document.body.classList.remove('mode-letters','mode-cvc','mode-numbers',
-                                   'mode-sight','mode-rhythm','round2');
+                                   'mode-sight','mode-rhythm','mode-write','round2');
     document.body.classList.add('mode-'+mode);
     chooser.classList.remove('on');
     homeBtn.hidden=false;
@@ -2975,6 +3256,14 @@
       boxesEl.textContent=''; sightWordEl.textContent=''; brailleEl.textContent='';
       cells=[]; order=[]; word=null; glyph=null; traceDone=true;
       startRhythmActivity();
+      return;
+    }
+    // Same shape as rhythm: no items, no order, nothing to trace or answer, and
+    // it owns the screen until the ⌂ takes it back.
+    if (mode==='write') {
+      boxesEl.textContent=''; sightWordEl.textContent=''; brailleEl.textContent='';
+      cells=[]; order=[]; word=null; glyph=null; traceDone=true;
+      startWrite();
       return;
     }
     buildOrder();
@@ -3025,9 +3314,192 @@
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
     if (assessActive()) endAssessment();
+    if (writeActive()) endWrite();
     vowelPanel.hidden=true;
     sightPanel.hidden=true;
     openChooser();
+  }
+
+  /* ---------------------------------------------------------- write ---
+     A playground. No objective, no scoring, no advancing, no break, nothing
+     to get wrong - a white page for practising letter formation with a finger
+     or a stylus. It owns the screen until the ⌂ takes it back, the same shape
+     the rhythm section has, so it skips the item pipeline entirely.
+
+     Three decisions worth keeping:
+
+     - It has its OWN canvas. The tracing canvas repaints itself from glyph
+       geometry on every pointermove - that is how the guide and the marker
+       stay in register - and a page that must simply KEEP what was drawn on
+       it is the opposite requirement. Sharing one canvas would have meant
+       teaching draw() to not redraw, which is where that function would stop
+       being readable.
+
+     - The ink changes colour on every pen-up. That is the whole feature: it
+       makes each stroke a separate, visible thing, so where one stroke ended
+       and the next began is readable after the fact rather than lost in one
+       continuous line. Rich, dark colours because the ground is white - the
+       whole palette clears WCAG AA against it, worst case 5.13:1, and
+       consecutive inks are at least 67 ΔE apart so a change is unmistakable.
+
+     - It is SILENT. The brush that the letter tracing plays is tied to being
+       on the guide, and there is no guide here; more to the point, a sound
+       that rewards movement is a sound worth making for its own sake, and
+       this repo has already learned that lesson once with the ghosted dots.
+       WRITE_BRUSH flips it on if that is ever wanted. */
+
+  // WRITE_INK is declared up with COLOR_PAIRS - the menu card's artwork needs
+  // it, and that runs earlier than this.
+  // Fraction of the canvas's short side, then clamped. Proportional so a
+  // stroke is the same weight on a phone and a tablet; floored so it never
+  // becomes a hairline on a small screen, and capped so it stays a pen rather
+  // than a roller on a large one. Tuning dial.
+  const WRITE_WIDTH_FRAC = .035, WRITE_WIDTH_MIN = 12, WRITE_WIDTH_MAX = 34;
+  const WRITE_BRUSH = false;   // see the note above before turning this on
+
+  const writeEl     = document.getElementById('write');
+  const writeCanvas = document.getElementById('writeCanvas');
+  const writeHint   = document.getElementById('writeHint');
+  const writeClear  = document.getElementById('writeClear');
+  const wctx = writeCanvas.getContext('2d');
+
+  let wOn=false, wDrawing=false, wPointer=null, wLast=null;
+  let wInk=0;              // index into WRITE_INK; advances on every pen-up
+  let wStrokes=[];         // {color,width,pts:[[x,y],..]} - kept so a resize can repaint
+  let wCur=null;
+
+  function writeActive() { return wOn; }
+  function writeWidth() {
+    const short=Math.min(writeCanvas.clientWidth,writeCanvas.clientHeight);
+    return Math.max(WRITE_WIDTH_MIN,Math.min(short*WRITE_WIDTH_FRAC,WRITE_WIDTH_MAX));
+  }
+
+  // Backing store in device pixels, drawing in CSS pixels - the same setup the
+  // tracing canvas uses, so a stroke is not soft on a high-DPR tablet.
+  function writeResize() {
+    const r=writeCanvas.getBoundingClientRect();
+    const dpr=Math.min(3,window.devicePixelRatio||1);
+    const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
+    writeCanvas.width=Math.round(w*dpr); writeCanvas.height=Math.round(h*dpr);
+    writeCanvas.style.width=w+'px'; writeCanvas.style.height=h+'px';
+    wctx.setTransform(dpr,0,0,dpr,0,0);
+    writeRepaint();
+  }
+
+  // Only on resize. Ordinary drawing appends to what is already on the canvas
+  // rather than redrawing the page, which is what keeps a long session cheap
+  // no matter how much is on it.
+  function writeRepaint() {
+    const w=writeCanvas.clientWidth,h=writeCanvas.clientHeight;
+    wctx.globalAlpha=1; wctx.fillStyle='#ffffff'; wctx.fillRect(0,0,w,h);
+    wctx.lineCap='round'; wctx.lineJoin='round';
+    for (const st of wStrokes) writeStroke(st.pts,st.color,st.width);
+  }
+
+  function writeStroke(pts,color,width) {
+    if (!pts.length) return;
+    wctx.strokeStyle=color; wctx.lineWidth=width;
+    wctx.lineCap='round'; wctx.lineJoin='round';
+    wctx.beginPath();
+    if (pts.length===1) {
+      // A tap with no movement is still a mark. Without this a dot on an `i`
+      // simply would not appear.
+      wctx.moveTo(pts[0][0],pts[0][1]); wctx.lineTo(pts[0][0],pts[0][1]);
+    } else {
+      wctx.moveTo(pts[0][0],pts[0][1]);
+      for (let i=1;i<pts.length;i++) wctx.lineTo(pts[i][0],pts[i][1]);
+    }
+    wctx.stroke();
+  }
+
+  function writePoint(ev) {
+    const r=writeCanvas.getBoundingClientRect();
+    return [ev.clientX-r.left, ev.clientY-r.top];
+  }
+
+  writeCanvas.addEventListener('pointerdown',ev=>{
+    if (!wOn || wDrawing) return;
+    ev.preventDefault();
+    wDrawing=true; wPointer=ev.pointerId;
+    try { writeCanvas.setPointerCapture(ev.pointerId); } catch {}
+    const p=writePoint(ev);
+    wLast=p;
+    wCur={ color:WRITE_INK[wInk%WRITE_INK.length], width:writeWidth(), pts:[p] };
+    wStrokes.push(wCur);
+    writeStroke([p],wCur.color,wCur.width);
+    if (!writeHint.classList.contains('gone')) writeHint.classList.add('gone');
+    if (WRITE_BRUSH) { brushOn(); brushSpeed(.5); }
+  });
+
+  writeCanvas.addEventListener('pointermove',ev=>{
+    if (!wDrawing || ev.pointerId!==wPointer) return;
+    ev.preventDefault();
+    const p=writePoint(ev);
+    // Draw ONLY the new segment. Appending to the canvas rather than repainting
+    // is what lets the page hold an unlimited amount of ink without slowing
+    // down, which matters because nothing here ever clears itself.
+    wctx.strokeStyle=wCur.color; wctx.lineWidth=wCur.width;
+    wctx.lineCap='round'; wctx.lineJoin='round';
+    wctx.beginPath(); wctx.moveTo(wLast[0],wLast[1]); wctx.lineTo(p[0],p[1]); wctx.stroke();
+    // Speed BEFORE wLast moves, or it is always zero.
+    if (WRITE_BRUSH) { brushOn(); brushSpeed(Math.hypot(p[0]-wLast[0],p[1]-wLast[1])/16); }
+    wCur.pts.push(p);
+    wLast=p;
+  });
+
+  // Lifting off is what changes the colour, and it is the only thing that
+  // does. Pointercancel counts too: a palm rejected mid-stroke has ended that
+  // stroke as surely as lifting would have.
+  function writeLift(ev) {
+    if (!wDrawing) return;
+    if (ev && wPointer!==null && ev.pointerId!==wPointer) return;
+    wDrawing=false; wPointer=null; wLast=null; wCur=null;
+    wInk=(wInk+1)%WRITE_INK.length;
+    if (WRITE_BRUSH) brushOff();
+  }
+  // up + cancel ONLY, exactly as the tracing canvas binds them. pointerleave
+  // can fire on a captured pointer that slides past the edge, which would end
+  // a stroke - and change the colour - with the finger still down.
+  writeCanvas.addEventListener('pointerup',writeLift);
+  writeCanvas.addEventListener('pointercancel',writeLift);
+
+  function writeWipe() {
+    wStrokes=[]; wCur=null; wDrawing=false; wPointer=null; wLast=null;
+    // The colour deliberately does NOT reset. A fresh page carrying on from
+    // the ink that was in use reads as continuous; snapping back to black
+    // would make the wipe feel like a different activity starting.
+    writeRepaint();
+    writeHint.classList.remove('gone');
+  }
+
+  function startWrite() {
+    runId++;
+    setInputLocked(false);
+    sightLookOff();
+    advancing=false;
+    brushOff();
+    stopDrawing();
+    if (currentClip) { try { currentClip.pause(); } catch {} }
+    if (minigameActive()) { mgOnFinish=null; endMinigame(); }
+    if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
+    if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    wOn=true;
+    writeEl.classList.add('on');
+    writeEl.setAttribute('aria-hidden','false');
+    wStrokes=[]; wInk=0; wDrawing=false; wPointer=null; wLast=null; wCur=null;
+    writeHint.classList.remove('gone');
+    // After the class lands, so the canvas has a size to measure.
+    writeResize();
+  }
+
+  function endWrite() {
+    if (!wOn) return;
+    wOn=false; wDrawing=false; wPointer=null; wLast=null; wCur=null;
+    writeEl.classList.remove('on');
+    writeEl.setAttribute('aria-hidden','true');
+    // The page goes with it. Nothing here is kept, saved or sent anywhere.
+    wStrokes=[];
+    try { wctx.setTransform(1,0,0,1,0,0); wctx.clearRect(0,0,writeCanvas.width,writeCanvas.height); } catch {}
   }
 
   /* ------------------------------------------------------ assessment ---
@@ -3055,7 +3527,17 @@
        abandoned one. */
 
   const ASSESS_LETTERS = Object.keys(BRAILLE);   // all 26, reshuffled per round
+  // The SAME bank the High Frequency Words activity teaches from, by reference
+  // and not by copy: the assessment asks for exactly what has been practised,
+  // and adding a word to SIGHT_WORDS adds it to both. Every round slices
+  // before shuffling, so nothing here mutates the activity's list.
+  const ASSESS_WORDS   = SIGHT_WORDS;
   const ASSESS_PROMPT  = 'audio/assessment/prompt-letter.wav';
+  // The visual round's two lines. Carl frames the card, and then acknowledges
+  // that a mark has been made - without ever saying WHAT it was, the same rule
+  // that keeps the letter prompt from naming the letter.
+  const ASSESS_WORD_PROMPT = 'audio/assessment/prompt-word.wav';
+  const ASSESS_NEXT_PROMPT = 'audio/assessment/prompt-next.wav';
   const ASSESS_MUSIC   = 'audio/assessment/background.mp3';
   // Set by ear on the classroom tablet, which is the only place that counts:
   // 0.18 was measured-reasonable and simply too quiet in the room. Tuning dial.
@@ -3074,9 +3556,14 @@
   const aFinishEl = document.getElementById('assessFinish');
   const aSnapEl   = document.getElementById('assessSnap');
   const aSnapDone = document.getElementById('snapDone');
+  const aPanelEl  = document.getElementById('assessPanel');
+  const aWordEl   = document.getElementById('assessWord');
+  const aPickEl   = document.getElementById('assessPick');
 
   let aOn=false;
-  let aOrder=[];      // this round's letters, shuffled
+  let aKind=null;     // 'letters' | 'words'. null while the picker is up.
+  let aSpokeNext=false;
+  let aOrder=[];      // this round's cards, shuffled
   let aIdx=0;
   let aVerdict={};    // letter -> 'got' | 'needs'. Absent means NOT JUDGED, which
                       // is not the same as wrong and is left out of the percentage.
@@ -3085,6 +3572,7 @@
   let aMusic=null, aMusicRamp=null;
 
   function assessActive() { return aOn; }
+  const aWords = () => aKind==='words';
 
   // Plain <audio> and a volume ramp on it, for the same reason the rest of the
   // app's recorded sound is: it must still work opened off a USB stick, where
@@ -3144,7 +3632,7 @@
     const d=ev.target.closest('.dot');
     if (!d) return;
     ev.preventDefault();
-    if (!aOn || !aSnapEl.hidden) return;
+    if (!aOn || !aSnapEl.hidden || !aPickEl.hidden) return;
     const n=Number(d.dataset.dot);
     if (aStep>=aNeed.length || n!==aNeed[aStep]) return;
     playTone(DOT_TONE[n],{dur:.62,vol:.3});
@@ -3162,28 +3650,56 @@
   }
 
   function assessShow(speak) {
-    const ch=aOrder[aIdx];
-    assessBuildCell(ch);
+    const item=aOrder[aIdx];
+    // Only a FRESH presentation re-arms the "next one" line. Back deliberately
+    // does not, for the same reason it does not replay the prompt: going back
+    // is the assessor correcting a mark, and re-announcing the move would tell
+    // the student their last answer was being reconsidered.
+    if (speak) aSpokeNext=false;
+    if (aWords()) {
+      // Nothing to tap and no cell at all - this round is read with the eyes,
+      // so the dot machinery is left empty rather than built and ignored.
+      aCellEl.textContent='';
+      aNeed=[]; aStep=0;
+      aWordEl.textContent='';
+      const big=glyphWord(item);
+      if (big) aWordEl.appendChild(big);
+    } else {
+      aWordEl.textContent='';
+      assessBuildCell(item);
+    }
     aCountEl.textContent=(aIdx+1)+' / '+aOrder.length;
-    // The answer, for the assessor. Drawn from PATHS like every other letter
-    // in this app, so it is the single-story `a` the student was taught.
+    // For the assessor. Drawn from PATHS like every other letter in this app,
+    // so it is the single-story `a` the student was taught. In the visual round
+    // the card is already print, so this is not hiding an answer - it is the
+    // position and the word together, which is what gets copied down.
     aGhostEl.textContent='';
-    const svg=glyphWord(ch);
+    const svg=glyphWord(item);
     if (svg) aGhostEl.appendChild(svg);
     assessPaintPills();
     aBackEl.disabled = aIdx===0;
     aNextEl.textContent = aIdx===aOrder.length-1 ? 'Done' : 'Next';
-    if (speak) playClip(ASSESS_PROMPT);
+    if (speak) playClip(aWords() ? ASSESS_WORD_PROMPT : ASSESS_PROMPT);
   }
 
   // Re-tapping the chosen pill clears it. A mis-tap on a panel this small and
   // this faint is likely, and leaving no way back from one would quietly put a
   // wrong mark in the snapshot.
   function assessMark(verdict) {
-    const ch=aOrder[aIdx];
-    aVerdict[ch] = aVerdict[ch]===verdict ? undefined : verdict;
-    if (!aVerdict[ch]) delete aVerdict[ch];
+    const item=aOrder[aIdx];
+    aVerdict[item] = aVerdict[item]===verdict ? undefined : verdict;
+    if (!aVerdict[item]) delete aVerdict[item];
     assessPaintPills();
+    // The visual round only, and only when a mark has actually been SET.
+    // Silent when a tap CLEARS one: clearing is the assessor correcting
+    // themselves, and announcing that would say something about the answer.
+    // Once per card, so a mis-tap and its correction do not make Carl repeat
+    // himself. Starting this clip stops the framing line if it is still going,
+    // which is what should happen - the card has been answered.
+    if (aWords() && aVerdict[item] && !aSpokeNext) {
+      aSpokeNext=true;
+      playClip(ASSESS_NEXT_PROMPT);
+    }
   }
   aGotEl.addEventListener('click',()=>assessMark('got'));
   aNeedsEl.addEventListener('click',()=>assessMark('needs'));
@@ -3204,9 +3720,12 @@
   aFinishEl.addEventListener('click',()=>{ if (aOn) assessSnapshot(); });
 
   function assessSnapshot() {
-    const judged=aOrder.filter(ch=>aVerdict[ch]);
-    const known=judged.filter(ch=>aVerdict[ch]==='got');
-    const needs=judged.filter(ch=>aVerdict[ch]==='needs');
+    const judged=aOrder.filter(k=>aVerdict[k]);
+    const known=judged.filter(k=>aVerdict[k]==='got');
+    const needs=judged.filter(k=>aVerdict[k]==='needs');
+    // The page is copied onto paper by hand, so it has to say what was counted.
+    const noun=aWords() ? 'words' : 'letters';
+    document.getElementById('snapKnownLabel').textContent=noun+' known';
     document.getElementById('snapKnown').textContent=String(known.length);
     document.getElementById('snapNeeds').textContent=String(needs.length);
     // Out of what was actually judged, not out of 26: Finish is allowed to end
@@ -3219,19 +3738,25 @@
     // Alphabetical, not in the order they were shown: that order was random
     // and means nothing, and a list to copy down is easier to check against
     // a-z.
-    for (const ch of needs.slice().sort()) {
+    // Case-insensitively, because the word bank contains "I": a plain sort()
+    // is by code unit and would file it ahead of every lowercase word.
+    for (const k of needs.slice().sort((x,y)=>x.localeCompare(y,undefined,{sensitivity:'base'}))) {
       const el=document.createElement('span');
-      el.textContent=ch;
+      el.textContent=k;
       row.appendChild(el);
     }
     const of=document.getElementById('snapOf');
     of.hidden = judged.length===aOrder.length;
-    of.textContent = judged.length+' of '+aOrder.length+' letters marked';
+    of.textContent = judged.length+' of '+aOrder.length+' '+noun+' marked';
     document.getElementById('snapEmpty').hidden = needs.length>0;
     aSnapEl.hidden=false;
   }
 
-  function startAssessment() {
+  // Opening the section is not starting a round any more. The double tap lands
+  // here, the picker asks which kind, and only then is a round dealt. aOn is
+  // true for the whole screen, picker included, so the ⌂ and start() still tear
+  // it down properly if the assessor changes their mind.
+  function openAssess() {
     // Whatever was running is walked away from, exactly as the ⌂ does it: the
     // run counter invalidates any timer still in flight, so nothing advances
     // behind the white screen.
@@ -3245,6 +3770,7 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    if (writeActive()) endWrite();
     chooser.classList.remove('on');
     vowelPanel.hidden=true;
     sightPanel.hidden=true;
@@ -3256,11 +3782,38 @@
     assessEl.classList.add('on');
     assessEl.setAttribute('aria-hidden','false');
     aSnapEl.hidden=true;
-    aOrder=shuffle(ASSESS_LETTERS.slice());
-    aIdx=0; aVerdict={};
+    // Picker up, round not dealt. The panel has nothing to say yet, and the
+    // music belongs to the sitting rather than to choosing what the sitting is.
+    aPickEl.hidden=false;
+    aPanelEl.hidden=true;
+    aKind=null; aOrder=[]; aIdx=0; aVerdict={};
+    aCellEl.textContent=''; aWordEl.textContent='';
+    document.body.classList.remove('assessWords');
+  }
+
+  function startAssessment(kind) {
+    aKind = kind==='words' ? 'words' : 'letters';
+    aPickEl.hidden=true;
+    aPanelEl.hidden=false;
+    document.body.classList.toggle('assessWords',aWords());
+    aOrder=shuffle((aWords() ? ASSESS_WORDS : ASSESS_LETTERS).slice());
+    aIdx=0; aVerdict={}; aSpokeNext=false;
     assessMusicOn();
     assessShow(true);
   }
+
+  // Single tap: the double tap on the pill has already happened, and this
+  // screen is openly an adult's.
+  document.getElementById('pickLetters').addEventListener('click',()=>{
+    if (aOn && !aPickEl.hidden) startAssessment('letters');
+  });
+  document.getElementById('pickWords').addEventListener('click',()=>{
+    if (aOn && !aPickEl.hidden) startAssessment('words');
+  });
+  // From the lists themselves, so the counts on the buttons cannot drift from
+  // what a round actually deals out.
+  document.getElementById('pickLettersN').textContent=String(ASSESS_LETTERS.length);
+  document.getElementById('pickWordsN').textContent=String(ASSESS_WORDS.length);
 
   function endAssessment() {
     if (!aOn) return;
@@ -3270,9 +3823,12 @@
     assessEl.classList.remove('on');
     assessEl.setAttribute('aria-hidden','true');
     aSnapEl.hidden=true;
-    document.body.classList.remove('assessing');
+    document.body.classList.remove('assessing','assessWords');
+    aPickEl.hidden=true;
+    aPanelEl.hidden=false;
     // The numbers go with it. See the note at the top of this section.
-    aCellEl.textContent='';
+    aCellEl.textContent=''; aWordEl.textContent='';
+    aKind=null; aSpokeNext=false;
     aOrder=[]; aVerdict={}; aIdx=0; aNeed=[]; aStep=0;
   }
 
@@ -3292,7 +3848,10 @@
       timer=setTimeout(disarm,650);
     });
   }
-  armDoubleTap(assessBtn,()=>{ if (!aOn) startAssessment(); });
+  armDoubleTap(assessBtn,()=>{ if (!aOn) openAssess(); });
+  // Wiping the page is the one destructive thing in the playground, so it gets
+  // the same double tap the ⌂ and the × use. armDoubleTap is defined above.
+  armDoubleTap(writeClear,()=>{ if (wOn) writeWipe(); });
   armDoubleTap(aSnapDone,()=>{ if (aOn) goHome(); });
 
   // A teacher can bookmark straight past the menu: ?mode=cvc&vowel=i
@@ -3300,7 +3859,8 @@
   const wanted=(params.get('mode')||'').toLowerCase();
   const wantedVowel=(params.get('vowel')||'').toLowerCase();
   const presetMode=({letters:'letters',words:'cvc',cvc:'cvc',numbers:'numbers',
-                     sight:'sight',sightwords:'sight',rhythm:'rhythm',beat:'rhythm'})[wanted]
+                     sight:'sight',sightwords:'sight',rhythm:'rhythm',beat:'rhythm',
+                     write:'write',draw:'write'})[wanted]
                    || (params.get('letter') ? 'letters' : null);
   const wantedBraille=(params.get('braille')||'').toLowerCase();
 

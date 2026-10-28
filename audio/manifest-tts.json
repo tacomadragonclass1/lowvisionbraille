@@ -1,7 +1,7 @@
 {
   "source": "Mixed. audio/sight/, audio/words/ and audio/numbers/ = local Chatterbox TTS (chatterbox-turbo), 'carlvoice' voice clone, seed 898, temperature 0.8, level-matched with tools/normalize_external_clips.py. audio/rhythm/ = local Chatterbox TTS, same 'carlvoice' clone, seed and temperature as the rest. audio/letters/ = local Kokoro-82M and MUTED by design. audio/phonemes/ = human recordings.",
   "format": "24 kHz 16-bit mono PCM WAV",
-  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.  2026-10-17: the ENTIRE sight-word section (8 words + 2 prompts) was re-recorded in Chatterbox with the 'carlvoice' clone because the Kokoro reads were rejected. Originals backed up at audio/.sight-kokoro-backup-20261017/.  2026-10-17: the 39 CVC words were re-recorded in Chatterbox too, same clone and seed as the sight words. Originals at audio/.words-kokoro-backup-20261017/. NOTE: this server runs chatterbox-turbo, which IGNORES exaggeration and cfg_weight - only temperature, seed and the reference audio affect the output.  2026-10-17: the 10 number names were re-recorded in Chatterbox as well. ⛔ audio/numbers/ files are named by DIGIT (8.wav) but SAY the word ('eight') - generate from the manifest text, never from the filename. Originals at audio/.numbers-kokoro-backup-20261017/.  2026-10-19: audio/rhythm/ holds the EIGHT spoken lines of the rhythm brain break - Chatterbox 'carlvoice' clone, seed 898, temperature 0.8, normalized with tools/normalize_external_clips.py to the same -1.0 dB peak as everything else. GENERATED BUT NOT YET SIGNED OFF BY EAR. All eight are ANNOUNCEMENTS of what is about to happen; the game scores nothing and says nothing about how the student played, so there are deliberately no praise, correction or timing lines. An earlier scored version had fifteen clips including nice/again/early/late/listen - those were deleted with the scoring. 'cha' became 'clap' throughout because Chatterbox mispronounced it. The DURATIONS are load-bearing: each line is given whole measures of the backing to itself and starting the next clip stops the one before it, so a longer re-record needs its `bars` raised in RHYTHM_SAY (index.html); where.wav at 4.43 s is the only one that needs two.  2026-10-20: the rhythm section was rebuilt as simon-says and ALL SPEECH WAS REMOVED - the groove, the lights and the greyed-out targets carry it instead. The eight clips in audio/rhythm/ are now UNUSED. They are kept rather than deleted, the same way audio/treat/ and audio/letters/ are, so the spoken version can be restored without re-rendering; nothing fetches them at runtime, so they cost repo weight only, not page weight. If speech is ever wanted again, note that len1-len4 were written for a design where a turn could be 1-4 measures long, and every task is one measure now.  2026-10-25: the round-2 ask was rewritten -- prompt-what.wav now says \"Let's read this word together. Say the letter name for each braille letter you touch.\" and a new prompt-goodjob.wav (\"Good job reading with me!\") closes the round-2 chain. Same carlvoice clone, seed 898, temperature 0.8, normalized the same way. NOT YET HEARD -- measured only. The superseded 2.68 s \"What is this word?\" is backed up locally at audio/.sight-prompt-backup-20261025/ and gitignored.  2026-10-25: audio/assessment/ added for the new assessment section. prompt-letter.wav is the only spoken line in it -- Carl frames the card and deliberately does NOT name the letter, because naming it is the thing being assessed. background.mp3 is the owner's own music, shipped as supplied (192 kbps stereo, 3:26) and looped at low volume under the whole round; it is not TTS and is not in this list.",
+  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.  2026-10-17: the ENTIRE sight-word section (8 words + 2 prompts) was re-recorded in Chatterbox with the 'carlvoice' clone because the Kokoro reads were rejected. Originals backed up at audio/.sight-kokoro-backup-20261017/.  2026-10-17: the 39 CVC words were re-recorded in Chatterbox too, same clone and seed as the sight words. Originals at audio/.words-kokoro-backup-20261017/. NOTE: this server runs chatterbox-turbo, which IGNORES exaggeration and cfg_weight - only temperature, seed and the reference audio affect the output.  2026-10-17: the 10 number names were re-recorded in Chatterbox as well. ⛔ audio/numbers/ files are named by DIGIT (8.wav) but SAY the word ('eight') - generate from the manifest text, never from the filename. Originals at audio/.numbers-kokoro-backup-20261017/.  2026-10-19: audio/rhythm/ holds the EIGHT spoken lines of the rhythm brain break - Chatterbox 'carlvoice' clone, seed 898, temperature 0.8, normalized with tools/normalize_external_clips.py to the same -1.0 dB peak as everything else. GENERATED BUT NOT YET SIGNED OFF BY EAR. All eight are ANNOUNCEMENTS of what is about to happen; the game scores nothing and says nothing about how the student played, so there are deliberately no praise, correction or timing lines. An earlier scored version had fifteen clips including nice/again/early/late/listen - those were deleted with the scoring. 'cha' became 'clap' throughout because Chatterbox mispronounced it. The DURATIONS are load-bearing: each line is given whole measures of the backing to itself and starting the next clip stops the one before it, so a longer re-record needs its `bars` raised in RHYTHM_SAY (index.html); where.wav at 4.43 s is the only one that needs two.  2026-10-20: the rhythm section was rebuilt as simon-says and ALL SPEECH WAS REMOVED - the groove, the lights and the greyed-out targets carry it instead. The eight clips in audio/rhythm/ are now UNUSED. They are kept rather than deleted, the same way audio/treat/ and audio/letters/ are, so the spoken version can be restored without re-rendering; nothing fetches them at runtime, so they cost repo weight only, not page weight. If speech is ever wanted again, note that len1-len4 were written for a design where a turn could be 1-4 measures long, and every task is one measure now.  2026-10-25: the round-2 ask was rewritten -- prompt-what.wav now says \"Let's read this word together. Say the letter name for each braille letter you touch.\" and a new prompt-goodjob.wav (\"Good job reading with me!\") closes the round-2 chain. Same carlvoice clone, seed 898, temperature 0.8, normalized the same way. APPROVED BY EAR 2026-10-27. The superseded 2.68 s \"What is this word?\" is backed up locally at audio/.sight-prompt-backup-20261025/ and gitignored.  2026-10-25: audio/assessment/ added for the new assessment section. prompt-letter.wav is the only spoken line in it -- Carl frames the card and deliberately does NOT name the letter, because naming it is the thing being assessed. background.mp3 is the owner's own music, shipped as supplied (192 kbps stereo, 3:26) and looped at low volume under the whole round; it is not TTS and is not in this list.  2026-10-27: five words were added to the high-frequency bank -- you, has, was, to, one -- and audio/assessment/ gained the visual round's two lines: prompt-word.wav frames the print card and prompt-next.wav acknowledges that the assessor has marked it WITHOUT saying what the mark was. Same carlvoice clone, seed 898, temperature 0.8, normalized through tools/normalize_external_clips.py. All seven were auditioned and approved the same day; 'was' was rejected on its final /z/ and re-recorded (see below). Measured checks were: format, -1.0 dB peak, 30/140 ms lead and tail, stop releases intact, and voiced-run rate cross-checked against the approved clips to rule out a truncated render. NOTE the RMS spread is wider than the 2026-10-25 batch: you.wav sits ~2.3 dB hotter and the two prompts ~2 dB quieter than the approved set, all at the same -1.0 dB peak. Worth listening for one word jumping out or a prompt sitting back.  2026-10-27: sight/was.wav was re-recorded from the phonetic spelling 'wuz' on seed 77 after the literal 'was' lost its final /z/ by ear -- measured at -30.9 dB against -20.9 for 'is' and -23.8 for 'has'; the fricative was present but ~10 dB too quiet to hear on a tablet speaker. ⛔ NOTE normalize_external_clips.py's release check only tests PLOSIVES, so it passed this clip: a weak final FRICATIVE (/z/, /s/, /v/, /f/) is NOT covered and has to be checked separately, by comparing the high-frequency share and level of the last ~200 ms against a clip already approved that ends the same way.",
   "clips": [
     {
       "text": "bag",
@@ -847,7 +847,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 4.939,
       "engine": "chatterbox",
-      "status": "regenerated_2026-10-25_unheard"
+      "status": "approved_2026-10-27"
     },
     {
       "text": "a",
@@ -936,7 +936,7 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 1.635,
       "engine": "chatterbox",
-      "status": "regenerated_2026-10-25_unheard"
+      "status": "approved_2026-10-27"
     },
     {
       "text": "Okay, let's make a beat!",
@@ -1017,7 +1017,73 @@
       "voice": "carlvoice (clone)",
       "duration_seconds": 1.263,
       "engine": "chatterbox",
-      "status": "regenerated_2026-10-25_unheard"
+      "status": "approved_2026-10-27"
+    },
+    {
+      "text": "you",
+      "file": "sight/you.wav",
+      "kind": "word",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 0.773,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27"
+    },
+    {
+      "text": "has",
+      "file": "sight/has.wav",
+      "kind": "word",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 0.684,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27"
+    },
+    {
+      "text": "wuz",
+      "file": "sight/was.wav",
+      "kind": "word",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 0.69,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27",
+      "word": "was",
+      "seed": 77,
+      "note": "Rendered from the PHONETIC spelling 'wuz', not 'was', and on seed 77 rather than the batch's 898. The literal spelling produced a final /z/ at -30.9 dB -- about 10 dB under 'is' and 7 under 'has' -- which was audibly missing on a tablet. This take lands at -23.0 dB over 150 ms, between 'has' and 'said'. REGENERATE FROM THIS text AND seed, never from the filename."
+    },
+    {
+      "text": "to",
+      "file": "sight/to.wav",
+      "kind": "word",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 0.505,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27"
+    },
+    {
+      "text": "one",
+      "file": "sight/one.wav",
+      "kind": "word",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 0.534,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27"
+    },
+    {
+      "text": "Let's look at these print letters together and read this word.",
+      "file": "assessment/prompt-word.wav",
+      "kind": "prompt",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 3.192,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27"
+    },
+    {
+      "text": "Let's do the next one.",
+      "file": "assessment/prompt-next.wav",
+      "kind": "prompt",
+      "voice": "carlvoice (clone)",
+      "duration_seconds": 1.278,
+      "engine": "chatterbox",
+      "status": "approved_2026-10-27"
     }
   ]
 }

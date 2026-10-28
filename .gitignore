@@ -11,3 +11,10 @@ _review.html
 
 # Local backup of the superseded round-2 ask prompt (2026-10-25).
 audio/.sight-prompt-backup-*/
+
+# Local sizing diagnostic (generated, not part of the app)
+_diag.html
+
+# Audition candidates for a clip being re-recorded (generated)
+_cand/
+_was.html

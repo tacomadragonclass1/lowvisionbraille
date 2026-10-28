@@ -9,7 +9,7 @@ and `img/` folders next to it — **copy all three or nothing works.**
 
 Designed for a tablet in landscape, full screen, held in two hands.
 
-## The five activities
+## The six activities
 
 After the *Tap to start* splash, an adult picks one. There is deliberately **no
 mode button on the activity screen** — a student would hit it, and would hit it
@@ -22,8 +22,9 @@ in the middle of a word.
 | **Numbers** `123` | 0–9 | two cells, in order | the number's name |
 | **High Frequency Words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
 | **Rhythm** `●■` | — | — | plays a beat; the student plays it back |
+| **Write** | free, anywhere | — | nothing at all |
 
-There is a sixth screen, **Assessment**, which is deliberately *not* on this
+There is a seventh screen, **Assessment**, which is deliberately *not* on this
 menu — it is an adult's control in the corner. See *Assessment*.
 
 Every letter sample on a menu card is **drawn from `PATHS`, not set in a font**
@@ -34,7 +35,12 @@ uppercase, space or `?` in `PATHS`) fall back to a font stack led by Andika,
 and that part is best effort. The Rhythm card carries an **under construction**
 note.
 
-**Rhythm is the odd one out** and is deliberately kept that way: no braille, no
+**Rhythm and Write are the odd ones out** and are deliberately kept that way.
+Both own the whole screen until the adult takes it back with the ⌂, and neither
+has items, an order, or anything to get right. Write additionally has no sound
+of any kind and no break — see *The write playground*.
+
+Of Rhythm specifically: no braille, no
 print, no items, nothing scored. It owns the whole screen until the adult takes
 it back with the ⌂. It is under development — see *The rhythm section* — and it is
 **not** in the brain-break rotation today, though it can still run as one.
@@ -82,10 +88,17 @@ the number sign (dots 3-4-5-6) followed by the letter `a`–`j` — so the stude
 number sign first, then the digit cell, and traces the printed numeral. All
 three must be done before it advances, then the number's name is spoken.
 
+### Write
+
+A **playground**, not an activity — see *The write playground* for the detail.
+A white page, a finger or a stylus, and ink that **changes colour every time
+you lift off**. Nothing is taught, nothing is scored, nothing advances, and
+there is no music and no brain break. It is for practising letter formation.
+
 ### High Frequency Words
 
-Eight high-frequency words — **the, is, it, said, and, as, a, I** — in two
-rounds. Round 1 shows the word in print above the dots; **round 2 shows the
+Thirteen high-frequency words — **the, is, it, said, and, as, a, I, you, has,
+was, to, one** — in two rounds. Round 1 shows the word in print above the dots; **round 2 shows the
 dots alone** and asks for the word. Round 2 begins only once round 1 has used
 the whole list, so every word has been seen before it is tested, and after
 round 2 the section cycles back to round 1.
@@ -108,8 +121,11 @@ the right read-back for `said` and `/s/ /a/ /i/ /d/` is not.
 > flip it to `true` the moment real recordings exist.
 >
 > **What is needed:** the spoken *name* of each letter — "tee", not /t/ — as
-> `audio/letters/<letter>.wav`. Only **eight** are actually used by this word
-> list: **t h e i s a d n**. The other 18 are only needed if the list grows.
+> `audio/letters/<letter>.wav`. Only **twelve** are actually used by this word
+> list: **a d e h i n o s t u w y**. The other 14 are only needed if the list
+> grows again. (It was eight until the second tranche added *you, has, was, to,
+> one*, which pulled in **o u w y**.) A capital is lowercased before the
+> lookup, so `I` asks for `i.wav` and there is no uppercase file to record.
 >
 > **Format:** mono WAV, 24 kHz, 16-bit, trimmed of leading silence and peaking
 > around 0.89, so they sit at one level with the rest of the audio.
@@ -205,17 +221,31 @@ Round 1 is unchanged: the spelling, a 700 ms beat, then the word, then on.
 
 The adult picks once, at the start of the section:
 
-| | `the` | `is` | `it` | `said` | `and` | `as` | `a` | `I` |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Letter by letter** | ⠞⠓⠑ | ⠊⠎ | ⠊⠞ | ⠎⠁⠊⠙ | ⠁⠝⠙ | ⠁⠎ | ⠁ | ⠠⠊ |
-| **UEB** | ⠮ | ⠊⠎ | ⠭ | ⠎⠙ | ⠯ | ⠵ | ⠁ | ⠠⠊ |
+| Word | Letter by letter | UEB | Why the UEB form is what it is |
+| --- | --- | --- | --- |
+| `the` | ⠞⠓⠑ | ⠮ | strong wordsign |
+| `is` | ⠊⠎ | ⠊⠎ | no contraction |
+| `it` | ⠊⠞ | ⠭ | alphabetic wordsign `x` |
+| `said` | ⠎⠁⠊⠙ | ⠎⠙ | shortform `s-d` |
+| `and` | ⠁⠝⠙ | ⠯ | strong wordsign |
+| `as` | ⠁⠎ | ⠵ | alphabetic wordsign `z` |
+| `a` | ⠁ | ⠁ | single cell either way |
+| `I` | ⠠⠊ | ⠠⠊ | capital indicator, then `i` |
+| `you` | ⠽⠕⠥ | ⠽ | alphabetic wordsign `y` |
+| `has` | ⠓⠁⠎ | ⠓⠁⠎ | no contraction — and `h` **alone** means *have*, so spelling it is the reading that cannot be mistaken |
+| `was` | ⠺⠁⠎ | ⠴ | lower wordsign: the letter `j` dropped one row |
+| `to` | ⠞⠕ | ⠞⠕ | no contraction — UEB removed the old unspaced `to` |
+| `one` | ⠕⠝⠑ | ⠕⠝⠑ | no contraction |
 
 Letter by letter is the default and is what the rest of this app teaches. UEB
-is how these words actually appear in braille text: `the` and `and` are strong
-wordsigns, `it` and `as` are the alphabetic wordsigns for `x` and `z`, and
-`said` is the shortform `s-d`. **A wordsign cell is silent** — naming "ex" over
-the single cell that means `it` would teach the wrong thing — so under UEB only
-the cells that really are that letter in the spelling speak.
+is how these words actually appear in braille text. **A wordsign cell is
+silent** — naming "ex" over the single cell that means `it` would teach the
+wrong thing — so under UEB only the cells that really are that letter in the
+spelling speak.
+
+Every dot above is cross-checked against the `BRAILLE` table in `index.html`
+rather than typed by hand; `was` is worth a second look if you are editing it,
+because 3-5-6 is not any letter's cell.
 
 **`I` is capitalised in both**: a capital `I` in print, and dot 6 then `i` in
 braille. A capital is genuinely two cells, exactly as a digit is, so the
@@ -287,34 +317,86 @@ file `carl.png`). It plays through plain `<audio>` rather than
   nursery tunes replaced it; the slices and the tool are kept so that round can
   be brought back without redoing the beat analysis. Nothing fetches them at
   runtime, so they cost page weight only in the repo, not in the browser.
-- `audio/assessment/` — `prompt-letter.wav`, the only spoken line in the
-  assessment section, and `background.mp3`, its backing music (the owner's own
-  file, shipped as supplied). Carl frames the card and deliberately does not
-  name the letter; see *Assessment*.
+- `audio/assessment/` — three spoken lines and the backing music.
+  `prompt-letter.wav` frames a braille card; `prompt-word.wav` frames a print
+  card in the visual round; `prompt-next.wav` acknowledges that the assessor has
+  marked one, without saying what the mark was. `background.mp3` is the backing
+  music (the owner's own file, shipped as supplied). Carl frames cards and
+  deliberately never reads the answer; see *Assessment*.
 - `audio/letters/` — the spoken letter **names**, for the sight-word section.
   **Rejected and unused** — see the warning above. Kept so a human recording
   drops straight in.
-- `audio/sight/` — the eight sight words, plus the three round-2 prompts: the
-  ask ("Let's read this word together…"), the reveal ("The word is") and the
-  send-off ("Good job reading with me!").
+- `audio/sight/` — the thirteen high-frequency words, plus the three round-2
+  prompts: the ask ("Let's read this word together…"), the reveal ("The word
+  is") and the send-off ("Good job reading with me!"). **Filenames are the
+  lowercased word**, so `I` ships as `i.wav`.
 - `audio/words/`, `audio/numbers/` — the 39 CVC words and the ten number names.
-  Local Kokoro-82M (Apache-2.0), voice **`af_heart`**: American, female, and the
-  highest-graded voice Kokoro ships (grade A; `af_bella` at A- is the only close
-  second). These shipped once in British `bf_emma`, on the theory that it would
-  match the British phoneme recordings — the owner's verdict was that it sounded bad,
-  and sounding good in a classroom beat internal consistency with the
-  phonemes. Do not go back to a British voice.
+  ⛔ **`audio/numbers/` files are named by DIGIT (`8.wav`) but say the WORD
+  ("eight")** — generate from the manifest's `text` field, never from the
+  filename.
 
-Regenerate or re-voice with:
+#### Which engine actually voices what
 
-```
-~/.local/share/phonicsfarm-tts/venv/bin/python tools/generate_words.py --force
-```
+**Every clip the app plays is the Chatterbox `carlvoice` clone**, not Kokoro.
+The sight words, CVC words and number names were all re-recorded in Chatterbox
+on 2026-10-17 because the Kokoro reads were rejected on listening; the only
+Kokoro files left are `audio/letters/`, which is muted and never played.
 
-`--voice <name> --lang a` swaps the voice; the whole set re-renders in about a
-minute. The browser's `speechSynthesis` is **not** used and should not be: it
-needs a user gesture, guarantees no particular voice on any given tablet, and
-has a murky licence.
+| Folder | Engine |
+| --- | --- |
+| `phonemes/` | human recordings (Pronunciation Studio) |
+| `sight/`, `words/`, `numbers/`, `assessment/` | Chatterbox `carlvoice` clone |
+| `letters/` | Kokoro — **muted**, awaiting an educator |
+| `brainbreak/`, `treat/`, `assessment/background.mp3` | the owner's own music |
+
+Settings, recovered from the server log to match clips already approved by ear:
+**`carlvoice.wav` clone, seed 898, temperature 0.8**, via the Chatterbox REST
+API on `:8004`. The server ignores `exaggeration` and `cfg_weight` — it runs
+chatterbox-turbo, where temperature, seed and the reference audio are the only
+levers.
+
+> ⛔ **`tools/generate_words.py` only renders the muted `audio/letters/` now.**
+> Do not use it for anything the app plays. Its `postprocess()` trims with an
+> **absolute** amplitude floor applied *before* normalising, which on a quieter
+> source eats the low-amplitude release of a final stop — "bag" becomes "ba-".
+>
+> Anything recorded elsewhere goes through **`tools/normalize_external_clips.py`**
+> instead, which normalises *first* and trims against a floor **relative** to
+> peak (−46 dB, silence only), then verifies each stop release survived. It
+> brings clips to the same −1.0 dB peak, 30 ms head and 140 ms tail as the rest
+> of the audio — which matters on a classroom tablet, where one section being
+> quieter than the others is an accessibility regression, not a cosmetic one.
+>
+> ```
+> tools/normalize_external_clips.py SRC_DIR OUT_DIR
+> ```
+>
+> ⚠️ **Its release check only tests PLOSIVES.** A weak final **fricative** —
+> /z/, /s/, /v/, /f/ — passes it silently. That is not theoretical: `was`
+> shipped with its final /z/ at **−30.9 dB**, about 10 dB under `is` and 7
+> under `has`, present in the spectrum but too quiet to hear on a tablet, and
+> the tool reported `ok`. Check a fricative-final clip by comparing the level
+> and high-frequency share of its last ~200 ms against an approved clip that
+> ends the same way.
+
+#### Phonetic respellings
+
+A clip is generated from the manifest's `text`, which does **not** have to be
+the word. When Chatterbox mispronounces or under-articulates a word, the fix is
+to respell it phonetically and record that in the manifest — `was` is rendered
+from **`wuz`** (and on seed 77 rather than the batch's 898), which took its
+final /z/ from −30.9 dB to −23.0, between `has` and `said`. The rhythm clips
+have the same pattern: `cha` became `clap` because Chatterbox would not say it.
+
+**The filename still has to be the word**, because the app builds it that way —
+`audio/sight/<word.toLowerCase()>.wav`. So `was.wav` contains "wuz", and the
+manifest carries `word`, `seed` and a `note` explaining why. ⛔ **Regenerate
+from the manifest's `text` and `seed`, never from the filename**, or the bug
+comes straight back.
+
+The browser's `speechSynthesis` is **not** used and should not be: it needs a
+user gesture, guarantees no particular voice on any given tablet, and has a
+murky licence.
 
 ## The word list
 
@@ -579,6 +661,9 @@ tab does exactly that.
 | Chime on success | `RHYTHM_SUCCESS_CHIME` |
 | Call-and-responses per brain break | `RHYTHM_BREAK_TASKS` |
 | Which break activity runs | `breakRotation` |
+| The writing playground's ink | `WRITE_INK` (declared beside `COLOR_PAIRS`) |
+| Its stroke weight | `WRITE_WIDTH_FRAC` / `_MIN` / `_MAX` |
+| Whether it makes any sound | `WRITE_BRUSH` — **off**, read *It is silent* first |
 
 ### Options
 
@@ -626,6 +711,103 @@ measure it.
 - **No haptics.** A buzz on each beat would be a real addition for this
   student; `navigator.vibrate` is unavailable on iOS Safari.
 
+## The write playground
+
+**No objective.** Nothing to get right, nothing that advances by itself, no
+score, no praise, no reward round and no brain break. A white page for
+practising letter formation with a finger or a stylus, which ends when the
+adult takes it back with the `⌂`. It is the only screen in the app that asks
+nothing of anybody.
+
+White ground, for the same reason the assessment is white: every teaching mode
+here is dark, so a light screen says at a glance that this is not a drill.
+
+### The ink changes colour on every pen-up
+
+That is the whole feature. Lift the finger or the stylus, and the next stroke
+is a different colour. It makes each stroke a separate, visible thing — so
+**where one stroke ended and the next began stays readable after the fact**,
+instead of disappearing into one continuous line. That is useful for letter
+formation, where stroke count and stroke order are most of the skill, and it is
+also just fun.
+
+The palette is deliberately dark and saturated, because the page is white:
+
+| | ink | vs white | |
+| --- | --- | --- | --- |
+| 1 | `#1a1a1a` near-black | 17.40:1 | AAA |
+| 2 | `#c62828` red | 5.62:1 | AA |
+| 3 | `#1565c0` blue | 5.75:1 | AA |
+| 4 | `#bf360c` orange | 5.60:1 | AA |
+| 5 | `#2e7d32` green | 5.13:1 | AA |
+| 6 | `#6a1b9a` purple | 9.39:1 | AAA |
+| 7 | `#00695c` teal | 6.61:1 | AA |
+| 8 | `#ad1457` magenta | 6.97:1 | AA |
+
+**Every ink clears WCAG AA against white**, worst case 5.13:1 — which is the
+point of choosing them by measurement rather than by eye in a low-vision app.
+A first pass used `#e65100` for the orange and it failed at **3.79:1**; the
+darker `#bf360c` replaces it. They are also *ordered* so consecutive strokes
+are as unlike each other as possible — adjacent pairs are at least **67 ΔE**
+apart, so a colour change can never be mistaken for the same stroke continuing.
+
+> ⛔ **`WRITE_INK` is declared up with `COLOR_PAIRS`, not in the write section**,
+> because the menu card's artwork is built before that section is reached and a
+> `const` cannot be used ahead of its declaration. Moving it back down throws at
+> load and takes the whole app with it.
+
+> ⛔ **The menu card draws a white page behind its three marks.** The palette is
+> built for a white ground and its first entry is near-black, so drawn straight
+> onto the `#1d1d1d` card the first mark is invisible — the same black-on-black
+> mistake the `⌂` shipped with once.
+
+### It is silent
+
+No brush, no tones, no music, nothing. The brush the letter tracing plays is
+tied to being *on the guide*, and there is no guide here — but the real reason
+is that a sound which rewards movement is a sound worth making for its own
+sake, and this app has already learned that lesson once with the ghosted dots.
+`WRITE_BRUSH` in `index.html` turns it on if that is ever wanted.
+
+### Clearing
+
+One control, bottom **right**: *Double tap to clear*. Double-tap guarded like
+the `⌂` and the `×`, because wiping a page somebody has just filled is the only
+destructive thing in the section and a stray palm must not be able to do it.
+Bottom right puts it as far from the `⌂` as the screen allows, so the two adult
+controls cannot be confused.
+
+Clearing deliberately **does not reset the colour** — the next stroke carries on
+from the ink that was in use. Snapping back to black would make a wipe feel like
+a different activity starting rather than a fresh page in the same one.
+
+### Implementation notes
+
+- **Its own canvas.** The tracing canvas repaints itself from glyph geometry on
+  every `pointermove` — that is how the guide and the marker stay in register —
+  and a page that must simply *keep* what was drawn on it is the opposite
+  requirement. Sharing one canvas would have meant teaching `draw()` not to
+  draw.
+- **Strokes are appended, never repainted.** Each `pointermove` strokes only the
+  new segment onto the canvas, so a long session stays cheap no matter how much
+  ink is on the page. The stroke list is kept only so a **resize can repaint** —
+  a tablet rotating mid-session must not wipe what someone has written.
+- **A tap with no movement still makes a mark**, or the dot on an `i` would
+  simply not appear.
+- **`pointerup` and `pointercancel` only** — not `pointerleave`, which can fire
+  on a captured pointer that slides past the edge and would end a stroke, and
+  change the colour, with the finger still down.
+- **Nothing is kept.** Leaving the section discards the page. There is no
+  storage, no export and no history, exactly as in the assessment.
+
+### Tests
+
+`node tools/write-tests/run.mjs` — 24 assertions, no framework and no install.
+It loads `index.html` under a small DOM stub and drives **real pointer events
+through the real handlers**, so it covers the things that actually broke while
+this was being written: a `const` used before its declaration, a second finger
+hijacking a stroke, and a wrong-pointer `pointerup` ending one early.
+
 ## Assessment
 
 **A sitting, not an activity.** Nothing is taught, nothing advances by itself,
@@ -636,6 +818,104 @@ which is live both on the activity menu and inside an activity.
 It is deliberately not a sixth menu card. A card can be picked by a student
 working through the menu, and an assessment started by accident is a wasted
 sitting; the double tap is the same guard the `⌂` uses, for the same reason.
+
+### Two kinds of round, and the picker
+
+The double tap no longer starts a round. It opens a **picker** — *Braille
+letters* (26 cards) or *Print words* (13) — and the round begins on the one
+chosen. The counts on the buttons are filled from the lists themselves, so they
+cannot drift from what a round actually deals.
+
+The picker is the one screen in the assessment that is **openly an adult's**:
+full contrast, real button sizes, plain words, and a **single** tap, because the
+double tap on the pill has already happened. Nobody is being assessed while it
+is up, so none of the restraint the rest of the section shows applies to it.
+
+It costs the braille round one extra tap. That is the price of not guessing: a
+round started by accident is a wasted sitting either way, and the picker also
+leaves room for a third kind later without another pill in the corner.
+
+### The visual round — print words, no braille
+
+The same thirteen words the High Frequency Words activity teaches, by reference
+and not by copy: **adding a word to `SIGHT_WORDS` adds it to both.** There is no
+braille cell, nothing to tap, and nothing to get wrong on the screen. The
+student reads the word aloud; the assessor marks it.
+
+The word is drawn from the app's own centerlines, so it is the same school
+print — single-story `a` — the student traces and reads everywhere else, and it
+is **as big as the screen allows**. There is deliberately **no frame**: the
+rectangle round the braille cell exists because six loose dots read as six
+separate things, and a word already reads as one thing. A frame here would only
+be another edge competing for the space the letters are meant to fill.
+
+**The letters are never kerned or stretched to fit.** The SVG carries
+`preserveAspectRatio="xMidYMid meet"`, so the glyph scales and the spacing
+between letters scales with it; whatever is left over is empty margin. That is
+the whole difference between filling a box and distorting a word to match one.
+
+Each word fills its own box, so a word with no ascender or descender renders
+larger than one with both — the viewBox is that word's own ink. This is the
+same rule the High Frequency Words print row already follows.
+
+> **⛔ Reserving the panel's width is what keeps the word off it, and two
+> earlier attempts were wrong.** Recorded because both are tempting.
+>
+> **Attempt 1 — reserve nothing.** The argument: a word can only reach that
+> corner by being *wide*, and a wide word must be *short*, because the viewBox
+> is its own ink. True, and useless: a word whose aspect ratio matches the box
+> fills **both** dimensions. `and` and `you` are 2.29 against a box of 2.28, and
+> **six of thirteen words** put ink in the panel's band at 1280×800.
+>
+> **Attempt 2 — cap the height** to the panel's measured band, giving
+> `min(66vh, calc(100vh − 414px))`. Correct at 1280×800, broken everywhere else:
+> an absolute subtrahend does not scale, so a short viewport loses the lot.
+>
+> | viewport | word height under attempt 2 |
+> | --- | --- |
+> | 1366×768 laptop, maximised | 246px |
+> | same at 125% display scaling | 114px |
+> | same at 150% | **26px** |
+> | phone **landscape** 915×412 | **negative — the word vanishes** |
+>
+> **What ships instead: reserve the width.** The stage is 94vw, the word is
+> centred on the screen, and it gives back the panel's width plus a gap on each
+> side — so the guarantee is arithmetic, not measured:
+>
+> ```
+> left edge − panel right = 0.03vw + 11px     (positive at every size)
+> ```
+>
+> The height is then a plain proportion, `min(66vh, 560px)`. Nothing needs
+> re-deriving when the panel's *contents* change, because only its **width** is
+> involved and that is `--apanelW`, shared with the panel itself.
+>
+> It costs width on a big screen and buys a word that is legible on every
+> screen rather than optimal on one. Measured x-heights: **363px** on the
+> laptop (was 205), **242px** at 150% scaling (was 22), **227px** in phone
+> landscape (was nothing at all).
+
+Below 900px the panel is a bottom strip instead, so the word gives back that
+80px band rather than the top one.
+
+#### Carl's two lines
+
+Carl frames each card with *"Let's look at these print letters together and read
+this word."* — and, as in the braille round, **does not read the word**, because
+reading it is the thing being assessed.
+
+When the assessor marks the card, Carl says *"Let's do the next one."* It fires
+on the **mark**, not on *Next*, and it is guarded twice:
+
+- **Silent when a tap clears a mark.** Clearing is the assessor correcting
+  themselves, and announcing it would say something about the answer — the same
+  reasoning that stops **Back** replaying the prompt.
+- **Once per card.** A mis-tap and its correction do not make Carl repeat
+  himself. Only a freshly presented card re-arms the line, so going **Back** does
+  not re-arm it either.
+
+Neither line says whether the answer was right. Carl announces; he never
+evaluates. The braille round is unchanged and still has only its one prompt.
 
 ### The contrast is flipped
 
@@ -699,7 +979,7 @@ moves instead. The pills stay stacked in the strip: side by side they get about
 95px each on a phone, and "Needs More Practice!" does not fit in 95px — it
 would clip, on the one control that must not be misread.
 
-### A round is 26 letters, and can end anywhere
+### A round is 26 letters or 13 words, and can end anywhere
 
 The order is reshuffled every round. **Finish** ends it wherever it has got to
 and still gives the snapshot — a short sitting is a real outcome, not an
@@ -712,8 +992,14 @@ work on in a readable typeface at a readable size — this is a list for an adul
 to copy down, so it is typeset, not taught, and it reads alphabetically rather
 than in the random order they were shown.
 
-The percentage is **out of what was actually judged**, not out of 26, because
-Finish is allowed to end a round early and scoring the letters nobody got to as
+**It says which it counted.** After a word round the labels read *words known*
+and `9 of 13 words marked`, because a page whose entire purpose is being copied
+onto paper must not leave the reader guessing what the number is out of. The
+list sorts case-insensitively, since a plain sort by code unit would file `I`
+ahead of every lowercase word.
+
+The percentage is **out of what was actually judged**, not out of the full
+round, because Finish is allowed to end a round early and scoring the letters nobody got to as
 failures would turn a short sitting into a bad result. When some letters were
 left unmarked a line says so — `9 of 26 letters marked` — because otherwise the
 percentage is a number out of an unstated total on a page whose entire purpose
@@ -755,6 +1041,7 @@ school-print writing order.
 - `?mode=letters` / `?mode=words` / `?mode=numbers` — bookmark straight past the
   activity menu. `?mode=words&vowel=i` locks one vowel family.
 - `?letter=k` — lock to a single letter for targeted practice.
+- `?mode=write` (or `?mode=draw`) opens the writing playground.
 - `?mode=rhythm` opens the Rhythm section; `?rtask=N` starts partway down its
   pattern list; `?rhythm=1` previews its brain-break shape; `?break=carl` /
   `?break=rhythm` pins which break activity the session uses. See *The rhythm
@@ -770,8 +1057,9 @@ school-print writing order.
   protects the activity**, not the camouflage.
 - The small `assess` pill **below** the `⌂` opens the assessment section, also
   on a double tap. Unlike the `⌂` it is live on the activity menu too, so the
-  assessor does not have to enter a drill in order to leave it. See
-  *Assessment*.
+  assessor does not have to enter a drill in order to leave it. It opens a
+  **picker** — braille letters or print words — rather than starting a round.
+  See *Assessment*.
 - The `×` at the top right exits, also on a double tap, and **stays dim on
   purpose.** The asymmetry is deliberate: going back to the menu is routine,
   quitting the app is not.
@@ -833,7 +1121,12 @@ eye or ear:
 | Assessment background music level | `ASSESS_MUSIC_LEVEL` |
 | How fast that music fades in and out | `ASSESS_MUSIC_FADE` |
 | Assessment cell size | `--ad` on `#assessCell` |
+| Assessment print-word size | `--awordH` on `#assessWord`; the panel reserve is `--apanelW` |
+| Which words the visual round asks | `ASSESS_WORDS`, which *is* `SIGHT_WORDS` |
 | Print letter size in its box | `--boxSize` on `#boxes` |
 | Which break activity runs | `breakRotation` |
+| The writing playground's ink | `WRITE_INK` (declared beside `COLOR_PAIRS`) |
+| Its stroke weight | `WRITE_WIDTH_FRAC` / `_MIN` / `_MAX` |
+| Whether it makes any sound | `WRITE_BRUSH` — **off**, read *It is silent* first |
 
 The Rhythm section has its own table of dials — see *The rhythm section · Tuning dials*.
