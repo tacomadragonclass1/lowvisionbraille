@@ -22,7 +22,7 @@ in the middle of a word.
 | **Numbers** `123` | 0–9 | two cells, in order | the number's name |
 | **High Frequency Words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
 | **Rhythm** `●■` | — | — | plays a beat; the student plays it back |
-| **Write** | free, anywhere | — | nothing at all |
+| **Write** | free, anywhere | — | the brush, under the stroke |
 
 There is a seventh screen, **Assessment**, which is deliberately *not* on this
 menu — it is an adult's control in the corner. See *Assessment*.
@@ -92,8 +92,9 @@ three must be done before it advances, then the number's name is spoken.
 
 A **playground**, not an activity — see *The write playground* for the detail.
 A white page, a finger or a stylus, and ink that **changes colour every time
-you lift off**. Nothing is taught, nothing is scored, nothing advances, and
-there is no music and no brain break. It is for practising letter formation.
+you lift off**. Hold **two fingers** down to bring up an eraser and wipe. The
+tracing brush plays under the stroke. Nothing is taught, nothing is scored,
+nothing advances, and there is no music and no brain break.
 
 ### High Frequency Words
 
@@ -663,7 +664,9 @@ tab does exactly that.
 | Which break activity runs | `breakRotation` |
 | The writing playground's ink | `WRITE_INK` (declared beside `COLOR_PAIRS`) |
 | Its stroke weight | `WRITE_WIDTH_FRAC` / `_MIN` / `_MAX` |
-| Whether it makes any sound | `WRITE_BRUSH` — **off**, read *It is silent* first |
+| Whether it makes any sound | `WRITE_BRUSH` — **on** since 2026-10-28 |
+| How big the eraser is | `WRITE_ERASER_MULT` |
+| What still counts as a two-finger gesture | `WRITE_ERASE_GRACE`, `WRITE_ERASE_SLOP` |
 
 ### Options
 
@@ -761,13 +764,57 @@ apart, so a colour change can never be mistaken for the same stroke continuing.
 > onto the `#1d1d1d` card the first mark is invisible — the same black-on-black
 > mistake the `⌂` shipped with once.
 
-### It is silent
+### The brush
 
-No brush, no tones, no music, nothing. The brush the letter tracing plays is
-tied to being *on the guide*, and there is no guide here — but the real reason
-is that a sound which rewards movement is a sound worth making for its own
-sake, and this app has already learned that lesson once with the ghosted dots.
-`WRITE_BRUSH` in `index.html` turns it on if that is ever wanted.
+The same brush the letter tracing plays, and it follows the hand here rather
+than the guide — there is no guide to be on or off. Speed brightens the filter
+and lifts the level exactly as it does in Letters, so a fast stroke is brighter
+than a slow one and a stroke that stops moving settles to a hiss instead of
+cutting out.
+
+It shipped **off** on 2026-10-27, on the reading that "no music" meant silence
+and on the worry that a sound rewarding movement gets farmed for its own sake —
+the ghosted-dots lesson. That was wrong in use and it was **turned on the next
+day**: in a section with no objective there is nothing for the sound to distract
+*from*, and the feedback is most of what makes a stroke feel like a stroke.
+`WRITE_BRUSH` still toggles it.
+
+> ⛔ `brushSpeed()` takes **px per millisecond**, not a distance. The first
+> version of this handler passed a raw gap between points, which pegs the
+> filter at full brightness on every move. It needs the clock, and the interval
+> wants the same floor the tracing canvas uses — a 1 ms gap on a fast digitiser
+> reports an absurd speed. A test asserts on the units.
+
+### The two-finger eraser
+
+**Hold two fingers down and wipe.** An eraser appears at the midpoint of the
+two, and anything under it is taken away for as long as they are held. Lift to
+one finger and it stops.
+
+The ring around the eraser is the honest part: it is drawn at exactly the size
+of the area being cleared, so what is about to go is never a guess. The eraser
+is `WRITE_ERASER_MULT` times the width of the pen, floored so it stays a rubber
+rather than a nib on a small screen.
+
+- **An erase is an entry in the display list**, not just white paint on the
+  canvas. Painting white alone would look right and then *come back* on the
+  next repaint, because a rotation replays the page from that list. Recording
+  the wipe in order is what makes it survive.
+- **The half-started stroke is discarded.** Two fingers never land at the same
+  instant, so the first one is always a fraction of a stroke — and leaving that
+  dot behind after every wipe would be maddening. It is dropped only if it was
+  genuinely part of the gesture: within `WRITE_ERASE_GRACE` ms and under
+  `WRITE_ERASE_SLOP` px of travel. A long, deliberate stroke that someone then
+  adds a second finger to is **kept**.
+- **Lifting to one finger does not start drawing.** The hand that was erasing
+  has to come off the page completely first, or every wipe would end with an
+  accidental line.
+
+> ⛔ **Palm rejection: a pen beats touch, always.** Writing with a stylus means
+> resting a hand on the page, and that hand is a second pointer. Without this
+> rule a palm would either draw a line or — far worse — trigger the eraser and
+> wipe the work. While a pen is down, every touch is ignored outright, and a
+> pen arriving mid-touch takes the page over rather than blending two inputs.
 
 ### Clearing
 
@@ -802,7 +849,7 @@ a different activity starting rather than a fresh page in the same one.
 
 ### Tests
 
-`node tools/write-tests/run.mjs` — 24 assertions, no framework and no install.
+`node tools/write-tests/run.mjs` — 46 assertions, no framework and no install.
 It loads `index.html` under a small DOM stub and drives **real pointer events
 through the real handlers**, so it covers the things that actually broke while
 this was being written: a `const` used before its declaration, a second finger
@@ -1127,6 +1174,8 @@ eye or ear:
 | Which break activity runs | `breakRotation` |
 | The writing playground's ink | `WRITE_INK` (declared beside `COLOR_PAIRS`) |
 | Its stroke weight | `WRITE_WIDTH_FRAC` / `_MIN` / `_MAX` |
-| Whether it makes any sound | `WRITE_BRUSH` — **off**, read *It is silent* first |
+| Whether it makes any sound | `WRITE_BRUSH` — **on** since 2026-10-28 |
+| How big the eraser is | `WRITE_ERASER_MULT` |
+| What still counts as a two-finger gesture | `WRITE_ERASE_GRACE`, `WRITE_ERASE_SLOP` |
 
 The Rhythm section has its own table of dials — see *The rhythm section · Tuning dials*.

@@ -11,8 +11,17 @@ const ok = (cond, msg) => { cond ? (pass++, console.log('  ok   ' + msg))
 
 const { listeners, missingIds } = loadApp(HTML, `
   globalThis.__T = { start, writeActive, writeWipe, endWrite, WRITE_INK,
+                     WRITE_BRUSH, WRITE_ERASE_GRACE, WRITE_ERASE_SLOP,
                      strokes: () => wStrokes, ink: () => wInk,
-                     hintGone: () => writeHint.classList.contains('gone') };
+                     mode: () => wMode,
+                     erasing: () => !writeEraser.hidden,
+                     resize: () => writeResize(),
+                     hintGone: () => writeHint.classList.contains('gone'),
+                     brushLog: [] };
+  // Wrap the brush so the test can see the UNITS it is fed - the first version
+  // of this handler passed a raw distance where px/ms was wanted.
+  const __bs = brushSpeed;
+  brushSpeed = (v) => { globalThis.__T.brushLog.push(v); return __bs(v); };
 `);
 const T = globalThis.__T;
 const C = listeners['writeCanvas'];
@@ -24,7 +33,8 @@ ok(missingIds.length === 0,
 ok(!!C && !!C.pointerdown && !!C.pointermove && !!C.pointerup,
    'the write canvas has down/move/up handlers bound');
 
-const ev = (id, x, y) => ({ pointerId: id, clientX: x, clientY: y, preventDefault() {} });
+const ev = (id, x, y, type = 'touch') =>
+  ({ pointerId: id, clientX: x, clientY: y, pointerType: type, preventDefault() {} });
 function stroke(id, pts) {
   C.pointerdown(ev(id, pts[0][0], pts[0][1]));
   for (const p of pts.slice(1)) C.pointermove(ev(id, p[0], p[1]));
@@ -80,5 +90,98 @@ ok(T.strokes().length === 0, 'nothing is kept after leaving');
 
 T.start('letters', null);
 ok(T.writeActive() === false, 'switching to another activity does not re-enter it');
+
+// ---------------------------------------------------------------- the brush
+console.log('\n  -- brush --');
+T.start('write', null);
+T.brushLog.length = 0;
+ok(T.WRITE_BRUSH === true, 'the brush is on');
+C.pointerdown(ev(1, 0, 0));
+C.pointermove(ev(1, 30, 40));          // 50px
+C.pointermove(ev(1, 90, 120));         // 100px
+C.pointerup(ev(1, 90, 120));
+ok(T.brushLog.length >= 2, 'the brush is fed on every move');
+// brushSpeed normalises against 1.6 px/ms. A raw DISTANCE would arrive as
+// 50-100 and peg it; a real rate over a floored >=6ms interval cannot exceed
+// about 17 for these points, and in practice is far less.
+const maxFed = Math.max(...T.brushLog);
+ok(maxFed <= 100 / 6 + 0.001,
+   `the brush is fed px/ms, not raw distance (max ${maxFed.toFixed(2)})`);
+ok(T.brushLog.every(v => v >= 0 && Number.isFinite(v)), 'every value is finite and non-negative');
+
+// ---------------------------------------------------------------- the eraser
+console.log('\n  -- two-finger eraser --');
+T.writeWipe();
+ok(T.erasing() === false, 'the eraser icon is hidden to start with');
+
+// two fingers, landing together: the first one's dot is part of the gesture
+C.pointerdown(ev(1, 100, 100));
+const afterFirst = T.strokes().length;
+C.pointerdown(ev(2, 160, 100));
+ok(T.mode() === 'erase', 'a second finger switches to erase');
+ok(T.erasing() === true, 'the eraser icon appears');
+ok(T.strokes().length === afterFirst - 1,
+   'the half-started stroke is discarded, not left as a stray mark');
+
+// wiping
+const beforeWipe = T.strokes().length;
+C.pointermove(ev(1, 200, 160));
+C.pointermove(ev(2, 260, 160));
+ok(T.strokes().length > beforeWipe, 'moving two fingers records erase marks');
+ok(T.strokes().slice(-1)[0].kind === 'erase', 'they are recorded AS erases');
+
+// one up: erase ends, and the finger still down must not start drawing
+C.pointerup(ev(1, 200, 160));
+ok(T.mode() !== 'erase', 'lifting to one finger ends the erase');
+ok(T.erasing() === false, 'the eraser icon goes away');
+const held = T.strokes().length;
+C.pointermove(ev(2, 300, 300));
+ok(T.strokes().length === held, 'the remaining finger does NOT start drawing');
+C.pointerup(ev(2, 300, 300));
+C.pointerdown(ev(3, 50, 50)); C.pointermove(ev(3, 80, 80)); C.pointerup(ev(3, 80, 80));
+ok(T.strokes().slice(-1)[0].kind === 'ink', 'once every finger is up, drawing works again');
+
+// a DELIBERATE stroke is not thrown away by a later second finger
+T.writeWipe();
+C.pointerdown(ev(1, 10, 10));
+for (let i = 1; i <= 12; i++) C.pointermove(ev(1, 10 + i * 20, 10 + i * 10));
+const drawn = T.strokes().length;
+C.pointerdown(ev(2, 400, 400));
+ok(T.mode() === 'erase', 'a second finger still starts the eraser');
+ok(T.strokes().length === drawn, 'but a long, deliberate stroke is KEPT');
+C.pointerup(ev(1, 0, 0)); C.pointerup(ev(2, 0, 0));
+
+// erasing must survive a rotation
+T.writeWipe();
+C.pointerdown(ev(1, 20, 20)); C.pointermove(ev(1, 120, 120)); C.pointerup(ev(1, 120, 120));
+C.pointerdown(ev(1, 60, 60)); C.pointerdown(ev(2, 80, 60));
+C.pointermove(ev(1, 100, 100)); C.pointermove(ev(2, 120, 100));
+const ops = T.strokes().filter(s => s.kind === 'erase').length;
+C.pointerup(ev(1, 0, 0)); C.pointerup(ev(2, 0, 0));
+T.resize();
+ok(T.strokes().filter(s => s.kind === 'erase').length === ops,
+   'erases are kept in the display list, so a rotation cannot undo them');
+
+// ------------------------------------------------------------ palm rejection
+console.log('\n  -- palm rejection --');
+T.writeWipe();
+C.pointerdown(ev(1, 100, 100, 'pen'));
+const penStrokes = T.strokes().length;
+C.pointerdown(ev(2, 300, 300, 'touch'));       // the heel of a hand
+ok(T.mode() === 'draw', 'a touch landing while a PEN is down does not start the eraser');
+ok(T.strokes().length === penStrokes, 'and it adds no mark of its own');
+C.pointermove(ev(1, 150, 150, 'pen'));
+ok(T.strokes().slice(-1)[0].kind === 'ink', 'the pen keeps drawing through it');
+C.pointerup(ev(2, 300, 300, 'touch'));
+C.pointerup(ev(1, 150, 150, 'pen'));
+ok(T.mode() === 'idle', 'and everything settles when both come up');
+
+// two fingers of the SAME kind still erase
+T.writeWipe();
+C.pointerdown(ev(1, 100, 100, 'touch'));
+C.pointerdown(ev(2, 160, 100, 'touch'));
+ok(T.mode() === 'erase', 'two touches do erase');
+C.pointerup(ev(1, 0, 0)); C.pointerup(ev(2, 0, 0));
+T.endWrite();
 
 export default { pass, fail };

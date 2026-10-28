@@ -539,6 +539,19 @@
     letter-spacing:.02em; transition:opacity .3s linear;
   }
   #writeHint.gone { opacity:0; }
+  /* The eraser. Position and size are set from JS - it sits at the MIDPOINT of
+     the two fingers and is exactly as wide as the area it clears. */
+  #writeEraser {
+    position:absolute; z-index:53; pointer-events:none;
+    transform:translate(-50%,-50%);
+  }
+  /* Spelled out: the rule above gives it a `transform`, and a UA [hidden] can
+     lose to an author rule - the trap this repo has hit before. */
+  #writeEraser[hidden] { display:none; }
+  #writeEraser svg { display:block; width:100%; height:100%; overflow:visible; }
+  /* Dark ring, barely-there fill: it has to be legible on a white page without
+     hiding the ink it is about to take. */
+  .eRing { fill:rgba(16,20,26,.055); stroke:#15181d; stroke-width:3; }
 
   /* ---------------------------------------------------- assessment section ---
      Flipped contrast: white ground, dark dots. That is not decoration. It is
@@ -914,6 +927,21 @@
   <div id="write" aria-hidden="true">
     <canvas id="writeCanvas"></canvas>
     <div id="writeHint">Draw anywhere</div>
+    <!-- Shown only while two fingers are held down. The ring is the honest
+         part: it is the actual area that will be wiped, so what you are about
+         to erase is never a guess. -->
+    <div id="writeEraser" hidden>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" class="eRing"/>
+        <g transform="rotate(-32 50 50)">
+          <rect x="30" y="39" width="14" height="22" rx="5" fill="#5c6bc0"/>
+          <rect x="42" y="39" width="28" height="22" rx="5" fill="#f06292"/>
+          <rect x="30" y="39" width="40" height="22" rx="6" fill="none"
+                stroke="#15181d" stroke-width="3.5"/>
+          <line x1="44" y1="39" x2="44" y2="61" stroke="#15181d" stroke-width="3"/>
+        </g>
+      </svg>
+    </div>
     <button id="writeClear" type="button">Double tap to clear</button>
   </div>
   <div id="assess" aria-hidden="true">
@@ -3355,18 +3383,40 @@
   // becomes a hairline on a small screen, and capped so it stays a pen rather
   // than a roller on a large one. Tuning dial.
   const WRITE_WIDTH_FRAC = .035, WRITE_WIDTH_MIN = 12, WRITE_WIDTH_MAX = 34;
-  const WRITE_BRUSH = false;   // see the note above before turning this on
+  // ON since 2026-10-28, asked for after the section was used. The same brush
+  // the letter tracing plays, but ungated: there is no guide here to be on or
+  // off, so it simply follows the hand. Tuning dial.
+  const WRITE_BRUSH = true;
+  // How much wider the eraser is than the pen, and the floor under it so it
+  // stays a rubber rather than a nib on a small screen. Tuning dials.
+  const WRITE_ERASER_MULT = 3.4;
+  // How long after touching down a second finger still counts as part of a
+  // two-finger GESTURE rather than an interruption of a deliberate stroke,
+  // and how far the first finger may have travelled in that time.
+  const WRITE_ERASE_GRACE = 450;   // ms
+  const WRITE_ERASE_SLOP  = 24;    // px of travel
 
   const writeEl     = document.getElementById('write');
   const writeCanvas = document.getElementById('writeCanvas');
   const writeHint   = document.getElementById('writeHint');
   const writeClear  = document.getElementById('writeClear');
+  const writeEraser = document.getElementById('writeEraser');
   const wctx = writeCanvas.getContext('2d');
 
-  let wOn=false, wDrawing=false, wPointer=null, wLast=null;
+  let wOn=false;
   let wInk=0;              // index into WRITE_INK; advances on every pen-up
-  let wStrokes=[];         // {color,width,pts:[[x,y],..]} - kept so a resize can repaint
+  // The page, as an ordered DISPLAY LIST. An erase is an entry in it like any
+  // stroke, which is what lets a resize repaint reproduce the page exactly -
+  // erasing by painting the canvas white alone would come back on the repaint.
+  let wStrokes=[];         // {kind:'ink'|'erase', color, width, pts:[[x,y],..]}
   let wCur=null;
+  // Every pointer currently down on the page, by id. Drawing needs one; the
+  // eraser needs two; palm rejection needs to know what KIND each one is.
+  const wPts=new Map();    // id -> {x,y,type}
+  let wMode='idle';        // 'idle' | 'draw' | 'erase'
+  let wDrawId=null, wLast=null, wLastT=0, wDownT=0, wTravel=0;
+  let wEraseAt=null;       // last midpoint the eraser was at
+  let wLockedTillUp=false; // after an erase, no drawing until every finger is up
 
   function writeActive() { return wOn; }
   function writeWidth() {
@@ -3393,7 +3443,8 @@
     const w=writeCanvas.clientWidth,h=writeCanvas.clientHeight;
     wctx.globalAlpha=1; wctx.fillStyle='#ffffff'; wctx.fillRect(0,0,w,h);
     wctx.lineCap='round'; wctx.lineJoin='round';
-    for (const st of wStrokes) writeStroke(st.pts,st.color,st.width);
+    for (const st of wStrokes)
+      writeStroke(st.pts, st.kind==='erase' ? '#ffffff' : st.color, st.width);
   }
 
   function writeStroke(pts,color,width) {
@@ -3417,14 +3468,84 @@
     return [ev.clientX-r.left, ev.clientY-r.top];
   }
 
+  // ---- pointer bookkeeping -------------------------------------------------
+  // A pen beats touch, always. A student writing with a stylus rests a hand on
+  // the page, and that hand is a second pointer: without this, a palm would
+  // either draw a line or - far worse - trigger the two-finger eraser and wipe
+  // the work. So while a pen is down, every touch is ignored outright.
+  function wPenDown() { for (const q of wPts.values()) if (q.type==='pen') return true; return false; }
+  function wEligible() {
+    const pen=wPenDown();
+    return [...wPts.entries()].filter(([,q]) => !pen || q.type==='pen');
+  }
+  function wMid(list) {
+    const n=list.length||1; let x=0,y=0;
+    for (const [,q] of list) { x+=q.x; y+=q.y; }
+    return [x/n,y/n];
+  }
+  function writeEraserWidth() { return Math.max(34, writeWidth()*WRITE_ERASER_MULT); }
+  function writeEraserShow(at) {
+    const d=writeEraserWidth();
+    writeEraser.style.width=d+'px'; writeEraser.style.height=d+'px';
+    writeEraser.style.left=at[0]+'px'; writeEraser.style.top=at[1]+'px';
+    writeEraser.hidden=false;
+  }
+  function writeEraserHide() { writeEraser.hidden=true; }
+
+  // ---- the eraser ----------------------------------------------------------
+  // Erasing paints white along the path AND records the same path as an entry
+  // in the display list, so a rotation repaints the page exactly as it looked.
+  function writeEraseTo(p) {
+    const w=writeEraserWidth();
+    if (!wEraseAt) wEraseAt=p;
+    const op={ kind:'erase', color:'#ffffff', width:w, pts:[wEraseAt,p] };
+    wStrokes.push(op);
+    writeStroke(op.pts,'#ffffff',w);
+    wEraseAt=p;
+  }
+
+  function writeStartErase() {
+    // The fraction of a stroke drawn in the moment before the second finger
+    // landed is part of the GESTURE, not a mark anybody meant to make - but
+    // only if it really was a moment. A deliberate stroke that someone then
+    // adds a second finger to is kept, truncated where it stopped.
+    if (wCur) {
+      const brief=(performance.now()-wDownT)<WRITE_ERASE_GRACE && wTravel<WRITE_ERASE_SLOP;
+      if (brief) {
+        const i=wStrokes.indexOf(wCur);
+        if (i>=0) wStrokes.splice(i,1);
+        writeRepaint();                // the discarded mark is already on the canvas
+      }
+    }
+    wCur=null; wDrawId=null; wLast=null;
+    brushOff();
+    wMode='erase';
+    wEraseAt=wMid(wEligible());
+    writeEraserShow(wEraseAt);
+  }
+
+  // ---- handlers ------------------------------------------------------------
   writeCanvas.addEventListener('pointerdown',ev=>{
-    if (!wOn || wDrawing) return;
+    if (!wOn) return;
     ev.preventDefault();
-    wDrawing=true; wPointer=ev.pointerId;
-    try { writeCanvas.setPointerCapture(ev.pointerId); } catch {}
     const p=writePoint(ev);
-    wLast=p;
-    wCur={ color:WRITE_INK[wInk%WRITE_INK.length], width:writeWidth(), pts:[p] };
+    wPts.set(ev.pointerId,{x:p[0],y:p[1],type:ev.pointerType||'touch'});
+    // A pen arriving mid-touch takes the page over: drop whatever the fingers
+    // were doing rather than blending two inputs together.
+    if ((ev.pointerType||'')==='pen' && wMode==='draw' && wDrawId!==ev.pointerId) {
+      wCur=null; wDrawId=null; wLast=null; brushOff();
+      wMode='idle';
+    }
+    try { writeCanvas.setPointerCapture(ev.pointerId); } catch {}
+    const live=wEligible();
+    if (live.length>=2 && wMode!=='erase') { writeStartErase(); return; }
+    if (wMode==='erase') { wEraseAt=wMid(live); writeEraserShow(wEraseAt); return; }
+    // Nothing may start drawing until the hand that was erasing is fully off.
+    if (wLockedTillUp || wMode!=='idle') return;
+    if (!live.some(([id])=>id===ev.pointerId)) return;   // an ignored palm
+    wMode='draw'; wDrawId=ev.pointerId;
+    wLast=p; wLastT=performance.now(); wDownT=wLastT; wTravel=0;
+    wCur={ kind:'ink', color:WRITE_INK[wInk%WRITE_INK.length], width:writeWidth(), pts:[p] };
     wStrokes.push(wCur);
     writeStroke([p],wCur.color,wCur.width);
     if (!writeHint.classList.contains('gone')) writeHint.classList.add('gone');
@@ -3432,30 +3553,60 @@
   });
 
   writeCanvas.addEventListener('pointermove',ev=>{
-    if (!wDrawing || ev.pointerId!==wPointer) return;
+    if (!wOn || !wPts.has(ev.pointerId)) return;
     ev.preventDefault();
     const p=writePoint(ev);
+    wPts.set(ev.pointerId,{x:p[0],y:p[1],type:ev.pointerType||'touch'});
+
+    if (wMode==='erase') {
+      const live=wEligible();
+      if (live.length>=2) { const m=wMid(live); writeEraseTo(m); writeEraserShow(m); }
+      return;
+    }
+    if (wMode!=='draw' || ev.pointerId!==wDrawId) return;
     // Draw ONLY the new segment. Appending to the canvas rather than repainting
     // is what lets the page hold an unlimited amount of ink without slowing
     // down, which matters because nothing here ever clears itself.
     wctx.strokeStyle=wCur.color; wctx.lineWidth=wCur.width;
     wctx.lineCap='round'; wctx.lineJoin='round';
     wctx.beginPath(); wctx.moveTo(wLast[0],wLast[1]); wctx.lineTo(p[0],p[1]); wctx.stroke();
-    // Speed BEFORE wLast moves, or it is always zero.
-    if (WRITE_BRUSH) { brushOn(); brushSpeed(Math.hypot(p[0]-wLast[0],p[1]-wLast[1])/16); }
+    // brushSpeed wants px per MILLISECOND, so it needs the clock, not just the
+    // distance. The interval is floored for the same reason the tracing canvas
+    // floors it: a 1 ms gap on a fast digitiser reports an absurd speed and
+    // spikes the filter.
+    const now=performance.now();
+    const dist=Math.hypot(p[0]-wLast[0],p[1]-wLast[1]);
+    wTravel+=dist;
+    if (WRITE_BRUSH) { brushOn(); brushSpeed(dist/Math.max(6,now-wLastT)); }
+    wLastT=now;
     wCur.pts.push(p);
     wLast=p;
   });
 
-  // Lifting off is what changes the colour, and it is the only thing that
-  // does. Pointercancel counts too: a palm rejected mid-stroke has ended that
+  // Lifting off is what changes the colour, and it is the only thing that does.
+  // Pointercancel counts too: a pointer the browser takes away has ended its
   // stroke as surely as lifting would have.
   function writeLift(ev) {
-    if (!wDrawing) return;
-    if (ev && wPointer!==null && ev.pointerId!==wPointer) return;
-    wDrawing=false; wPointer=null; wLast=null; wCur=null;
-    wInk=(wInk+1)%WRITE_INK.length;
-    if (WRITE_BRUSH) brushOff();
+    if (!wOn) return;
+    if (ev) wPts.delete(ev.pointerId);
+    const live=wEligible();
+
+    if (wMode==='erase') {
+      if (live.length<2) {
+        wMode='idle'; wEraseAt=null; writeEraserHide();
+        // A finger still on the page after an erase must not become a pen
+        // stroke the moment its partner lifts.
+        wLockedTillUp = wPts.size>0;
+      }
+      if (wPts.size===0) wLockedTillUp=false;
+      return;
+    }
+    if (wMode==='draw' && (!ev || ev.pointerId===wDrawId)) {
+      wMode='idle'; wDrawId=null; wLast=null; wCur=null;
+      wInk=(wInk+1)%WRITE_INK.length;
+      if (WRITE_BRUSH) brushOff();
+    }
+    if (wPts.size===0) { wLockedTillUp=false; if (wMode!=='draw') wMode='idle'; }
   }
   // up + cancel ONLY, exactly as the tracing canvas binds them. pointerleave
   // can fire on a captured pointer that slides past the edge, which would end
@@ -3463,8 +3614,20 @@
   writeCanvas.addEventListener('pointerup',writeLift);
   writeCanvas.addEventListener('pointercancel',writeLift);
 
+
+  // Every piece of per-gesture state, in one place, so entering, wiping and
+  // leaving cannot drift apart.
+  function writeResetGesture() {
+    wCur=null; wMode='idle'; wDrawId=null; wLast=null; wLastT=0;
+    wDownT=0; wTravel=0; wEraseAt=null; wLockedTillUp=false;
+    wPts.clear();
+    writeEraserHide();
+    brushOff();
+  }
+
   function writeWipe() {
-    wStrokes=[]; wCur=null; wDrawing=false; wPointer=null; wLast=null;
+    wStrokes=[];
+    writeResetGesture();
     // The colour deliberately does NOT reset. A fresh page carrying on from
     // the ink that was in use reads as continuous; snapping back to black
     // would make the wipe feel like a different activity starting.
@@ -3486,7 +3649,8 @@
     wOn=true;
     writeEl.classList.add('on');
     writeEl.setAttribute('aria-hidden','false');
-    wStrokes=[]; wInk=0; wDrawing=false; wPointer=null; wLast=null; wCur=null;
+    wStrokes=[]; wInk=0;
+    writeResetGesture();
     writeHint.classList.remove('gone');
     // After the class lands, so the canvas has a size to measure.
     writeResize();
@@ -3494,7 +3658,8 @@
 
   function endWrite() {
     if (!wOn) return;
-    wOn=false; wDrawing=false; wPointer=null; wLast=null; wCur=null;
+    wOn=false;
+    writeResetGesture();
     writeEl.classList.remove('on');
     writeEl.setAttribute('aria-hidden','true');
     // The page goes with it. Nothing here is kept, saved or sent anywhere.
