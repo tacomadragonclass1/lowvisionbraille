@@ -158,25 +158,35 @@
   /* A braille cell. In CVC and numbers a word is several cells in sequence:
      only the foregrounded one is live, the rest are dimmed and inert, so the
      ORDER of the cells is itself part of what is being taught. */
-  #braille.cells-2 .cell, #braille.cells-3 .cell,
-  #braille.cells-4 .cell { transform:scale(.6); opacity:.32; }
+  /* "More than one cell" is the real condition here, so it is written that
+     way rather than enumerated: these three rules used to list cells-2
+     through cells-4 by name, and a word needing five would have been
+     silently un-backgrounded. Same specificity as the list it replaced. */
+  #braille:not(.cells-1) .cell { transform:scale(.6); opacity:.32; }
   #braille .cell {
     display:flex; gap:clamp(22px,5.5vw,56px);
     transition:transform .22s ease, opacity .22s ease;
     transform-origin:center;
   }
-  #braille.cells-2 .cell.active, #braille.cells-3 .cell.active,
-  #braille.cells-4 .cell.active { transform:scale(1); opacity:1; }
+  #braille:not(.cells-1) .cell.active { transform:scale(1); opacity:1; }
   #braille .cell.done { opacity:.3; }
-  #braille.cells-2 .cell.done, #braille.cells-3 .cell.done,
-  #braille.cells-4 .cell.done { transform:scale(.62); opacity:.3; }
+  #braille:not(.cells-1) .cell.done { transform:scale(.62); opacity:.3; }
   #braille.cells-2, #braille.cells-3 { gap:clamp(10px,2.2vw,30px); }
   #braille.cells-4 { gap:clamp(8px,1.8vw,24px); }
+  /* Five to seven cells exist only because the third tranche of high
+     frequency words does: letter-by-letter, `because` is seven cells. Both
+     gaps tighten as the count rises, because the row's width is fixed and
+     every vw spent on a gap comes straight off the dots. */
+  #braille.cells-5 { gap:clamp(7px,1.6vw,20px); }
+  #braille.cells-6 { gap:clamp(6px,1.4vw,18px); }
+  #braille.cells-7 { gap:clamp(5px,1.2vw,16px); }
   #braille.cells-2 .dot { width:clamp(44px,11vw,96px); border-width:clamp(5px,1.3vw,11px); }
   #braille.cells-3 .dot { width:clamp(38px,9.4vw,84px); border-width:clamp(4px,1.1vw,10px); }
   #braille.cells-4 .dot { width:clamp(32px,8vw,72px); border-width:clamp(4px,1vw,9px); }
-  #braille.cells-2 .brailleCol, #braille.cells-3 .brailleCol,
-  #braille.cells-4 .brailleCol { gap:clamp(8px,1.5vh,16px); }
+  #braille.cells-5 .dot { width:clamp(28px,6.5vw,60px); border-width:clamp(3px,.85vw,8px); }
+  #braille.cells-6 .dot { width:clamp(25px,5.3vw,52px); border-width:clamp(3px,.75vw,7px); }
+  #braille.cells-7 .dot { width:clamp(22px,4.6vw,46px); border-width:clamp(3px,.65vw,6px); }
+  #braille:not(.cells-1) .brailleCol { gap:clamp(8px,1.5vh,16px); }
   /* The print letters of a CVC word. No tracing here - the student reads these and
      answers them in braille, so the box only ever reports progress. */
   /* One absolute size drives both the box and the letter inside it. A
@@ -330,9 +340,7 @@
      ghosts leave, or the shape being studied changes as it is being studied. */
   body.sightLook #braille .cell,
   body.sightLook #braille .cell.done,
-  body.sightLook #braille.cells-2 .cell.done,
-  body.sightLook #braille.cells-3 .cell.done,
-  body.sightLook #braille.cells-4 .cell.done {
+  body.sightLook #braille:not(.cells-1) .cell.done {
     opacity:1; transform:scale(.86);
     /* ⭐ EACH CELL IS FRAMED, and it has to be. With the ghosts gone, the gap
        BETWEEN two cells (21px on a 4-cell word) and the gap between the two
@@ -375,15 +383,30 @@
          the width it occupies, so a four-cell word costs four FULL-width cells
          however small three of them look;
        - the binding case is a phone in landscape, where the screen is short
-         and three stacked dots overflow long before the width does. */
+         and three stacked dots overflow long before the width does.
+     The vw term for each count is the solution to the row's width budget,
+     not a guess. A cell occupies two dots plus its inner column gap however
+     small a backgrounded one LOOKS, so for N cells:
+         N*(2d + inner) + (N-1)*outer + 6vw padding <= 93vw
+     and 93 rather than 100 keeps the ~7vw of slack the four-cell case
+     already shipped with. Solving it with the gaps declared above gives
+     8.5vw at four cells (the value that was already here), then 6.5, 5.3 and
+     4.6 at five, six and seven. Those are ceilings: on a short screen the
+     13vh/28vh term binds first and the dots are smaller again. */
   body.mode-sight #braille.cells-1 { --d:min(108px,34vw,13vh); }
   body.mode-sight #braille.cells-2 { --d:min( 96px,19vw,13vh); }
   body.mode-sight #braille.cells-3 { --d:min( 84px,12vw,13vh); }
   body.mode-sight #braille.cells-4 { --d:min( 72px,8.5vw,13vh); }
+  body.mode-sight #braille.cells-5 { --d:min( 60px,6.5vw,13vh); }
+  body.mode-sight #braille.cells-6 { --d:min( 52px,5.3vw,13vh); }
+  body.mode-sight #braille.cells-7 { --d:min( 46px,4.6vw,13vh); }
   body.mode-sight.round2 #braille.cells-1 { --d:min(210px,34vw,28vh); }
   body.mode-sight.round2 #braille.cells-2 { --d:min(190px,19vw,28vh); }
   body.mode-sight.round2 #braille.cells-3 { --d:min(130px,12vw,28vh); }
   body.mode-sight.round2 #braille.cells-4 { --d:min(110px,8.5vw,28vh); }
+  body.mode-sight.round2 #braille.cells-5 { --d:min( 95px,6.5vw,28vh); }
+  body.mode-sight.round2 #braille.cells-6 { --d:min( 84px,5.3vw,28vh); }
+  body.mode-sight.round2 #braille.cells-7 { --d:min( 74px,4.6vw,28vh); }
   /* #braille is in the selector to outrank `#braille.cells-N .dot` above:
      an id beats any number of classes. */
   body.mode-sight #braille .dot { width:var(--d); border-width:calc(var(--d)/9); }
@@ -392,8 +415,18 @@
   @media (orientation:landscape) {
     body.mode-numbers #app { grid-template-columns:minmax(0,58fr) minmax(0,42fr); grid-template-rows:100%; }
   }
+  /* The gap between a cell's two dot COLUMNS. It has to narrow with the cell
+     count for the same reason the gap between cells does, but not below the
+     point where the two columns stop reading as one cell: the measured figure
+     this section already depends on is that the gap between cells is ~21px
+     while the gap between the columns inside one is ~34px, and the grouping
+     is only legible while the inner gap stays the larger of the two. Each
+     pair below keeps that ordering. */
   #braille.cells-2 .cell, #braille.cells-3 .cell,
   #braille.cells-4 .cell { gap:clamp(14px,3.4vw,34px); }
+  #braille.cells-5 .cell { gap:clamp(12px,3vw,30px); }
+  #braille.cells-6 .cell { gap:clamp(11px,2.6vw,26px); }
+  #braille.cells-7 .cell { gap:clamp(10px,2.2vw,22px); }
   /* The Rhythm section owns the whole screen. The layer below is opaque and
      covers everything anyway, but there is no reason to lay out and paint a
      canvas, a print row and six braille dots nobody will ever see. */
@@ -1174,11 +1207,27 @@
     if (onEnd) {
       a.addEventListener('ended',finish);
       // The fallback has to outlast the clip, or it pre-empts the real 'ended'
-      // event. A flat 2600 did exactly that: prompt-what.wav is 2.68 s. Use the
-      // real duration once metadata is in, and keep 2600 as the floor for the
-      // case where it never loads (missing/undecodable file).
-      const dur = Number.isFinite(a.duration) && a.duration>0 ? a.duration*1000+400 : 0;
-      setTimeout(finish, Math.max(2600, dur));
+      // event. A flat 2600 did exactly that: prompt-what.wav was 2.68 s then
+      // and is 4.94 s now. Use the real duration once metadata is in, and keep
+      // 2600 only as the floor for a file that never loads at all.
+      //
+      // ⛔ The floor is SHORTER than some clips, so arming it once, before
+      // metadata has arrived, is not safe: it fires mid-clip and runs the
+      // continuation early. Where that continuation is an INPUT GATE, the dots
+      // go live while the question is still being asked - the exact thing the
+      // gate exists to prevent. This used to be unreachable because round 1
+      // always ran first and warmed every prompt; interleaving the rounds made
+      // a round-2 card possible as the second card of a session, so the timer
+      // now re-arms itself the moment the real duration is known.
+      let timer=null;
+      const arm=()=>{
+        const dur = Number.isFinite(a.duration) && a.duration>0 ? a.duration*1000+400 : 0;
+        if (timer) clearTimeout(timer);
+        timer=setTimeout(finish, Math.max(2600, dur));
+      };
+      arm();
+      if (!(Number.isFinite(a.duration) && a.duration>0))
+        a.addEventListener('loadedmetadata',arm,{once:true});
     }
     const played=a.play();
     if (played && played.catch) played.catch(finish);
@@ -1325,12 +1374,23 @@
   // capital indicator in braille.
   //
   // The list is shuffled every round, so the order here is for reading the
-  // source, not for teaching: the first eight are the original tranche and the
-  // last five were added after. Adding a word costs three things - an entry
-  // here, a SIGHT_UEB spelling below, and a recorded clip at
-  // audio/sight/<word>.wav named by the LOWERCASED word.
+  // source, not for teaching: the tranches are kept apart only so a later
+  // addition can be found. Adding a word costs three things - an entry here, a
+  // SIGHT_UEB spelling below, and a recorded clip at audio/sight/<word>.wav
+  // named by the LOWERCASED word.
+  //
+  // The longest word drives the braille row's sizing, and in the letter-by-
+  // letter convention that is one cell per PRINT letter: `because` is seven
+  // cells, where nothing before the third tranche went past four. The
+  // cells-N rules in the stylesheet run to seven for that reason, and the
+  // dots in a seven-cell word are necessarily smaller than in a three-cell
+  // one - see the note there before adding anything longer.
   const SIGHT_WORDS = ['the','is','it','said','and','as','a','I',
-                       'you','has','was','to','one'];
+                       'you','has','was','to','one',
+                       // Third tranche, given alphabetically.
+                       'all','am','an','are','at','away','be','because',
+                       'black','blue','brown','but','by','can','came','come',
+                       'could','day','do','eat','eight','first'];
 
   // The teacher picks the convention for the whole session. `grapheme` spells
   // every word out, one cell per print letter, and is the default because it
@@ -1365,7 +1425,58 @@
     was:  [{ dots:[3,5,6] }],
     // UEB removed the old unspaced "to", so it is simply spelled.
     to:   [{ name:'t' }, { name:'o' }],
-    one:  [{ name:'o' }, { name:'n' }, { name:'e' }]   // no contraction, spelled
+    // Dot 5 then o: the initial-letter contraction, the same series as `day`
+    // below. This was o-n-e spelled in full until 2026-10-30, which was simply
+    // wrong UEB -- caught by translating the first two tranches through
+    // liblouis and finding this the only one of thirteen that disagreed.
+    one:  [{ dots:[5] }, { name:'o' }],
+
+    /* Third tranche. These were not written out by hand and they were not
+       derived from the alphabet table either - both earlier tranches were, and
+       that is exactly how `one` above went wrong. Every form here is the
+       output of liblouis 3.33 translating the word through the official
+       en-ueb-g2 table, checked by translating each result BACK to the word it
+       came from. Running the same table over the first two tranches reproduced
+       twelve of those thirteen entries exactly, and the thirteenth - `one` -
+       was a genuine error, now corrected above.
+
+       The silent-cell rule from the first tranche carries over unchanged: a
+       cell is named only when it IS that letter in the spelling, so a
+       groupsign covering two letters (`ar`, `ow`, `gh`, `st`), a lower
+       wordsign and the dot-5 prefix are all silent, while the single letters
+       around them are named. */
+
+    all:  [{ name:'a' }, { name:'l' }, { name:'l' }],  // spelled; `al` is "also", not "all"
+    am:   [{ name:'a' }, { name:'m' }],
+    an:   [{ name:'a' }, { name:'n' }],
+    // `ar` groupsign (3-4-5) covers the a and the r, so only the e is named.
+    are:  [{ dots:[3,4,5] }, { name:'e' }],
+    at:   [{ name:'a' }, { name:'t' }],
+    away: [{ name:'a' }, { name:'w' }, { name:'a' }, { name:'y' }],
+    // Lower wordsign standing alone (2-3), the same class as `was` above.
+    be:   [{ dots:[2,3] }],
+    // Shortform `bec`: the lower sign for "be" carries the b and the e, then c.
+    because: [{ dots:[2,3] }, { name:'c' }],
+    black: [{ name:'b' }, { name:'l' }, { name:'a' }, { name:'c' }, { name:'k' }],
+    blue: [{ name:'b' }, { name:'l' }, { name:'u' }, { name:'e' }],
+    // `ow` groupsign (2-4-6) covers the o and the w.
+    brown:[{ name:'b' }, { name:'r' }, { dots:[2,4,6] }, { name:'n' }],
+    but:  [{ dots:[1,2] }],                        // alphabetic wordsign (b)
+    by:   [{ name:'b' }, { name:'y' }],            // UEB dropped the unspaced "by"
+    can:  [{ dots:[1,4] }],                        // alphabetic wordsign (c)
+    came: [{ name:'c' }, { name:'a' }, { name:'m' }, { name:'e' }],
+    come: [{ name:'c' }, { name:'o' }, { name:'m' }, { name:'e' }],
+    could:[{ name:'c' }, { name:'d' }],            // shortform c-d, as `said` is s-d
+    // Dot 5 then d: the initial-letter contraction. The dot-5 cell is not a
+    // letter, so it is silent; the d is the word's own first letter.
+    day:  [{ dots:[5] }, { name:'d' }],
+    do:   [{ dots:[1,4,5] }],                      // alphabetic wordsign (d)
+    // `ea` is a lower sign and cannot open a word, so this is simply spelled.
+    eat:  [{ name:'e' }, { name:'a' }, { name:'t' }],
+    // `gh` groupsign (1-2-6) covers the g and the h.
+    eight:[{ name:'e' }, { name:'i' }, { dots:[1,2,6] }, { name:'t' }],
+    // Shortform `fst`: f, then the `st` groupsign (3-4).
+    first:[{ name:'f' }, { dots:[3,4] }]
   };
 
   // The write playground's ink. Lives here with the other palettes rather than
@@ -1462,8 +1573,11 @@
   let cvcVowel=null;    // a key of CVC_WORDS, or null for a mix of all
   let sightConvention='grapheme';  // 'grapheme' | 'ueb'
   // Round 1 shows the print word above the dots; round 2 shows the dots alone
-  // and asks for the word. Round 2 begins only once round 1 has used the whole
-  // list, so the words are familiar before they are tested.
+  // and asks for the word. The two are SHUFFLED TOGETHER in one deck, so this
+  // is a property of the current CARD, not a phase the section is in: it is
+  // re-read from the item on every setupItem. The 1 here is only the value it
+  // holds outside the section. See buildOrder for how a word is guaranteed to
+  // be seen in print before it is tested from dots alone.
   let sightRound=1;
   let sightGroups=[];   // the per-letter <g> of the printed word, in order
   let cells=[];         // the braille cells of the current item, in tap order
@@ -1499,7 +1613,42 @@
       return;
     }
     if (mode==='numbers') { order=shuffle('0123456789'.split('')); return; }
-    if (mode==='sight') { order=shuffle([...SIGHT_WORDS]); return; }
+    if (mode==='sight') {
+      /* ONE deck, both rounds interleaved at random.
+
+         Each word goes in TWICE and the whole list is shuffled; walking it, a
+         word's FIRST appearance is its round-1 card and its SECOND is its
+         round-2 card. That construction is the whole mechanism, and it is
+         worth seeing why it needs no constraint checking, no retries and no
+         reshuffling: a second occurrence is BY DEFINITION after a first, so
+         "a round-2 card only appears once its round-1 counterpart has played"
+         is guaranteed by how the list is built rather than enforced after the
+         fact. It is also a uniformly random interleaving, which a
+         place-then-check loop would not be.
+
+         Two consequences, both guaranteed and both load-bearing:
+
+           - The FIRST card of a deck is always round 1, because the first
+             token in a shuffled list is necessarily a first occurrence. Round
+             2 autoplays its question when the card arrives, which is only
+             legal after a user gesture, and this is what keeps it legal on the
+             opening card of a session. ⛔ Do not replace this with a scheme
+             that can deal a round-2 card first.
+           - Every word is still read in PRINT before it is ever tested from
+             dots alone, which was the entire point of the old two-pass order.
+             Interleaving kept that and dropped only the long wait.
+
+         What changed on 2026-10-30: the section used to run all of round 1,
+         then all of round 2. At 13 words that was a 26-card cycle; at 35 it
+         would have been 70 cards before a word came round again. */
+      const seen=new Set();
+      order=shuffle([...SIGHT_WORDS,...SIGHT_WORDS]).map(w=>{
+        const round=seen.has(w) ? 2 : 1;
+        seen.add(w);
+        return { word:w, round };
+      });
+      return;
+    }
     const forced=(new URLSearchParams(location.search).get('letter')||'').toLowerCase();
     if (/^[a-z]$/.test(forced)) { order=[forced]; return; }
     order=shuffle('abcdefghijklmnopqrstuvwxyz'.split(''));
@@ -1776,7 +1925,11 @@
       buildCells(item.split('').map(ch=>({ char:ch, required:BRAILLE[ch], sound:phonemeSrc(ch) })));
       clip(wordSrc(item));
     } else if (mode==='sight') {
-      word=item;
+      // A sight item is a {word, round} PAIR, not a bare word: the two rounds
+      // are interleaved in one deck, so which round this card is comes from
+      // the card and not from a mode-wide counter.
+      word=item.word;
+      sightRound=item.round;
       glyph=null;
       // Nothing to trace: the word is read, or recalled, and answered in braille.
       traceDone=true;
@@ -1784,21 +1937,21 @@
       document.body.classList.toggle('round2',sightRound===2);
       // Round 2 shows no print at all. That is what makes it a reading test
       // rather than a matching exercise, so there is nothing to fall back on.
-      if (sightRound===1) buildSightWord(item);
+      if (sightRound===1) buildSightWord(word);
       else { sightWordEl.textContent=''; sightGroups=[]; }
-      buildCells(sightCells(item));
-      clip(sightSrc(item));
+      buildCells(sightCells(word));
+      clip(sightSrc(word));
       // Round 2 asks UP FRONT: the question has to come before the student
       // answers in braille, not after it. REVEAL is only warmed here - it
-      // plays once the dots are in. Round 2 never lands on the first card of
-      // a session (start() sets sightRound=1), so a gesture has always
-      // happened by now and this is allowed to autoplay.
-      // Warm BOTH prompts in BOTH rounds. playClip's fallback timer needs a
-      // real duration, and that is only known once the element has loaded its
-      // metadata -- so warming only in round 2 left the very first round-2
-      // card falling back to the 2600 ms floor and opening the gate ~80 ms
-      // early, which is the bug the gate exists to prevent. Round 1 runs the
-      // whole list first, so by round 2 both durations are known.
+      // plays once the dots are in. A round-2 card is never the FIRST card of
+      // a deck (see buildOrder), so a gesture has always happened by now and
+      // this is allowed to autoplay.
+      // Warm BOTH prompts in BOTH rounds, so the cache is primed as early as
+      // possible. ⛔ This warming is no longer what makes the input gate
+      // correct: once the rounds were interleaved, a round-2 card could be the
+      // SECOND card of a session, far too soon to assume metadata has loaded.
+      // playClip now re-arms its fallback when the real duration arrives, which
+      // is what actually closes that hole -- see the note there.
       clip(SIGHT_ASK); clip(SIGHT_REVEAL); clip(SIGHT_GOODJOB);
       if (sightRound===2) {
         const myRun=runId;
@@ -3041,9 +3194,9 @@
       if (myRun!==runId) return;
       orderIndex++;
       if (orderIndex>=order.length) {
-        // Round 2 starts once round 1 has used the whole list, then hands back
-        // to round 1: the section cycles rather than ending.
-        if (mode==='sight') sightRound = sightRound===1 ? 2 : 1;
+        // A fresh deck. Sight mode no longer flips a round here: its deck
+        // already holds both rounds of every word, so running out of cards
+        // just means reshuffling the lot.
         buildOrder();
       }
       itemsDone++;

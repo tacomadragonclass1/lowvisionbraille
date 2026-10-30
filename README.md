@@ -98,11 +98,43 @@ nothing advances, and there is no music and no brain break.
 
 ### High Frequency Words
 
-Thirteen high-frequency words — **the, is, it, said, and, as, a, I, you, has,
-was, to, one** — in two rounds. Round 1 shows the word in print above the dots; **round 2 shows the
-dots alone** and asks for the word. Round 2 begins only once round 1 has used
-the whole list, so every word has been seen before it is tested, and after
-round 2 the section cycles back to round 1.
+Thirty-five high-frequency words — **the, is, it, said, and, as, a, I, you,
+has, was, to, one**, then **all, am, an, are, at, away, be, because, black,
+blue, brown, but, by, can, came, come, could, day, do, eat, eight, first** — in
+two rounds. Round 1 shows the word in print above the dots; **round 2 shows the
+dots alone** and asks for the word.
+
+#### The two rounds are shuffled together into one deck
+
+**Changed 2026-10-30.** The section used to run all of round 1 and then all of
+round 2. At thirteen words that was a 26-card cycle; at thirty-five it would
+have been **seventy cards before a word came round again**, so the rounds are
+now interleaved and a card may be either kind.
+
+The rule is that **a word's round-2 card only appears once its round-1 card has
+played** — it is never tested from dots before it has been seen in print. That
+is not checked after the fact, it comes from how the deck is built: each word
+goes in **twice**, the whole list is shuffled, and walking it a word's *first*
+appearance is its round-1 card and its *second* is its round-2 card. A second
+occurrence is by definition after a first, so the rule holds by construction,
+and the result is a uniformly random interleaving rather than the biased one a
+place-then-retry loop would give.
+
+Two consequences are guaranteed rather than likely, and both are load-bearing:
+
+- **The first card of a deck is always round 1**, because the first token of a
+  shuffled list is necessarily a first occurrence. Round 2 autoplays its
+  question as the card arrives, which browsers only allow after a user
+  gesture — this is what keeps that legal on the opening card of a session.
+  ⛔ Do not replace the deck with a scheme that can deal round 2 first.
+- **Every word is still read in print before it is tested from dots alone**,
+  which was the entire point of the old two-pass order.
+
+One side effect worth knowing: nothing stops a word's two cards landing
+**back-to-back**, which makes that one card an echo rather than a recall. The
+rate is low — measured over 300 decks, **1.0 of the 35 words per 70-card deck**
+— so it is left alone rather than fixed with a minimum-gap rule. If it ever
+needs to go, that is where to add it.
 
 The print word is deliberately **not** in the CVC letter boxes. A box costs a
 border and a gap on every letter, and the point of this section is lettering as
@@ -122,10 +154,11 @@ the right read-back for `said` and `/s/ /a/ /i/ /d/` is not.
 > flip it to `true` the moment real recordings exist.
 >
 > **What is needed:** the spoken *name* of each letter — "tee", not /t/ — as
-> `audio/letters/<letter>.wav`. Only **twelve** are actually used by this word
-> list: **a d e h i n o s t u w y**. The other 14 are only needed if the list
-> grows again. (It was eight until the second tranche added *you, has, was, to,
-> one*, which pulled in **o u w y**.) A capital is lowercased before the
+> `audio/letters/<letter>.wav`. Only **nineteen** are actually used by this
+> word list: **a b c d e f h i k l m n o r s t u w y**. The other seven
+> (**g j p q v x z**) are only needed if the list grows again. (It was eight
+> until the second tranche added *you, has, was, to, one*, which pulled in
+> **o u w y**; the third tranche of twenty-two pulled in **b c f k l m r**.) A capital is lowercased before the
 > lookup, so `I` asks for `i.wav` and there is no uppercase file to record.
 >
 > **Format:** mono WAV, 24 kHz, 16-bit, trimmed of leading silence and peaking
@@ -142,6 +175,69 @@ the right read-back for `said` and `/s/ /a/ /i/ /d/` is not.
 > sequencer already takes — it is exactly how the number sign and the capital
 > indicator behave. The dot tones still sound, the cell still advances, and the
 > word is still spoken at the end.
+
+#### The third tranche, and where the UEB spellings come from
+
+The first two tranches' UEB forms were written by hand and cross-checked
+against the alphabet table. The third tranche of twenty-two was not: every
+form is the output of **liblouis 3.33 translating the word through the
+official `en-ueb-g2` table**, and each result was translated **back** to
+confirm it round-trips to the word it came from.
+
+Running that same table over the first two tranches reproduced **twelve of
+those thirteen entries exactly**. The thirteenth was a real error, and it has
+been corrected:
+
+> ✅ **`one` was wrong and is now fixed.** It was `o-n-e` spelled in full, with
+> a comment claiming "no contraction". Real UEB is the **dot-5 initial-letter
+> contraction** — dot 5 then `o` — the same series as `day` in the third
+> tranche. All thirty-five words now round-trip through `en-ueb-g2` exactly.
+> This is the one place where what a shipped word looks like in braille
+> changed, so it is worth knowing if something looks different in the UEB
+> convention.
+
+Worth knowing about the forms themselves, because they are not all spellings:
+`but`, `can`, `do` and `be` are **single cells** (alphabetic or lower
+wordsigns), `because` is the shortform `bec`, `could` is `cd` and `first` is
+`fst`, and `are`, `brown` and `eight` carry the `ar`, `ow` and `gh`
+groupsigns. The silent-cell rule from the first tranche is unchanged: a cell
+is spoken only when it **is** that letter in the spelling, so groupsigns,
+wordsigns and the dot-5 prefix are all silent. `tools/write-tests` asserts
+that the spoken cells of every word are the word's own letters **in order**,
+which is the exact shape of that rule.
+
+#### ⚠️ The longest word is now SEVEN cells, and the dots are smaller for it
+
+In the letter-by-letter convention — the default — a word costs one cell per
+print letter, so `because` is **seven cells** where nothing before this
+tranche went past four. The `cells-N` rules in the stylesheet run to seven for
+that reason, and the `vw` term for each count is the solution to the row's
+width budget rather than a guess; the arithmetic is written out beside the
+rules.
+
+**Measured in a browser at four viewports** (tablet 1280×800, phone in both
+orientations, a 414px-tall laptop), every count from one to seven fits the row
+in both rounds, nothing overflows, and the gap *inside* a cell stays larger
+than the gap *between* cells at every count — which is the thing that keeps
+the dots reading as groups.
+
+What it costs is dot size, and this is the trade to be aware of:
+
+| | 3-cell word | 7-cell word (`because`) |
+|---|---|---|
+| round 1, tablet 1280×800 | 84px dots | **46px** |
+| round 2, tablet 1280×800 | 130px dots | **59px** |
+
+The print row shrinks the same way, because a word's box is its own ink: on
+the tablet `because` renders at a **135px x-height** against 237px for the
+previous smallest word. On the assessment's print-word card it is **86px**,
+the smallest of the thirty-five, and **no word intrudes on the assessor panel**
+— checked across all cards, the ink starts at x=248 with the panel ending at
+x=199.
+
+None of that is a defect, but a seven-cell word is the smallest the dots have
+ever been in this section, and a longer word would make them smaller again.
+**Measure before adding one.**
 
 #### Round 2's chain
 
@@ -327,7 +423,7 @@ file `carl.png`). It plays through plain `<audio>` rather than
 - `audio/letters/` — the spoken letter **names**, for the sight-word section.
   **Rejected and unused** — see the warning above. Kept so a human recording
   drops straight in.
-- `audio/sight/` — the thirteen high-frequency words, plus the three round-2
+- `audio/sight/` — the thirty-five high-frequency words, plus the three round-2
   prompts: the ask ("Let's read this word together…"), the reveal ("The word
   is") and the send-off ("Good job reading with me!"). **Filenames are the
   lowercased word**, so `I` ships as `i.wav`.
@@ -372,6 +468,17 @@ levers.
 > tools/normalize_external_clips.py SRC_DIR OUT_DIR
 > ```
 >
+> **`tools/make_review_page.py`** writes `_review.html`, a one-page auditioner
+> with a play button per clip and "play all in order" per group, un-approved
+> clips first. It is a tracked tool because the page had been hand-rebuilt
+> three times; the page itself stays gitignored. `--compare because is has as
+> was` puts a side-by-side row at the top, which is how a fricative-final clip
+> gets judged against ones that already passed.
+>
+> ⛔ **Serve the working tree with `Cache-Control: no-store` while auditioning.**
+> A plain `python -m http.server` does not, and this repo's stale-asset trap
+> will have you listening to the OLD wav while debugging the new one.
+>
 > ⚠️ **Its release check only tests PLOSIVES.** A weak final **fricative** —
 > /z/, /s/, /v/, /f/ — passes it silently. That is not theoretical: `was`
 > shipped with its final /z/ at **−30.9 dB**, about 10 dB under `is` and 7
@@ -379,6 +486,20 @@ levers.
 > the tool reported `ok`. Check a fricative-final clip by comparing the level
 > and high-frequency share of its last ~200 ms against an approved clip that
 > ends the same way.
+>
+> The third tranche had exactly one fricative-final word, **`because`**, so
+> that check was run on it: its final 200 ms sits at **−26.4 dB**, inside the
+> −35.7…−24.6 dB spread of the four approved /z/-final clips (`as`, `has`,
+> `is`, `was`), and its energy above 3 kHz is **0.990** of the window —
+> higher than all four (0.941–0.988).
+>
+> ⚠️ **And it is still the weak one.** Judged weak by ear and shipped anyway as
+> good enough, marked `approved_weak_2026-10-30` and left as a to-do for the
+> next round. **That is the useful part of this story:** every measure-only
+> check passed, including the one built for exactly this failure class, and the
+> ear disagreed. The measurements are a filter, not a verdict. When it is
+> redone, measurement will not find the problem — a different seed or a
+> phonetic respelling is the lever, the same move that fixed `was`.
 
 #### Phonetic respellings
 
@@ -849,11 +970,32 @@ a different activity starting rather than a fresh page in the same one.
 
 ### Tests
 
-`node tools/write-tests/run.mjs` — 46 assertions, no framework and no install.
+`node tools/write-tests/run.mjs` — 74 assertions, no framework and no install.
 It loads `index.html` under a small DOM stub and drives **real pointer events
 through the real handlers**, so it covers the things that actually broke while
 this was being written: a `const` used before its declaration, a second finger
 hijacking a stroke, and a wrong-pointer `pointerup` ending one early.
+
+Two suites run: `test_write.mjs` (the playground) and `test_sightwords.mjs`
+(the word bank). The last assertion in the second one is the one worth
+knowing about, because it guards a gap nothing else could see:
+
+> **The word list is JavaScript and the dot sizing is CSS, and nothing
+> connected them.** A word needing a cell count the stylesheet had never heard
+> of would have rendered with no dot sizing at all — on the tablet, not in a
+> test. That assertion walks every word in both conventions, collects every
+> cell count the bank can actually produce, and fails if any of them is
+> missing a `--d` rule in either round. Deleting one `cells-7` line makes it
+> fail by name, which is how it was checked.
+
+It also asserts that `audio/sight/<word>.wav` exists for every word in the
+bank, so adding a word without recording it fails here too.
+
+The deck is checked over **300 shuffles**, not one: that a round-2 card never
+precedes its own round-1 card, that the first card is always round 1, and that
+every word contributes exactly one card of each kind. Both rounds are then
+dealt through the **real `setupItem`**, which is what proves a round-2 card
+lays out no print and a seven-cell word builds seven cells.
 
 ## Assessment
 
@@ -869,7 +1011,7 @@ sitting; the double tap is the same guard the `⌂` uses, for the same reason.
 ### Two kinds of round, and the picker
 
 The double tap no longer starts a round. It opens a **picker** — *Braille
-letters* (26 cards) or *Print words* (13) — and the round begins on the one
+letters* (26 cards) or *Print words* (35) — and the round begins on the one
 chosen. The counts on the buttons are filled from the lists themselves, so they
 cannot drift from what a round actually deals.
 
@@ -884,7 +1026,7 @@ leaves room for a third kind later without another pill in the corner.
 
 ### The visual round — print words, no braille
 
-The same thirteen words the High Frequency Words activity teaches, by reference
+The same thirty-five words the High Frequency Words activity teaches, by reference
 and not by copy: **adding a word to `SIGHT_WORDS` adds it to both.** There is no
 braille cell, nothing to tap, and nothing to get wrong on the screen. The
 student reads the word aloud; the assessor marks it.
@@ -1026,7 +1168,7 @@ moves instead. The pills stay stacked in the strip: side by side they get about
 95px each on a phone, and "Needs More Practice!" does not fit in 95px — it
 would clip, on the one control that must not be misread.
 
-### A round is 26 letters or 13 words, and can end anywhere
+### A round is 26 letters or 35 words, and can end anywhere
 
 The order is reshuffled every round. **Finish** ends it wherever it has got to
 and still gives the snapshot — a short sitting is a real outcome, not an
@@ -1040,7 +1182,7 @@ to copy down, so it is typeset, not taught, and it reads alphabetically rather
 than in the random order they were shown.
 
 **It says which it counted.** After a word round the labels read *words known*
-and `9 of 13 words marked`, because a page whose entire purpose is being copied
+and `9 of 35 words marked`, because a page whose entire purpose is being copied
 onto paper must not leave the reader guessing what the number is out of. The
 list sorts case-insensitively, since a plain sort by code unit would file `I`
 ahead of every lowercase word.

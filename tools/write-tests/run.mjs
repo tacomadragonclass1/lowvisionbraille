@@ -8,7 +8,7 @@
 // loads the WHOLE file under a DOM stub and drives the real handlers. That is
 // what lets it catch load-order faults - a const used before its declaration
 // will throw here exactly as it would in a browser.
-const suites = ['test_write.mjs'];
+const suites = ['test_write.mjs', 'test_sightwords.mjs'];
 let pass = 0, fail = 0;
 for (const s of suites) {
   console.log(`\n${'='.repeat(60)}\n${s}\n${'='.repeat(60)}`);
