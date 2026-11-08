@@ -39,15 +39,20 @@
   }
   .dot.required { border-color:var(--letter); background:#090909; }
   .dot.hit { border-color:var(--trace); background:var(--trace); transform:scale(1.08); }
+  /* z-index 90 is above the splash (80), the menu (70) and every activity and
+     assessment layer, so the button is reachable on every page. It is double-tap
+     like the other adult controls: a stray palm must not flip the screen mode. */
   #fullscreen {
-    position:absolute; z-index:20; left:max(12px,env(safe-area-inset-left));
+    position:absolute; z-index:90; left:max(12px,env(safe-area-inset-left));
     bottom:max(12px,env(safe-area-inset-bottom)); min-height:44px;
     padding:10px 14px; border:1px solid #888; border-radius:8px;
     background:#171717; color:#eee; font:600 15px Arial,sans-serif;
     touch-action:none;
+    transition:background .12s linear, border-color .12s linear;
   }
+  #fullscreen.armed { background:#3f3f3f; border-color:#8f8f8f; color:#fff; }
   #fullscreenStatus { position:absolute; bottom:64px; left:12px; max-width:300px;
-    color:white; background:#000; font:14px Arial,sans-serif; z-index:20; }
+    color:white; background:#000; font:14px Arial,sans-serif; z-index:90; }
   /* Findable by the adult in the room, still not a target for the student. The old
      was 24x20 of #555 on #121212 at 48% opacity - black on black at arm's
      length, and could not be found at all. It is legible grey on a bordered
@@ -913,7 +918,7 @@
   <div id="boxes" aria-hidden="true"></div>
   <div id="sightWord" aria-hidden="true"></div>
   <div id="braille" aria-label="Braille cells"></div>
-  <button id="fullscreen" type="button">⛶ Full screen</button>
+  <button id="fullscreen" type="button" aria-label="Double tap to toggle full screen">⛶ Full screen</button>
   <div id="fullscreenStatus" role="status"></div>
   <button id="home" aria-label="Double tap to return to the activity menu">⌂</button>
   <!-- Directly below the ⌂ and guarded the same way. It is an adult's control,
@@ -2139,15 +2144,15 @@
   }
 
   // ------------------------------------------------------- shape minigame ---
-  // Each shape hands out the next note of a nursery tune when it is touched,
-  // so the melody assembles itself at whatever pace the student works at rather
-  // than demanding they keep time with a track.
+  // Each shape hands out the next note of a tune when it is touched, so the
+  // melody assembles itself at whatever pace the student works at rather than
+  // demanding they keep time with a track.
   //
-  // The tune is how the student knows which activity they are in: tracing (letters and
-  // numbers) always plays Mary, blending (words) always plays Twinkle. It is
-  // the only per-mode cue in the reward round, so do not shuffle them.
-  // Both sit an octave above the braille dot tones, so a reward never muddles
-  // the dot drill.
+  // Six tunes rotate through every round, in any mode (they used to be tied to
+  // the mode - Mary for tracing, Twinkle for blending - until 2026-11-07). Three
+  // nursery tunes sit an octave above the braille dot tones, so a reward never
+  // muddles the dot drill. Three more sit well below them, played in a buzzier
+  // voice (BASS_VOICE) so they still read on a tablet speaker.
   const TUNES = {
     // "Twinkle Twinkle Little Star", first seven notes: C C G G A A G.
     twinkle: [523.25, 523.25, 783.99, 783.99, 880.00, 880.00, 783.99],
@@ -2157,10 +2162,22 @@
     // exactly seven notes. It starts on G and arches, where Mary starts on E
     // and falls and Twinkle starts on a repeated C, so the three are told
     // apart from the first note.
-    london:  [783.99, 880.00, 783.99, 698.46, 659.25, 698.46, 783.99]
+    london:  [783.99, 880.00, 783.99, 698.46, 659.25, 698.46, 783.99],
+    // The bass three, all in the octave below middle C. Seven Nation Army: E E G E D C B.
+    sevenNation: [164.81, 164.81, 196.00, 164.81, 146.83, 130.81, 123.47],
+    // Old MacDonald, G G G D E E D (the D is the one below the G).
+    oldMacDonald: [196.00, 196.00, 196.00, 146.83, 164.81, 164.81, 146.83],
+    // Ode to Joy, E E F G G F E.
+    odeToJoy: [164.81, 164.81, 174.61, 196.00, 196.00, 174.61, 164.81]
   };
-  const MODE_TUNE = { letters:'mary', numbers:'mary', cvc:'twinkle', sight:'london' };
-  // Both phrases end on a long note, so the last shape resolves instead of
+  // Treble and bass alternate, so no two rounds in a row share a register.
+  const TUNE_ORDER = ['twinkle','sevenNation','mary','oldMacDonald','london','odeToJoy'];
+  const BASS_TUNES = new Set(['sevenNation','oldMacDonald','odeToJoy']);
+  // Down here a plain triangle is nearly inaudible on a tablet speaker, so the
+  // bass tunes get a sawtooth (rich in harmonics) at a lower volume.
+  const BASS_VOICE = { type:'sawtooth', vol:.2 };
+  let tuneTurn=Math.floor(Math.random()*TUNE_ORDER.length), mgTuneKey='twinkle';
+  // Every phrase ends on a long note, so the last shape resolves instead of
   // just stopping. Keep this if a longer tune is ever added.
   const LAST_NOTE_DUR = 1.0, NOTE_DUR = .6;
   const ROW_MAX = 7;   // past this a round wraps back to the left for a 2nd row
@@ -2213,7 +2230,8 @@
     brushOff();
     mgOnFinish=onFinish;
     mgStep=0; mgBusy=false;
-    mgTune=TUNES[MODE_TUNE[mode]] || TUNES.twinkle;
+    mgTuneKey=TUNE_ORDER[tuneTurn++ % TUNE_ORDER.length];
+    mgTune=TUNES[mgTuneKey];
     // Shapes and colours are redrawn every round; the note order never is.
     const shapes=sample(SHAPE_NAMES,mgTune.length);
     const colors=sample(SHAPE_COLORS,mgTune.length);
@@ -2265,7 +2283,8 @@
       popped=true; mgBusy=true;
       playPop();
       playTone(mgTune[mgStep],
-               {dur: mgStep===mgTune.length-1 ? LAST_NOTE_DUR : NOTE_DUR, vol:.34});
+               {dur: mgStep===mgTune.length-1 ? LAST_NOTE_DUR : NOTE_DUR, vol:.34,
+                ...(BASS_TUNES.has(mgTuneKey) ? BASS_VOICE : {})});
       el.animate(
         [{transform:'translate(-50%,-50%) scale(1)',opacity:1},
          {transform:'translate(-50%,-50%) scale(1.55)',opacity:0}],
@@ -3074,9 +3093,10 @@
   // mid-advance cannot reach through and set up an item behind the menu.
   let runId=0;
 
-  // How many completed items earn a reward round, per mode. A CVC word is three
-  // cells of work, so it earns one twice as often as a single letter does.
-  const MINIGAME_EVERY = { letters:4, numbers:4, cvc:2, sight:2 };
+  // How many completed items earn a reward round, per mode. Every 6 in all four
+  // since 2026-11-06. CVC and sight were 2 (letters and numbers 4), which read
+  // as far too frequent in use.
+  const MINIGAME_EVERY = { letters:6, numbers:6, cvc:6, sight:6 };
 
   // How many completed TASKS earn a brain break. A task is any finished piece
   // of work, and a reward round counts as one of them - so the break is paced
@@ -3242,7 +3262,7 @@
   const fullscreenBtn=document.getElementById('fullscreen');
   const fullscreenStatus=document.getElementById('fullscreenStatus');
   const isFullscreen=()=>Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-  fullscreenBtn.addEventListener('click',async()=>{
+  const toggleFullscreen=async()=>{
     fullscreenStatus.textContent='';
     try {
       if (isFullscreen()) {
@@ -3256,7 +3276,8 @@
     } catch {
       fullscreenStatus.textContent='Full screen is unavailable here. Open this file directly in your browser and try again.';
     }
-  });
+  };
+  armDoubleTap(fullscreenBtn,toggleFullscreen);
   function fullscreenChanged() {
     fullscreenBtn.textContent=isFullscreen() ? '⛶ Exit full screen' : '⛶ Full screen';
     requestAnimationFrame(resizeCanvas);

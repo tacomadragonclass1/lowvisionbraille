@@ -365,7 +365,7 @@ and the only glyph in `PATHS` that is not lowercase.
 | A sight word completed, round 1 | The whole word, spoken |
 | A sight word completed, round 2 | Five seconds of silence, "The word is …", the word, "Good job reading with me!", then the framed word holds and fades |
 | A braille dot touched in the Assessment section | That dot's tone — but **only** if it is the next one in reading order |
-| Shape touched in the minigame | A pop, then the next note of that mode's tune |
+| Shape touched in the minigame | A pop, then the next note of the round's tune |
 | Every 6th completed task | A brain break: Carl's dance |
 | BOOM touched in the Rhythm section | A kick drum |
 | CLAP touched in the Rhythm section | A clap |
@@ -543,21 +543,24 @@ A reward round of **seven shapes, seven notes.** One bright shape appears at a
 time, left to right; touching it pops it and plays the next note of a nursery
 tune, and by the last shape the phrase has completed itself.
 
-**Each section has its own tune, and that is the point.** It is the only cue in
-the reward round that says which activity the student is in:
+**Six tunes rotate through every round, in any mode.** They alternate treble
+and bass:
 
-| Mode | Tune | Notes |
+| Tune | Notes | Register |
 | --- | --- | --- |
-| Letters | Mary Had a Little Lamb | E D C D E E E |
-| Numbers | Mary Had a Little Lamb | E D C D E E E |
-| Words (CVC) | Twinkle Twinkle Little Star | C C G G A A G |
-| High Frequency Words | London Bridge Is Falling Down | G A G F E F G |
+| Twinkle Twinkle Little Star | C C G G A A G | treble |
+| Seven Nation Army | E E G E D C B | bass |
+| Mary Had a Little Lamb | E D C D E E E | treble |
+| Old MacDonald | G G G D E E D | bass |
+| London Bridge Is Falling Down | G A G F E F G | treble |
+| Ode to Joy | E E F G G F E | bass |
 
-Numbers shares the tracing tune because it *is* a tracing activity — a digit is
-traced exactly the way a letter is. Both phrases sit an octave above the braille
-dot tones, so a reward never muddles the dot drill, and both end on a longer
-note (`LAST_NOTE_DUR`) so the seventh shape resolves instead of just stopping.
-Don't shuffle which mode gets which tune.
+The treble tunes sit an octave above the braille dot tones, so a reward never
+muddles the dot drill. The bass tunes sit well below them and use a sawtooth
+voice (`BASS_VOICE`), because a plain triangle that low is nearly inaudible on a
+tablet speaker. Every phrase ends on a longer note (`LAST_NOTE_DUR`) so the
+seventh shape resolves instead of just stopping. The tune used to be tied to the
+mode; since 2026-11-07 it is not.
 
 It is deliberately **self-paced, not a rhythm game.** A note is handed out one
 touch at a time, so the tune assembles at whatever speed the student works at rather
