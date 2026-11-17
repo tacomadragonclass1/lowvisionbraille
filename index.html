@@ -629,26 +629,31 @@
   /* The picker, inside the menu. It REPLACES the card row rather than sitting
      under it like the vowel panel does - 26 keys under seven cards will not
      fit a tablet's height. */
+  /* display:flex only when shown - the [hidden] rule above must still win. */
+  #chooserPrint:not([hidden]) { display:flex; }
   #chooserPrint { flex-direction:column; align-items:center; gap:clamp(10px,2.4vh,22px); }
   #chooserPrint .chooserLabel { margin-bottom:0; }
   #printSlots { display:flex; gap:clamp(10px,2vw,20px); }
   .pSlot {
-    width:clamp(64px,12vmin,110px); height:clamp(64px,12vmin,110px); padding:6px;
+    width:clamp(64px,14vmin,130px); height:clamp(64px,14vmin,130px); padding:8px;
     border:3px dashed #5a5a5a; border-radius:14px; background:#111; color:#ffd60a;
-    display:grid; place-items:center; touch-action:none;
+    display:block; touch-action:none;   /* block, not grid: the svg's height:100% needs a definite parent */
   }
   .pSlot.filled { border-style:solid; border-color:#ffd60a; }
   #printGrid {
-    --pk:clamp(40px,min(8.4vw,9.6vh),78px);
+    --pk:clamp(40px,min(9.6vw,13vh),120px);
     display:grid; grid-template-columns:repeat(9,var(--pk)); gap:clamp(5px,1vmin,10px);
   }
-  @media (orientation:portrait) { #printGrid { grid-template-columns:repeat(6,var(--pk)); --pk:clamp(40px,13vw,78px); } }
+  @media (orientation:portrait) { #printGrid { grid-template-columns:repeat(6,var(--pk)); --pk:clamp(40px,min(13vw,8vh),120px); } }
   .plKey {
-    width:var(--pk); height:var(--pk); padding:4px; border:2px solid #4a4a4a;
-    border-radius:10px; background:#111; color:#fff; display:grid; place-items:center;
+    width:var(--pk); height:var(--pk); padding:calc(var(--pk)*.1); border:2px solid #4a4a4a;
+    border-radius:10px; background:#111; color:#fff; display:block;
     touch-action:none;
   }
-  .plKey svg, .pSlot svg { display:block; height:100%; width:auto; max-width:100%; overflow:visible; }
+  /* Fill the key exactly. Every key's viewBox is the SAME size (see
+     printKeyArt), so filling the box keeps one shared scale: an l is tall, an
+     a is x-height, and nothing grows past its key. */
+  .plKey svg, .pSlot svg { display:block; width:100%; height:100%; overflow:visible; }
   .plKey svg path, .pSlot svg path {
     fill:none; stroke:currentColor; stroke-width:12; stroke-linecap:round; stroke-linejoin:round;
   }
@@ -4232,16 +4237,21 @@
   // A letter drawn on the FULL ascender-to-descender range, so in the picker
   // an `a` is x-height and an `l` is tall - the letters look like print, not
   // like a row of equal-height icons.
-  let printKeyRange=null;   // [top, bottom] over the whole alphabet, SVG y-down
+  // Every key gets the SAME viewBox size - the tallest range by the widest
+  // letter, each letter centred in it - so the CSS can simply fill the key and
+  // all 26 share one scale. (Sizing each svg from its own width blew the thin
+  // letters, i j l r, up past their keys and across the grid.)
+  let printKeyRange=null;   // [top, bottom, width] over the whole alphabet, SVG y-down
   function printKeyArt(ch) {
     const svg=glyphWord(ch);
     if (!svg) return null;
     if (!printKeyRange) printKeyRange=[
       Math.min(...PRINT_KEYS.map(c=>glyphBounds(c).minY))-PAD,
-      Math.max(...PRINT_KEYS.map(c=>glyphBounds(c).maxY))+PAD];
+      Math.max(...PRINT_KEYS.map(c=>glyphBounds(c).maxY))+PAD,
+      Math.max(...PRINT_KEYS.map(c=>{ const g=glyphBounds(c); return g.maxX-g.minX; }))+PAD*2];
     const vb=(svg.getAttribute('viewBox')||'0 0 1 1').split(/\s+/).map(Number);
-    const [t,b]=printKeyRange;
-    svg.setAttribute('viewBox',`${vb[0]} ${t} ${vb[2]} ${b-t}`);
+    const [t,b,w]=printKeyRange;
+    svg.setAttribute('viewBox',`${vb[0]+vb[2]/2-w/2} ${t} ${w} ${b-t}`);
     return svg;
   }
   for (const ch of PRINT_KEYS) {
