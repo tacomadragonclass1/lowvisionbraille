@@ -9,7 +9,7 @@ and `img/` folders next to it — **copy all three or nothing works.**
 
 Designed for a tablet in landscape, full screen, held in two hands.
 
-## The six activities
+## The seven activities
 
 After the *Tap to start* splash, an adult picks one. There is deliberately **no
 mode button on the activity screen** — a student would hit it, and would hit it
@@ -23,8 +23,9 @@ in the middle of a word.
 | **High Frequency Words** `the` | — | one cell per letter, or the UEB form | the letter names, then the word |
 | **Rhythm** `●■` | — | — | plays a beat; the student plays it back |
 | **Write** | free, anywhere | — | the brush, under the stroke |
+| **Print Letter Tracing** | 3 chosen letters | — | nothing but the brush |
 
-There is a seventh screen, **Assessment**, which is deliberately *not* on this
+There is an eighth screen, **Assessment**, which is deliberately *not* on this
 menu — it is an adult's control in the corner. See *Assessment*.
 
 Every letter sample on a menu card is **drawn from `PATHS`, not set in a font**
@@ -52,7 +53,8 @@ Words** asks which braille convention to use.
 
 Unchanged from the original app. A large letter guide is traced with a finger
 while the braille cell lights the dots that letter needs. **Both** are required
-to advance. New: finishing the cell now plays that letter's sound — `/b/`, not
+to advance, and the tracing has to be complete — every stroke, end to end (see
+*Tracing*). New: finishing the cell now plays that letter's sound — `/b/`, not
 "bee".
 
 ### CVC
@@ -95,6 +97,46 @@ A white page, a finger or a stylus, and ink that **changes colour every time
 you lift off**. Hold **two fingers** down to bring up an eraser and wipe. The
 tracing brush plays under the stroke. Nothing is taught, nothing is scored,
 nothing advances, and there is no music and no brain break.
+
+### Print Letter Tracing
+
+The braille Letters tracing with the braille taken away, on a white page. The
+card opens a picker in place of the menu: **Pick 3 letters** — tapping a letter
+fills the next empty slot, tapping a filled slot empties it, a letter may be
+picked more than once (`b d b`), and **Start** wakes up once all three are set.
+**Back** returns to the cards.
+
+The three letters are drawn **as large as the screen allows**, sharing one scale
+and one baseline. They are laid out once as a row and once as a column, and
+whichever gives the bigger letters wins — a row on a landscape tablet, a column
+for short letters on a phone held upright. The space at the top for the ⌂ and
+at the bottom for the pill is kept clear.
+
+- **Same tracing rule** as Letters and Numbers — the code is shared
+  (`strokeTraced()`, `traceHalo()`), so the two can never drift. Every stroke of
+  every letter, end to end; the i/j dot is a touch on the dot. The letters can
+  be traced in any order. See *Tracing*.
+- **No letter sounds at all.** No phoneme, no name, no clip of any kind — only
+  the brush, which plays while the finger is on the guide.
+- When all three are traced there is a short beat, then the **shape minigame**
+  (after EVERY round, not every sixth item - its tune comes from the same
+  rotation as every other mode), then **the same three letters come back** on a
+  clean page. No brain break.
+- **One ink colour per round.** Every stroke in a round is the same colour, and
+  the colour changes when a new round starts — after the minigame, or after new
+  letters are picked. That is the opposite of Write, where every stroke is a
+  new colour: here the colour marks the attempt, not the stroke. Inks come from
+  `WRITE_INK`, all of which clear WCAG AA on white. The guide is a mid grey,
+  `PRINT_GUIDE`.
+- **Pick new letters** is a pill at the bottom centre (bottom right on a narrow
+  screen, clear of the Full screen button), guarded by the same
+  double tap as the ⌂ — the first tap only arms it. It brings the picker back
+  with empty slots; **Back** returns to the letters already on screen. A round
+  that had just finished when the picker opened skips its minigame and starts
+  fresh.
+
+`?mode=print&letters=bdp` bookmarks straight in; without three valid letters it
+opens the picker.
 
 ### High Frequency Words
 
@@ -973,14 +1015,16 @@ a different activity starting rather than a fresh page in the same one.
 
 ### Tests
 
-`node tools/write-tests/run.mjs` — 74 assertions, no framework and no install.
+`node tools/write-tests/run.mjs` — 139 assertions, no framework and no install.
 It loads `index.html` under a small DOM stub and drives **real pointer events
 through the real handlers**, so it covers the things that actually broke while
 this was being written: a `const` used before its declaration, a second finger
 hijacking a stroke, and a wrong-pointer `pointerup` ending one early.
 
-Two suites run: `test_write.mjs` (the playground) and `test_sightwords.mjs`
-(the word bank). The last assertion in the second one is the one worth
+Four suites run: `test_write.mjs` (the playground), `test_sightwords.mjs`
+(the word bank), `test_trace.mjs` (what counts as a finished trace — see
+*Tracing*) and `test_print.mjs` (Print Letter Tracing: the picker, the shared
+rule, the round, ink per round, the pill, and that no clip is ever played). The last assertion in the second one is the one worth
 knowing about, because it guards a gap nothing else could see:
 
 > **The word list is JavaScript and the dot sizing is CSS, and nothing
@@ -1219,10 +1263,30 @@ and simply too quiet in the room.
 
 ## Tracing
 
-Tracing is deliberately loose, and this is load-bearing: a generous halo around
-the thick guide counts, and a stroke is satisfied at 70% coverage (18% for the
-dots on `i` and `j`). Do not tighten it to look rigorous — it is a motor
-accessibility allowance, not a bug.
+Every stroke of the letter or digit has to be traced **completely, end to
+end**, before the item can advance — the braille cell being done is not enough
+on its own. Two dials at the top of the coverage code set this:
+
+- `TRACE_COVERAGE = 1` — the fraction of each stroke that must be covered.
+- `TRACE_HALO = .75` — how far the finger may be from the centerline, in guide
+  widths (floor `TRACE_HALO_MIN`, 24px). The guide is one guide width thick, so
+  this is "on the ink, or a quarter of a guide width beside it".
+
+The dot on `i` and `j` has nothing to trace: a touch counts, but it has to land
+on the dot. Direction and stroke order are not checked, and coverage builds up
+across lift-offs, so a missed bit can be filled in afterwards.
+
+**The one rule that must survive any future tuning:** the halo stays wider than
+half the marker the student lays down (0.76 guide widths wide). That makes "the
+guide looks painted over" imply "it has counted", so a student is never stuck on
+a letter that looks finished. `tools/write-tests/test_trace.mjs` asserts it.
+
+History: until 2026-11-16 this was deliberately loose — 70% of each stroke
+inside a halo of 42px or 10.5% of the screen's short side, whichever was
+larger (more than a guide width; how much more depended on the letter's size), 18% for the i/j dot — as a motor-accessibility
+allowance. In classroom use that let a rough swipe near the letter advance, and
+it was tightened on the owner's call. If it proves too hard, loosen
+`TRACE_HALO` first; coverage below 1 brings back skipping the ends of strokes.
 
 Digit centerlines live in the same `PATHS` table as the letters, in the same
 space (baseline y=70, x-height top y=0, ascender top y=-30), and are drawn in
@@ -1234,6 +1298,8 @@ school-print writing order.
   activity menu. `?mode=words&vowel=i` locks one vowel family.
 - `?letter=k` — lock to a single letter for targeted practice.
 - `?mode=write` (or `?mode=draw`) opens the writing playground.
+- `?mode=print&letters=bdp` (or `?mode=trace`) opens Print Letter Tracing on
+  those three letters; without them it opens the letter picker.
 - `?mode=rhythm` opens the Rhythm section; `?rtask=N` starts partway down its
   pattern list; `?rhythm=1` previews its brain-break shape; `?break=carl` /
   `?break=rhythm` pins which break activity the session uses. See *The rhythm
@@ -1302,7 +1368,7 @@ eye or ear:
 | Reward frequency | `MINIGAME_EVERY` |
 | Brain break frequency | `BRAIN_BREAK_EVERY` |
 | Double-tap window on ⌂ / × | the `650` in their `pointerup` handlers |
-| Which tune each mode gets | `MODE_TUNE` / `TUNES` |
+| The minigame tunes and their rotation | `TUNES` / `TUNE_ORDER` |
 | How big Carl is | `--carlH` |
 | How high Carl hops, how fast | `carlHop` keyframes |
 | How far backgrounded cells recede | `.cells-2 .cell` / `.cells-3 .cell` scale and opacity |
@@ -1322,5 +1388,9 @@ eye or ear:
 | Whether it makes any sound | `WRITE_BRUSH` — **on** since 2026-10-28 |
 | How big the eraser is | `WRITE_ERASER_MULT` |
 | What still counts as a two-finger gesture | `WRITE_ERASE_GRACE`, `WRITE_ERASE_SLOP` |
+| How close a trace must be, and how much of it | `TRACE_HALO` / `TRACE_HALO_MIN`, `TRACE_COVERAGE` |
+| Print Letter Tracing's guide colour | `PRINT_GUIDE` |
+| Space between its three letters | `PRINT_GAP` (glyph units) |
+| Beat between its last stroke and the minigame | `PRINT_DONE_BEAT` |
 
 The Rhythm section has its own table of dials — see *The rhythm section · Tuning dials*.

@@ -591,6 +591,83 @@
      hiding the ink it is about to take. */
   .eRing { fill:rgba(16,20,26,.055); stroke:#15181d; stroke-width:3; }
 
+  /* ------------------------------------------------- print letter tracing ---
+     Three chosen letters, as big as the screen allows, traced on a white page
+     under the SAME rules as the braille Letters section. No braille, no letter
+     sounds - only the brush. White like Write, because it is the same job:
+     practising print.
+
+     z-index 26, deliberately BELOW the reward round (30) rather than up with
+     Write (52): a finished round hands over to the minigame, and the minigame
+     has to land on top of this page without the page having to hide itself.
+     Still above #app's own content and the full-screen button (20). */
+  #print {
+    display:none; position:absolute; inset:0; z-index:26; background:#ffffff;
+    font-family:Andika,'Century Gothic',ui-rounded,'Segoe UI',Arial,sans-serif;
+  }
+  #print.on { display:block; }
+  #printCanvas { display:block; width:100%; height:100%; touch-action:none; }
+  /* The adult's way to change the letters. Bottom centre, double-tap guarded
+     like every other adult control, and quiet - it must not be the brightest
+     thing on a page the student is staring at. */
+  #printNew {
+    position:absolute; z-index:27; left:50%; transform:translateX(-50%);
+    bottom:max(8px,env(safe-area-inset-bottom));
+    min-height:34px; padding:6px 18px;
+    border:1px solid rgba(16,20,26,.22); border-radius:999px;
+    background:rgba(255,255,255,.9); color:rgba(16,20,26,.55);
+    font:600 14px/1.2 Arial,Helvetica,sans-serif; letter-spacing:.02em;
+    white-space:nowrap; touch-action:none;
+    transition:background .12s linear, color .12s linear, border-color .12s linear;
+  }
+  /* The Full screen button sits bottom-LEFT on every page now (z 90). On a
+     narrow screen a centred pill would run under it, so it moves right. */
+  @media (max-width:560px) {
+    #printNew { left:auto; right:max(8px,env(safe-area-inset-right)); transform:none; }
+  }
+  #printNew.armed { background:rgba(16,20,26,.10); color:#15181d; border-color:rgba(16,20,26,.5); }
+  /* The picker, inside the menu. It REPLACES the card row rather than sitting
+     under it like the vowel panel does - 26 keys under seven cards will not
+     fit a tablet's height. */
+  #chooserPrint { flex-direction:column; align-items:center; gap:clamp(10px,2.4vh,22px); }
+  #chooserPrint .chooserLabel { margin-bottom:0; }
+  #printSlots { display:flex; gap:clamp(10px,2vw,20px); }
+  .pSlot {
+    width:clamp(64px,12vmin,110px); height:clamp(64px,12vmin,110px); padding:6px;
+    border:3px dashed #5a5a5a; border-radius:14px; background:#111; color:#ffd60a;
+    display:grid; place-items:center; touch-action:none;
+  }
+  .pSlot.filled { border-style:solid; border-color:#ffd60a; }
+  #printGrid {
+    --pk:clamp(40px,min(8.4vw,9.6vh),78px);
+    display:grid; grid-template-columns:repeat(9,var(--pk)); gap:clamp(5px,1vmin,10px);
+  }
+  @media (orientation:portrait) { #printGrid { grid-template-columns:repeat(6,var(--pk)); --pk:clamp(40px,13vw,78px); } }
+  .plKey {
+    width:var(--pk); height:var(--pk); padding:4px; border:2px solid #4a4a4a;
+    border-radius:10px; background:#111; color:#fff; display:grid; place-items:center;
+    touch-action:none;
+  }
+  .plKey svg, .pSlot svg { display:block; height:100%; width:auto; max-width:100%; overflow:visible; }
+  .plKey svg path, .pSlot svg path {
+    fill:none; stroke:currentColor; stroke-width:12; stroke-linecap:round; stroke-linejoin:round;
+  }
+  #printBtns { display:flex; gap:clamp(12px,3vw,30px); }
+  .pBtn {
+    min-width:clamp(110px,18vw,180px); min-height:48px; padding:8px 20px;
+    border:3px solid #4a4a4a; border-radius:14px; background:#111; color:#cfcfcf;
+    font:600 clamp(16px,2.8vh,22px)/1 Arial,sans-serif; touch-action:none;
+  }
+  /* Seven cards on a phone held upright wrap to four rows, and at the
+     tablet padding the fourth row (the Print card, alone) ran off the bottom.
+     Tighter cards on narrow portrait screens only - tablets are untouched. */
+  @media (orientation:portrait) and (max-width:520px) {
+    #chooserModes .card { padding:10px 8px; gap:6px; }
+    #chooserModes { gap:10px; }
+  }
+  #printGo:not([disabled]) { border-color:#30d158; color:#30d158; }
+  #printGo[disabled] { opacity:.35; }
+
   /* ---------------------------------------------------- assessment section ---
      Flipped contrast: white ground, dark dots. That is not decoration. It is
      the one signal that works at a glance and from across the room for
@@ -982,6 +1059,13 @@
     </div>
     <button id="writeClear" type="button">Double tap to clear</button>
   </div>
+  <!-- Print letter tracing. Its own canvas, like Write, but this one DOES
+       repaint from glyph geometry every move - it is the tracing canvas's job
+       on a white page, three letters at a time. -->
+  <div id="print" aria-hidden="true">
+    <canvas id="printCanvas"></canvas>
+    <button id="printNew" type="button">Pick new letters</button>
+  </div>
   <div id="assess" aria-hidden="true">
     <!-- The assessor's panel. Faint, small and jammed in the corner, for the
          same reason the ⌂ is: it is not for the student, and it must not
@@ -1049,6 +1133,23 @@
         <button class="card" type="button" data-mode="sight" data-sample="the"><b></b><span>High Frequency Words</span></button>
         <button class="card" type="button" data-mode="rhythm"><b class="sym">●■</b><span>Rhythm</span><em>under construction</em></button>
         <button class="card" type="button" data-mode="write"><b class="sym" id="writeCardSample"></b><span>Write</span></button>
+        <button class="card" type="button" data-mode="print"><b class="sym" id="printCardSample"></b><span>Print Letter Tracing</span></button>
+      </div>
+      <!-- Which three letters to trace. Tapping a letter fills the next empty
+           slot; tapping a filled slot empties it. A letter may be picked more
+           than once (b d b is a real practice set). -->
+      <div id="chooserPrint" hidden>
+        <div class="chooserLabel">Pick 3 letters</div>
+        <div id="printSlots">
+          <button class="pSlot" type="button" data-slot="0"></button>
+          <button class="pSlot" type="button" data-slot="1"></button>
+          <button class="pSlot" type="button" data-slot="2"></button>
+        </div>
+        <div id="printGrid"></div>
+        <div id="printBtns">
+          <button id="printBack" class="pBtn" type="button">Back</button>
+          <button id="printGo" class="pBtn" type="button" disabled>Start</button>
+        </div>
       </div>
       <div class="chooserRow" id="chooserVowels" hidden>
         <div class="chooserLabel">Which vowel?</div>
@@ -2015,9 +2116,29 @@
     return [ev.clientX-r.left, ev.clientY-r.top];
   }
 
-  // Deliberately generous motor-accessibility halo around the thick guide.
-  function coverageRadius() {
-    return Math.max(42,Math.min(canvas.clientWidth,canvas.clientHeight)*.105);
+  // How close the finger has to be for a point of the guide to count, and how
+  // much of each stroke has to be covered. Tightened 2026-11-16 on the owner's
+  // call: tracing used to pass at 70% of each stroke inside a halo of more than a
+  // guide width, which let a rough swipe near the letter advance. Now the WHOLE
+  // stroke has to be traced, end to end, with the finger on or just beside the
+  // ink. These are the two dials.
+  //
+  // The halo (0.75 guide widths from the centerline) is deliberately WIDER than
+  // half the marker the student lays down (0.38): if the guide LOOKS painted
+  // over, it has counted. A child must never be stuck on a letter that looks
+  // finished - the forgiveness only ever runs the other way.
+  const TRACE_HALO = .75;        // x guide width, measured from the centerline
+  const TRACE_HALO_MIN = 24;     // px floor, for a very small screen
+  const TRACE_COVERAGE = 1;      // fraction of every stroke that must be covered
+  function traceHalo(guideWidth) { return Math.max(TRACE_HALO_MIN,guideWidth*TRACE_HALO); }
+  function coverageRadius() { return traceHalo(currentTransform().guideWidth); }
+  // THE rule for "this stroke is traced", shared by the braille Letters and
+  // Numbers canvas and by Print Letter Tracing, so the two can never drift.
+  // For i/j, the first disconnected stroke is the dot: touching it counts (it
+  // has nothing to trace), but the touch has to land on it - same halo.
+  function strokeTraced(ch,strokeIndex,bits) {
+    if ((ch==='i'||ch==='j') && strokeIndex===0) return bits.some(Boolean);
+    return bits.filter(Boolean).length/bits.length >= TRACE_COVERAGE;
   }
 
   // Is the finger on the guide right now? Drives the brush, and is intentionally
@@ -2043,13 +2164,8 @@
         if (dx*dx+dy*dy<=r2) coverage[s][i]=true;
       }
     }
-    // Every separately defined stroke has to be substantially covered.
-    // For i/j, the first disconnected stroke is the dot: a deliberate touch counts; the stem still needs tracing.
-    traceDone=coverage.every((bits,strokeIndex)=>{
-      const ratio=bits.filter(Boolean).length/bits.length;
-      const isDot=(glyph==='i'||glyph==='j') && strokeIndex===0;
-      return ratio >= (isDot ? .18 : .70);
-    });
+    // Every separately defined stroke has to be traced completely.
+    traceDone=coverage.every((bits,strokeIndex)=>strokeTraced(glyph,strokeIndex,bits));
     checkCompletion();
   }
 
@@ -3287,7 +3403,7 @@
   // Both canvases follow the viewport. The write page REPAINTS from its stored
   // strokes on resize rather than losing them - a tablet rotating mid-session
   // must not wipe what someone has written.
-  function resizeAll() { resizeCanvas(); if (writeActive()) writeResize(); }
+  function resizeAll() { resizeCanvas(); if (writeActive()) writeResize(); if (printActive()) printResize(); }
   window.addEventListener('resize',resizeAll);
   window.visualViewport?.addEventListener('resize',resizeAll);
   new ResizeObserver(resizeCanvas).observe(document.getElementById('traceWrap'));
@@ -3298,6 +3414,9 @@
   // the time it first fires.
   new ResizeObserver(()=>{ if (writeActive()) writeResize(); })
     .observe(document.getElementById('write'));
+  // Same TDZ reason as above: getElementById, not the printEl const.
+  new ResizeObserver(()=>{ if (printActive()) printResize(); })
+    .observe(document.getElementById('print'));
   window.addEventListener('orientationchange',()=>setTimeout(resizeAll,120));
 
   // ---------------------------------------------------------- tap to start ---
@@ -3433,20 +3552,23 @@
       vowelPanel.hidden=true; sightPanel.hidden=true;
       if (picked==='cvc') { vowelPanel.hidden=false; return; }
       if (picked==='sight') { sightPanel.hidden=false; return; }
+      if (picked==='print') { openPrintPicker('menu'); return; }
       start(picked,null);
     });
   }
 
-  function start(picked,vowel,convention) {
+  function start(picked,vowel,convention,letters) {
     runId++;
     setInputLocked(false);
     if (assessActive()) endAssessment();
     if (writeActive()) endWrite();
+    if (printActive()) endPrint();
+    closePrintPicker();
     mode=picked; cvcVowel=vowel;
     sightConvention = convention==='ueb' ? 'ueb' : 'grapheme';
     sightRound=1;
     document.body.classList.remove('mode-letters','mode-cvc','mode-numbers',
-                                   'mode-sight','mode-rhythm','mode-write','round2');
+                                   'mode-sight','mode-rhythm','mode-write','mode-print','round2');
     document.body.classList.add('mode-'+mode);
     chooser.classList.remove('on');
     homeBtn.hidden=false;
@@ -3466,6 +3588,14 @@
       boxesEl.textContent=''; sightWordEl.textContent=''; brailleEl.textContent='';
       cells=[]; order=[]; word=null; glyph=null; traceDone=true;
       startWrite();
+      return;
+    }
+    // Same shape again: it owns the screen, and runs its own three-letter
+    // round rather than the braille item pipeline.
+    if (mode==='print') {
+      boxesEl.textContent=''; sightWordEl.textContent=''; brailleEl.textContent='';
+      cells=[]; order=[]; word=null; glyph=null; traceDone=true;
+      startPrint(letters);
       return;
     }
     buildOrder();
@@ -3517,6 +3647,8 @@
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
     if (assessActive()) endAssessment();
     if (writeActive()) endWrite();
+    if (printActive()) endPrint();
+    closePrintPicker();
     vowelPanel.hidden=true;
     sightPanel.hidden=true;
     openChooser();
@@ -3840,6 +3972,367 @@
     wStrokes=[];
     try { wctx.setTransform(1,0,0,1,0,0); wctx.clearRect(0,0,writeCanvas.width,writeCanvas.height); } catch {}
   }
+
+  /* ---------------------------------------------- print letter tracing ---
+     Three letters, picked by the adult, traced on a white page. It is the
+     braille Letters tracing with the braille taken away: the SAME completion
+     rule (strokeTraced), the SAME halo (traceHalo), the same guide-to-marker
+     proportions and the same brush - and no letter sounds at all, only the
+     brush. When all three are traced the reward round plays, then the same
+     three come back on a clean page in a new ink.
+
+     Decisions worth keeping:
+
+     - All three letters are on screen at once and may be traced in any
+       order. They share one scale and one baseline, so an ascender really is
+       taller than an x-height letter, exactly as on the CVC boxes.
+
+     - As big as the screen allows. The three are laid out once in a ROW and
+       once in a COLUMN and whichever gives the larger scale wins: a row on a
+       landscape tablet, a column on a phone held upright.
+
+     - The ink is ONE colour for a whole round and changes when a new round
+       starts (after the minigame, or after new letters are picked). That is
+       the opposite of Write, where every stroke changes colour; here the
+       colour marks the attempt, not the stroke.
+
+     - Marker segments are stored in GLYPH units, not pixels, so a rotation
+       re-lays the page out and the student's work stays on the letters. */
+
+  const PRINT_KEYS  = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  const PRINT_GAP   = 30;        // glyph units between letters (3 guide widths)
+  const PRINT_GUIDE = '#a8a8a8'; // the guide on white; the ink is WRITE_INK. Tuning dial.
+  const PRINT_DONE_BEAT = 600;   // ms between the last stroke and the minigame
+
+  const printEl     = document.getElementById('print');
+  const printCanvas = document.getElementById('printCanvas');
+  const printNew    = document.getElementById('printNew');
+  const pctx = printCanvas.getContext('2d');
+  const chooserModesRow = document.getElementById('chooserModes');
+  const printPanel  = document.getElementById('chooserPrint');
+  const printGrid   = document.getElementById('printGrid');
+  const printSlotEls= [...printPanel.querySelectorAll('.pSlot')];
+  const printGo     = document.getElementById('printGo');
+  const printBack   = document.getElementById('printBack');
+
+  let pOn=false;
+  let pLetters=[];         // the three chosen letters, in screen order
+  let pInk=-1;             // index into WRITE_INK; advances once per ROUND
+  let pCoverage=[];        // [letter][stroke][sample] -> covered?
+  let pSegments=[];        // marker strokes, in glyph units: [[x,y],..]
+  let pLayout=null;        // {scale, gw, ox, oy, places:[{dx,dy}]}
+  let pDrawing=false, pPointer=null, pLastScreen=null, pLastT=0;
+  let pAdvancing=false;
+  let pickFrom='menu';     // where the picker was opened from: 'menu' | 'section'
+  let pickSlots=[null,null,null];
+
+  function printActive() { return pOn; }
+
+  // ---- layout ---------------------------------------------------------------
+  // Glyph units are GLYPHS' own space (y up). Each letter is offset by its
+  // place; the whole set is then scaled and centred into the free area.
+  function printLayout() {
+    const w=printCanvas.clientWidth, h=printCanvas.clientHeight;
+    if (!pLetters.length || !w || !h) return null;
+    const bs=pLetters.map(ch=>GLYPH_BOUNDS[ch]);
+    const minY=Math.min(...bs.map(b=>b.minY)), maxY=Math.max(...bs.map(b=>b.maxY));
+    const lineH=maxY-minY, widths=bs.map(b=>Math.max(1,b.maxX-b.minX));
+    const strokeUnits=10;
+    // Room for the ⌂ and the assess pill top-left, and the pill at the bottom.
+    const top=64, bottom=60, side=Math.max(20,w*.03);
+    const aw=Math.max(20,w-2*side), ah=Math.max(20,h-top-bottom);
+    const rowW=widths.reduce((a,b)=>a+b,0)+PRINT_GAP*(pLetters.length-1);
+    const rowScale=Math.min(aw/(rowW+strokeUnits), ah/(lineH+strokeUnits));
+    const colW=Math.max(...widths), colH=lineH*pLetters.length+PRINT_GAP*(pLetters.length-1);
+    const colScale=Math.min(aw/(colW+strokeUnits), ah/(colH+strokeUnits));
+    const asRow=rowScale>=colScale;
+    const scale=Math.max(.05,asRow ? rowScale : colScale);
+    // Places: where each letter's own origin lands, in glyph units, inside a
+    // set whose bounding box is [0,totalW] x [-(totalH), 0] (y up, top = 0).
+    const places=[]; let cursor=0;
+    pLetters.forEach((ch,i)=>{
+      const b=bs[i];
+      if (asRow) { places.push({dx:cursor-b.minX, dy:-maxY}); cursor+=widths[i]+PRINT_GAP; }
+      else {
+        places.push({dx:(colW-widths[i])/2-b.minX, dy:-maxY-i*(lineH+PRINT_GAP)});
+      }
+    });
+    const totalW=asRow ? rowW : colW, totalH=asRow ? lineH : colH;
+    const ox=side+(aw-totalW*scale)/2, oy=top+(ah-totalH*scale)/2;
+    return { scale, gw:strokeUnits*scale, ox, oy, places, asRow };
+  }
+  // glyph units of letter i -> screen px
+  function pToScreen(i,[x,y],L=pLayout) {
+    const pl=L.places[i];
+    return [L.ox+(x+pl.dx)*L.scale, L.oy-(y+pl.dy)*L.scale];
+  }
+  // screen px -> SET units (letter-independent), for storing the marker
+  function pFromScreen([x,y],L=pLayout) { return [(x-L.ox)/L.scale, -(y-L.oy)/L.scale]; }
+  function pSetToScreen([x,y],L=pLayout) { return [L.ox+x*L.scale, L.oy-y*L.scale]; }
+  function pGeometry() {
+    return pLetters.map((ch,i)=>GLYPHS[ch].map(stroke=>stroke.map(p=>pToScreen(i,p))));
+  }
+
+  function printResize() {
+    const r=printCanvas.getBoundingClientRect();
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    printCanvas.width=Math.max(1,Math.round(r.width*dpr));
+    printCanvas.height=Math.max(1,Math.round(r.height*dpr));
+    pctx.setTransform(dpr,0,0,dpr,0,0);
+    printStop();
+    pLayout=printLayout();
+    printDraw();
+  }
+
+  function pPolyline(points,color,width) {
+    if (!points.length) return;
+    pctx.strokeStyle=color; pctx.lineWidth=width;
+    pctx.lineCap='round'; pctx.lineJoin='round';
+    pctx.beginPath(); pctx.moveTo(points[0][0],points[0][1]);
+    if (points.length===1) pctx.lineTo(points[0][0],points[0][1]);
+    for (let i=1;i<points.length;i++) pctx.lineTo(points[i][0],points[i][1]);
+    pctx.stroke();
+  }
+
+  function printInk() { return WRITE_INK[((pInk%WRITE_INK.length)+WRITE_INK.length)%WRITE_INK.length]; }
+
+  function printDraw() {
+    const w=printCanvas.clientWidth, h=printCanvas.clientHeight;
+    pctx.globalAlpha=1; pctx.fillStyle='#ffffff'; pctx.fillRect(0,0,w,h);
+    if (!pLayout) return;
+    // Same proportions as the braille tracing canvas: a 10-unit guide and a
+    // marker at .76 of it, so the halo promise (see TRACE_HALO) holds here too.
+    for (const strokes of pGeometry()) for (const st of strokes) pPolyline(st,PRINT_GUIDE,pLayout.gw);
+    const ink=printInk();
+    for (const seg of pSegments) pPolyline(seg.map(p=>pSetToScreen(p)),ink,pLayout.gw*.76);
+  }
+
+  // ---- coverage: the shared rule ------------------------------------------
+  function printOnGuide(x,y,geometry=pGeometry()) {
+    const r2=traceHalo(pLayout.gw)**2;
+    for (const strokes of geometry) for (const st of strokes) for (const p of st) {
+      const dx=x-p[0], dy=y-p[1];
+      if (dx*dx+dy*dy<=r2) return true;
+    }
+    return false;
+  }
+  function printCover(x,y,geometry) {
+    const r2=traceHalo(pLayout.gw)**2;
+    geometry.forEach((strokes,i)=>strokes.forEach((st,s)=>st.forEach((p,k)=>{
+      const dx=x-p[0], dy=y-p[1];
+      if (dx*dx+dy*dy<=r2) pCoverage[i][s][k]=true;
+    })));
+  }
+  function printLetterDone(i) {
+    return pCoverage[i].every((bits,s)=>strokeTraced(pLetters[i],s,bits));
+  }
+  function printAllDone() { return pLetters.every((_,i)=>printLetterDone(i)); }
+
+  function printCheck() {
+    if (pAdvancing || !printAllDone()) return;
+    pAdvancing=true;
+    printStop();
+    const myRun=runId;
+    setTimeout(()=>{
+      if (myRun!==runId || !pOn) return;
+      startMinigame(()=>{ if (myRun!==runId || !pOn) return; printNewRound(); });
+    },PRINT_DONE_BEAT);
+  }
+
+  // ---- rounds ---------------------------------------------------------------
+  function printNewRound() {
+    pAdvancing=false;
+    pInk++;                                 // a new round is a new colour
+    pSegments=[];
+    pCoverage=pLetters.map(ch=>GLYPHS[ch].map(st=>new Array(st.length).fill(false)));
+    printStop();
+    printDraw();
+  }
+
+  // ---- pointer --------------------------------------------------------------
+  function printPoint(ev) {
+    const r=printCanvas.getBoundingClientRect();
+    return [ev.clientX-r.left, ev.clientY-r.top];
+  }
+  function printStop(ev) {
+    if (ev && pPointer!==null && ev.pointerId!==pPointer) return;
+    pDrawing=false; pPointer=null; pLastScreen=null;
+    brushOff();
+  }
+  printCanvas.addEventListener('pointerdown',ev=>{
+    if (!pOn) return;
+    ev.preventDefault();
+    if (pAdvancing || pDrawing || !pLayout) return;
+    pDrawing=true; pPointer=ev.pointerId;
+    try { printCanvas.setPointerCapture(ev.pointerId); } catch {}
+    const p=printPoint(ev), geo=pGeometry();
+    pLastScreen=p; pLastT=performance.now();
+    pSegments.push([pFromScreen(p)]);
+    printCover(p[0],p[1],geo); printDraw();
+    if (printOnGuide(p[0],p[1],geo)) { brushOn(); brushSpeed(.5); } else brushOff();
+    printCheck();
+  });
+  printCanvas.addEventListener('pointermove',ev=>{
+    if (!pOn || !pDrawing || ev.pointerId!==pPointer) return;
+    ev.preventDefault();
+    const p=printPoint(ev), geo=pGeometry(), seg=pSegments[pSegments.length-1];
+    const now=performance.now();
+    // Same floored interval as the tracing canvas, for the same reason.
+    const speed=Math.hypot(p[0]-pLastScreen[0],p[1]-pLastScreen[1])/Math.max(6,now-pLastT);
+    pLastT=now;
+    // Interpolated every 8px, like the tracing canvas, so a fast stroke
+    // cannot jump over a stretch of guide.
+    const dist=Math.hypot(p[0]-pLastScreen[0],p[1]-pLastScreen[1]);
+    const steps=Math.max(1,Math.ceil(dist/8));
+    for (let k=1;k<=steps;k++) {
+      const q=[pLastScreen[0]+(p[0]-pLastScreen[0])*k/steps, pLastScreen[1]+(p[1]-pLastScreen[1])*k/steps];
+      seg.push(pFromScreen(q)); printCover(q[0],q[1],geo);
+    }
+    pLastScreen=p;
+    printDraw();
+    if (printOnGuide(p[0],p[1],geo)) { brushOn(); brushSpeed(speed); } else brushOff();
+    printCheck();
+  });
+  printCanvas.addEventListener('pointerup',printStop);
+  printCanvas.addEventListener('pointercancel',printStop);
+
+  // ---- enter / leave --------------------------------------------------------
+  function startPrint(letters) {
+    runId++;
+    setInputLocked(false);
+    sightLookOff();
+    advancing=false;
+    brushOff();
+    stopDrawing();
+    if (currentClip) { try { currentClip.pause(); } catch {} }
+    if (minigameActive()) { mgOnFinish=null; endMinigame(); }
+    if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
+    if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    pLetters=(letters||[]).filter(ch=>PRINT_KEYS.includes(ch)).slice(0,3);
+    if (pLetters.length!==3) pLetters=['a','b','c'];
+    pOn=true;
+    printEl.classList.add('on');
+    printEl.setAttribute('aria-hidden','false');
+    printNewRound();
+    // After the class lands, so the canvas has a size to measure.
+    printResize();
+  }
+
+  function endPrint() {
+    if (!pOn) return;
+    pOn=false;
+    printStop();
+    pAdvancing=false;
+    printEl.classList.remove('on');
+    printEl.setAttribute('aria-hidden','true');
+    pSegments=[]; pCoverage=[]; pLayout=null;
+  }
+
+  // ---- the picker -------------------------------------------------------------
+  // A letter drawn on the FULL ascender-to-descender range, so in the picker
+  // an `a` is x-height and an `l` is tall - the letters look like print, not
+  // like a row of equal-height icons.
+  let printKeyRange=null;   // [top, bottom] over the whole alphabet, SVG y-down
+  function printKeyArt(ch) {
+    const svg=glyphWord(ch);
+    if (!svg) return null;
+    if (!printKeyRange) printKeyRange=[
+      Math.min(...PRINT_KEYS.map(c=>glyphBounds(c).minY))-PAD,
+      Math.max(...PRINT_KEYS.map(c=>glyphBounds(c).maxY))+PAD];
+    const vb=(svg.getAttribute('viewBox')||'0 0 1 1').split(/\s+/).map(Number);
+    const [t,b]=printKeyRange;
+    svg.setAttribute('viewBox',`${vb[0]} ${t} ${vb[2]} ${b-t}`);
+    return svg;
+  }
+  for (const ch of PRINT_KEYS) {
+    const b=document.createElement('button');
+    b.type='button'; b.className='plKey'; b.dataset.letter=ch;
+    b.setAttribute('aria-label',ch);
+    const art=printKeyArt(ch); if (art) b.appendChild(art);
+    b.addEventListener('click',()=>printPick(ch));
+    printGrid.appendChild(b);
+  }
+  printSlotEls.forEach((el,i)=>el.addEventListener('click',()=>printUnpick(i)));
+
+  function printPickerRender() {
+    printSlotEls.forEach((el,i)=>{
+      el.textContent='';
+      const ch=pickSlots[i];
+      el.classList.toggle('filled',!!ch);
+      if (ch) { const art=printKeyArt(ch); if (art) el.appendChild(art); }
+    });
+    printGo.disabled=pickSlots.some(c=>!c);
+  }
+  function printPick(ch) {
+    const i=pickSlots.indexOf(null);
+    if (i<0) return;            // all three full: empty a slot first
+    pickSlots[i]=ch;
+    printPickerRender();
+  }
+  function printUnpick(i) { pickSlots[i]=null; printPickerRender(); }
+
+  function openPrintPicker(from) {
+    pickFrom=from;
+    pickSlots=[null,null,null];
+    printPickerRender();
+    if (from==='section') {
+      // Pause the page under the menu. A round that had just finished and
+      // was waiting on its minigame is dropped: Back starts a fresh round.
+      runId++;
+      printStop();
+      chooser.classList.add('on');
+    }
+    vowelPanel.hidden=true; sightPanel.hidden=true;
+    chooserModesRow.hidden=true;
+    printPanel.hidden=false;
+  }
+  function closePrintPicker() {
+    printPanel.hidden=true;
+    chooserModesRow.hidden=false;
+  }
+  printGo.addEventListener('click',()=>{
+    if (pickSlots.some(c=>!c)) return;
+    start('print',null,null,[...pickSlots]);
+  });
+  printBack.addEventListener('click',()=>{
+    closePrintPicker();
+    if (pickFrom==='section' && pOn) {
+      // Back to the same letters. If the round had finished, its minigame was
+      // cancelled when the picker opened, so carry on with a fresh round.
+      chooser.classList.remove('on');
+      if (pAdvancing) printNewRound();
+    }
+  });
+
+  // The menu card: a white page, three grey guide letters, ink over the first.
+  // Drawn, like every sample on this menu.
+  (function printCardArt() {
+    const host=document.getElementById('printCardSample');
+    if (!host) return;
+    const svg=glyphWord('abc');
+    if (!svg) return;
+    const vb=(svg.getAttribute('viewBox')||'0 0 1 1').split(/\s+/).map(Number);
+    const page=document.createElementNS(SVGNS,'rect');
+    page.setAttribute('x',String(vb[0]-12)); page.setAttribute('y',String(vb[1]-12));
+    page.setAttribute('width',String(vb[2]+24)); page.setAttribute('height',String(vb[3]+24));
+    page.setAttribute('rx','14'); page.setAttribute('fill','#ffffff');
+    svg.insertBefore(page,svg.firstChild);
+    svg.setAttribute('viewBox',`${vb[0]-12} ${vb[1]-12} ${vb[2]+24} ${vb[3]+24}`);
+    // Inline colours: the menu's shared path rule would paint it all yellow.
+    const groups=[...svg.querySelectorAll('g')];
+    groups.forEach((g,i)=>{
+      for (const path of g.querySelectorAll('path')) {
+        path.style.stroke=PRINT_GUIDE; path.style.strokeWidth='13';
+        if (i===0) {
+          const ink=path.cloneNode(true);
+          ink.style.stroke=WRITE_INK[2]; ink.style.strokeWidth='8';
+          g.appendChild(ink);
+        }
+      }
+    });
+    host.textContent='';
+    host.appendChild(svg);
+  })();
 
   /* ------------------------------------------------------ assessment ---
      A sitting, not an activity. Nothing is taught here, nothing advances by
@@ -4191,6 +4684,9 @@
   // Wiping the page is the one destructive thing in the playground, so it gets
   // the same double tap the ⌂ and the × use. armDoubleTap is defined above.
   armDoubleTap(writeClear,()=>{ if (wOn) writeWipe(); });
+  // New letters = the picker again. Guarded like Clear: a student's stray tap
+  // must not throw away the round they are in the middle of.
+  armDoubleTap(printNew,()=>{ if (pOn) openPrintPicker('section'); });
   armDoubleTap(aSnapDone,()=>{ if (aOn) goHome(); });
 
   // A teacher can bookmark straight past the menu: ?mode=cvc&vowel=i
@@ -4199,7 +4695,7 @@
   const wantedVowel=(params.get('vowel')||'').toLowerCase();
   const presetMode=({letters:'letters',words:'cvc',cvc:'cvc',numbers:'numbers',
                      sight:'sight',sightwords:'sight',rhythm:'rhythm',beat:'rhythm',
-                     write:'write',draw:'write'})[wanted]
+                     write:'write',draw:'write',print:'print',trace:'print'})[wanted]
                    || (params.get('letter') ? 'letters' : null);
   const wantedBraille=(params.get('braille')||'').toLowerCase();
 
@@ -4232,7 +4728,13 @@
     // there is nothing to preload. audio/rhythm/ is kept on disk but unused;
     // see the note in README.
     if (rhythmPreview) { startRhythmBreak(openChooser); return; }
-    if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null,
+    // ?mode=print&letters=bdp - three letters, or the picker if they are not.
+    if (presetMode==='print') {
+      const ls=[...(params.get('letters')||'').toLowerCase()].filter(c=>PRINT_KEYS.includes(c));
+      if (ls.length===3) start('print',null,null,ls);
+      else { openChooser(); openPrintPicker('menu'); }
+    }
+    else if (presetMode) start(presetMode, CVC_WORDS[wantedVowel] ? wantedVowel : null,
                           wantedBraille);
     else openChooser();
   }
