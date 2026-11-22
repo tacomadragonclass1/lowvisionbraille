@@ -1,7 +1,7 @@
 {
   "source": "Mixed. audio/sight/, audio/words/ and audio/numbers/ = local Chatterbox TTS (chatterbox-turbo), 'carlvoice' voice clone, seed 898, temperature 0.8, level-matched with tools/normalize_external_clips.py. audio/rhythm/ = local Chatterbox TTS, same 'carlvoice' clone, seed and temperature as the rest. audio/letters/ = local Kokoro-82M and MUTED by design. audio/phonemes/ = human recordings.",
   "format": "24 kHz 16-bit mono PCM WAV",
-  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.  2026-10-17: the ENTIRE sight-word section (8 words + 2 prompts) was re-recorded in Chatterbox with the 'carlvoice' clone because the Kokoro reads were rejected. Originals backed up at audio/.sight-kokoro-backup-20261017/.  2026-10-17: the 39 CVC words were re-recorded in Chatterbox too, same clone and seed as the sight words. Originals at audio/.words-kokoro-backup-20261017/. NOTE: this server runs chatterbox-turbo, which IGNORES exaggeration and cfg_weight - only temperature, seed and the reference audio affect the output.  2026-10-17: the 10 number names were re-recorded in Chatterbox as well. ⛔ audio/numbers/ files are named by DIGIT (8.wav) but SAY the word ('eight') - generate from the manifest text, never from the filename. Originals at audio/.numbers-kokoro-backup-20261017/.  2026-10-19: audio/rhythm/ holds the EIGHT spoken lines of the rhythm brain break - Chatterbox 'carlvoice' clone, seed 898, temperature 0.8, normalized with tools/normalize_external_clips.py to the same -1.0 dB peak as everything else. GENERATED BUT NOT YET SIGNED OFF BY EAR. All eight are ANNOUNCEMENTS of what is about to happen; the game scores nothing and says nothing about how the student played, so there are deliberately no praise, correction or timing lines. An earlier scored version had fifteen clips including nice/again/early/late/listen - those were deleted with the scoring. 'cha' became 'clap' throughout because Chatterbox mispronounced it. The DURATIONS are load-bearing: each line is given whole measures of the backing to itself and starting the next clip stops the one before it, so a longer re-record needs its `bars` raised in RHYTHM_SAY (index.html); where.wav at 4.43 s is the only one that needs two.  2026-10-20: the rhythm section was rebuilt as simon-says and ALL SPEECH WAS REMOVED - the groove, the lights and the greyed-out targets carry it instead. The eight clips in audio/rhythm/ are now UNUSED. They are kept rather than deleted, the same way audio/treat/ and audio/letters/ are, so the spoken version can be restored without re-rendering; nothing fetches them at runtime, so they cost repo weight only, not page weight. If speech is ever wanted again, note that len1-len4 were written for a design where a turn could be 1-4 measures long, and every task is one measure now.  2026-10-25: the round-2 ask was rewritten -- prompt-what.wav now says \"Let's read this word together. Say the letter name for each braille letter you touch.\" and a new prompt-goodjob.wav (\"Good job reading with me!\") closes the round-2 chain. Same carlvoice clone, seed 898, temperature 0.8, normalized the same way. APPROVED BY EAR 2026-10-27. The superseded 2.68 s \"What is this word?\" is backed up locally at audio/.sight-prompt-backup-20261025/ and gitignored.  2026-10-25: audio/assessment/ added for the new assessment section. prompt-letter.wav is the only spoken line in it -- Carl frames the card and deliberately does NOT name the letter, because naming it is the thing being assessed. background.mp3 is the owner's own music, shipped as supplied (192 kbps stereo, 3:26) and looped at low volume under the whole round; it is not TTS and is not in this list.  2026-10-27: five words were added to the high-frequency bank -- you, has, was, to, one -- and audio/assessment/ gained the visual round's two lines: prompt-word.wav frames the print card and prompt-next.wav acknowledges that the assessor has marked it WITHOUT saying what the mark was. Same carlvoice clone, seed 898, temperature 0.8, normalized through tools/normalize_external_clips.py. All seven were auditioned and approved the same day; 'was' was rejected on its final /z/ and re-recorded (see below). Measured checks were: format, -1.0 dB peak, 30/140 ms lead and tail, stop releases intact, and voiced-run rate cross-checked against the approved clips to rule out a truncated render. NOTE the RMS spread is wider than the 2026-10-25 batch: you.wav sits ~2.3 dB hotter and the two prompts ~2 dB quieter than the approved set, all at the same -1.0 dB peak. Worth listening for one word jumping out or a prompt sitting back.  2026-10-27: sight/was.wav was re-recorded from the phonetic spelling 'wuz' on seed 77 after the literal 'was' lost its final /z/ by ear -- measured at -30.9 dB against -20.9 for 'is' and -23.8 for 'has'; the fricative was present but ~10 dB too quiet to hear on a tablet speaker. ⛔ NOTE normalize_external_clips.py's release check only tests PLOSIVES, so it passed this clip: a weak final FRICATIVE (/z/, /s/, /v/, /f/) is NOT covered and has to be checked separately, by comparing the high-frequency share and level of the last ~200 ms against a clip already approved that ends the same way.  2026-10-30: the high-frequency-word bank grew 13 -> 35. The 22 new clips (all, am, an, are, at, away, be, because, black, blue, brown, but, by, can, came, come, could, day, do, eat, eight, first) are the same carlvoice clone, seed 898, temperature 0.8, normalized through tools/normalize_external_clips.py: peak spread 0.0 dB at -1.0 dB, head 30 ms, tail 140 ms, speech-RMS spread 8.7 dB against the shipped thirteen's 8.1 dB. All 22 were listened to and APPROVED on 2026-10-30 (status approved_2026-10-30), with ONE exception recorded as approved_weak_2026-10-30: 'because' was judged weak by ear and shipped anyway as good-enough, deliberately deferred to the next HFW round. Note that every measure-only check PASSED on that clip, including the fricative check built specifically for this failure class -- so the measurements are a filter, not a verdict, and the ear stays the authority.  2026-11-21: the owner supplied upgraded recordings replacing eleven sight clips (all, at, away, because, black, blue, day, do and the three round-2 prompts) -- this retires the 'because' approved_weak to-do -- and fourteen new words grew the bank 35 -> 49 (this, that, go, from, out, look, how, does, little, what, who, for, find, your). All twenty-five ship as supplied: 44.1 kHz, peaks between -1.6 and -13.6 dB, not level-matched to the rest of the bank.",
+  "note": "Whole-word, number-name, letter-NAME and sight-word reads. The isolated letter phonemes in audio/phonemes/ are human recordings, not TTS; audio/letters/ is the spoken letter NAME and is TTS.  audio/letters/ (the spoken letter NAMES) is rejected and currently unused - it awaits recordings from an educator.  2026-10-17: the ENTIRE sight-word section (8 words + 2 prompts) was re-recorded in Chatterbox with the 'carlvoice' clone because the Kokoro reads were rejected. Originals backed up at audio/.sight-kokoro-backup-20261017/.  2026-10-17: the 39 CVC words were re-recorded in Chatterbox too, same clone and seed as the sight words. Originals at audio/.words-kokoro-backup-20261017/. NOTE: this server runs chatterbox-turbo, which IGNORES exaggeration and cfg_weight - only temperature, seed and the reference audio affect the output.  2026-10-17: the 10 number names were re-recorded in Chatterbox as well. ⛔ audio/numbers/ files are named by DIGIT (8.wav) but SAY the word ('eight') - generate from the manifest text, never from the filename. Originals at audio/.numbers-kokoro-backup-20261017/.  2026-10-19: audio/rhythm/ holds the EIGHT spoken lines of the rhythm brain break - Chatterbox 'carlvoice' clone, seed 898, temperature 0.8, normalized with tools/normalize_external_clips.py to the same -1.0 dB peak as everything else. GENERATED BUT NOT YET SIGNED OFF BY EAR. All eight are ANNOUNCEMENTS of what is about to happen; the game scores nothing and says nothing about how the student played, so there are deliberately no praise, correction or timing lines. An earlier scored version had fifteen clips including nice/again/early/late/listen - those were deleted with the scoring. 'cha' became 'clap' throughout because Chatterbox mispronounced it. The DURATIONS are load-bearing: each line is given whole measures of the backing to itself and starting the next clip stops the one before it, so a longer re-record needs its `bars` raised in RHYTHM_SAY (index.html); where.wav at 4.43 s is the only one that needs two.  2026-10-20: the rhythm section was rebuilt as simon-says and ALL SPEECH WAS REMOVED - the groove, the lights and the greyed-out targets carry it instead. The eight clips in audio/rhythm/ are now UNUSED. They are kept rather than deleted, the same way audio/treat/ and audio/letters/ are, so the spoken version can be restored without re-rendering; nothing fetches them at runtime, so they cost repo weight only, not page weight. If speech is ever wanted again, note that len1-len4 were written for a design where a turn could be 1-4 measures long, and every task is one measure now.  2026-10-25: the round-2 ask was rewritten -- prompt-what.wav now says \"Let's read this word together. Say the letter name for each braille letter you touch.\" and a new prompt-goodjob.wav (\"Good job reading with me!\") closes the round-2 chain. Same carlvoice clone, seed 898, temperature 0.8, normalized the same way. APPROVED BY EAR 2026-10-27. The superseded 2.68 s \"What is this word?\" is backed up locally at audio/.sight-prompt-backup-20261025/ and gitignored.  2026-10-25: audio/assessment/ added for the new assessment section. prompt-letter.wav is the only spoken line in it -- Carl frames the card and deliberately does NOT name the letter, because naming it is the thing being assessed. background.mp3 is the owner's own music, shipped as supplied (192 kbps stereo, 3:26) and looped at low volume under the whole round; it is not TTS and is not in this list.  2026-10-27: five words were added to the high-frequency bank -- you, has, was, to, one -- and audio/assessment/ gained the visual round's two lines: prompt-word.wav frames the print card and prompt-next.wav acknowledges that the assessor has marked it WITHOUT saying what the mark was. Same carlvoice clone, seed 898, temperature 0.8, normalized through tools/normalize_external_clips.py. All seven were auditioned and approved the same day; 'was' was rejected on its final /z/ and re-recorded (see below). Measured checks were: format, -1.0 dB peak, 30/140 ms lead and tail, stop releases intact, and voiced-run rate cross-checked against the approved clips to rule out a truncated render. NOTE the RMS spread is wider than the 2026-10-25 batch: you.wav sits ~2.3 dB hotter and the two prompts ~2 dB quieter than the approved set, all at the same -1.0 dB peak. Worth listening for one word jumping out or a prompt sitting back.  2026-10-27: sight/was.wav was re-recorded from the phonetic spelling 'wuz' on seed 77 after the literal 'was' lost its final /z/ by ear -- measured at -30.9 dB against -20.9 for 'is' and -23.8 for 'has'; the fricative was present but ~10 dB too quiet to hear on a tablet speaker. ⛔ NOTE normalize_external_clips.py's release check only tests PLOSIVES, so it passed this clip: a weak final FRICATIVE (/z/, /s/, /v/, /f/) is NOT covered and has to be checked separately, by comparing the high-frequency share and level of the last ~200 ms against a clip already approved that ends the same way.  2026-10-30: the high-frequency-word bank grew 13 -> 35. The 22 new clips (all, am, an, are, at, away, be, because, black, blue, brown, but, by, can, came, come, could, day, do, eat, eight, first) are the same carlvoice clone, seed 898, temperature 0.8, normalized through tools/normalize_external_clips.py: peak spread 0.0 dB at -1.0 dB, head 30 ms, tail 140 ms, speech-RMS spread 8.7 dB against the shipped thirteen's 8.1 dB. All 22 were listened to and APPROVED on 2026-10-30 (status approved_2026-10-30), with ONE exception recorded as approved_weak_2026-10-30: 'because' was judged weak by ear and shipped anyway as good-enough, deliberately deferred to the next HFW round. Note that every measure-only check PASSED on that clip, including the fricative check built specifically for this failure class -- so the measurements are a filter, not a verdict, and the ear stays the authority.  2026-11-21: the owner supplied upgraded recordings replacing eleven sight clips (all, at, away, because, black, blue, day, do and the three round-2 prompts) -- this retires the 'because' approved_weak to-do -- and fourteen new words grew the bank 35 -> 49 (this, that, go, from, out, look, how, does, little, what, who, for, find, your). They came in at 44.1 kHz with peaks between -1.6 and -13.6 dB, so the same day all twenty-five were resampled to 24 kHz, peak-normalized with normalize_external_clips.py, and then any clip whose speech RMS sat above -14.8 dB (the median of the 24 older clips) was turned down to it. Peak alone was not enough: at -1.0 dB peak 'who', 'all' and 'blue' measured ~3 dB louder than the loudest older clip. Result: speech RMS -16.3..-14.8 dB, inside the older clips' -19.4..-11.9. Originals at audio/.sight-owner-originals-20261121/ (gitignored).",
   "clips": [
     {
       "text": "bag",
@@ -835,19 +835,19 @@
       "text": "The word is",
       "file": "sight/prompt-reveal.wav",
       "kind": "prompt",
-      "duration_seconds": 1.44,
+      "duration_seconds": 1.467,
       "status": "owner_supplied_2026-11-21",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "Let's read this word together. Say the letter name for each braille letter you touch.",
       "file": "sight/prompt-what.wav",
       "kind": "prompt",
-      "duration_seconds": 5.898,
+      "duration_seconds": 5.976,
       "status": "owner_supplied_2026-11-21",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "a",
@@ -933,10 +933,10 @@
       "text": "Good job reading with me!",
       "file": "sight/prompt-goodjob.wav",
       "kind": "prompt",
-      "duration_seconds": 2.461,
+      "duration_seconds": 2.58,
       "status": "owner_supplied_2026-11-21",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "Okay, let's make a beat!",
@@ -1089,11 +1089,11 @@
       "text": "all",
       "file": "sight/all.wav",
       "kind": "word",
-      "duration_seconds": 0.697,
+      "duration_seconds": 0.784,
       "status": "owner_supplied_2026-11-21",
       "word": "all",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "am",
@@ -1132,21 +1132,21 @@
       "text": "at",
       "file": "sight/at.wav",
       "kind": "word",
-      "duration_seconds": 0.743,
+      "duration_seconds": 0.812,
       "status": "owner_supplied_2026-11-21",
       "word": "at",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "away",
       "file": "sight/away.wav",
       "kind": "word",
-      "duration_seconds": 0.882,
+      "duration_seconds": 1.02,
       "status": "owner_supplied_2026-11-21",
       "word": "away",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "be",
@@ -1163,31 +1163,31 @@
       "text": "because",
       "file": "sight/because.wav",
       "kind": "word",
-      "duration_seconds": 1.393,
+      "duration_seconds": 1.506,
       "status": "owner_supplied_2026-11-21",
       "word": "because",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "black",
       "file": "sight/black.wav",
       "kind": "word",
-      "duration_seconds": 0.975,
+      "duration_seconds": 1.019,
       "status": "owner_supplied_2026-11-21",
       "word": "black",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "blue",
       "file": "sight/blue.wav",
       "kind": "word",
-      "duration_seconds": 0.65,
+      "duration_seconds": 0.82,
       "status": "owner_supplied_2026-11-21",
       "word": "blue",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "brown",
@@ -1271,21 +1271,21 @@
       "text": "day",
       "file": "sight/day.wav",
       "kind": "word",
-      "duration_seconds": 0.789,
+      "duration_seconds": 0.839,
       "status": "owner_supplied_2026-11-21",
       "word": "day",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "do",
       "file": "sight/do.wav",
       "kind": "word",
-      "duration_seconds": 0.789,
+      "duration_seconds": 0.903,
       "status": "owner_supplied_2026-11-21",
       "word": "do",
       "engine": "owner-supplied",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "eat",
@@ -1325,140 +1325,140 @@
       "file": "sight/this.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.697,
+      "duration_seconds": 0.842,
       "status": "owner_supplied_2026-11-21",
       "word": "this",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "that",
       "file": "sight/that.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.743,
+      "duration_seconds": 0.868,
       "status": "owner_supplied_2026-11-21",
       "word": "that",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "go",
       "file": "sight/go.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.604,
+      "duration_seconds": 0.665,
       "status": "owner_supplied_2026-11-21",
       "word": "go",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "from",
       "file": "sight/from.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.65,
+      "duration_seconds": 0.792,
       "status": "owner_supplied_2026-11-21",
       "word": "from",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "out",
       "file": "sight/out.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.697,
+      "duration_seconds": 0.824,
       "status": "owner_supplied_2026-11-21",
       "word": "out",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "look",
       "file": "sight/look.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.789,
+      "duration_seconds": 0.934,
       "status": "owner_supplied_2026-11-21",
       "word": "look",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "how",
       "file": "sight/how.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.836,
+      "duration_seconds": 0.983,
       "status": "owner_supplied_2026-11-21",
       "word": "how",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "does",
       "file": "sight/does.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.836,
+      "duration_seconds": 0.98,
       "status": "owner_supplied_2026-11-21",
       "word": "does",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "little",
       "file": "sight/little.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.975,
+      "duration_seconds": 1.089,
       "status": "owner_supplied_2026-11-21",
       "word": "little",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "what",
       "file": "sight/what.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 1.207,
+      "duration_seconds": 1.348,
       "status": "owner_supplied_2026-11-21",
       "word": "what",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "who",
       "file": "sight/who.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.882,
+      "duration_seconds": 0.934,
       "status": "owner_supplied_2026-11-21",
       "word": "who",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "for",
       "file": "sight/for.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 0.975,
+      "duration_seconds": 1.054,
       "status": "owner_supplied_2026-11-21",
       "word": "for",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "find",
       "file": "sight/find.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 1.068,
+      "duration_seconds": 1.152,
       "status": "owner_supplied_2026-11-21",
       "word": "find",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     },
     {
       "text": "your",
       "file": "sight/your.wav",
       "kind": "sight_word",
       "engine": "owner-supplied",
-      "duration_seconds": 1.44,
+      "duration_seconds": 1.561,
       "status": "owner_supplied_2026-11-21",
       "word": "your",
-      "note": "Supplied by the owner 2026-11-21 as an upgraded recording; shipped as supplied (44.1 kHz mono, NOT run through normalize_external_clips.py, so its peak is not at the -1.0 dB the older clips share)."
+      "note": "Supplied by the owner 2026-11-21 as an upgraded recording. Level-matched the same day: resampled 44.1 -> 24 kHz (soxr), run through normalize_external_clips.py (peak -1.0 dB, 30/140 ms pad), then turned DOWN where needed so its speech RMS is no hotter than -14.8 dB, the median of the 24 older clips. Original as supplied is kept locally at audio/.sight-owner-originals-20261121/ (gitignored)."
     }
   ]
 }

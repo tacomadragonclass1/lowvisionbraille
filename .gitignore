@@ -18,3 +18,6 @@ _diag.html
 # Audition candidates for a clip being re-recorded (generated)
 _cand/
 _was.html
+
+# The owner's 2026-11-21 sight recordings as supplied, before level-matching.
+audio/.sight-owner-originals-*/

@@ -1306,10 +1306,42 @@
     if (!a) { a=new Audio(src); a.preload='auto'; clipCache.set(src,a); }
     return a;
   }
+  // ⛔ Clips that start with NO tap behind them get refused on a strict
+  // autoplay browser (Safari on iPad/iPhone): the round-2 ask plays as the
+  // card arrives, and "The word is... Good job reading with me" starts five
+  // seconds after the last dot. A refusal runs the continuation at once, so
+  // the student saw the round go by in silence - "the prompts don't always
+  // play". Such browsers unlock an audio element for good once it has been
+  // played inside a real gesture, so every real tap plays each not-yet-
+  // unlocked clip in the cache MUTED and stops it again. setupItem() has
+  // already warmed this card's clips into the cache, so by the time any of
+  // them is needed a tap has unlocked it. Chrome needs none of this; there it
+  // is a silent no-op.
+  //
+  // _priming is a token, not a flag on the element's state: if playClip()
+  // claims the clip before the muted play settles (slow wifi), the settle
+  // must not pause the real playback.
+  const unlockedClips=new WeakSet();
+  function unlockClips() {
+    for (const a of clipCache.values()) {
+      if (unlockedClips.has(a) || !a.paused) continue;
+      unlockedClips.add(a);
+      a._priming=true; a.muted=true;
+      let p; try { p=a.play(); } catch { p=null; }
+      const settle=()=>{ if (!a._priming) return; a._priming=false;
+                         try { a.pause(); a.currentTime=0; } catch {} a.muted=false; };
+      const refused=()=>{ unlockedClips.delete(a); settle(); };
+      if (p && p.then) p.then(settle,refused); else settle();
+    }
+  }
+  document.addEventListener('pointerdown',unlockClips,true);
+  document.addEventListener('keydown',unlockClips,true);
+
   function playClip(src,onEnd) {
     const a=clip(src);
     if (currentClip && currentClip!==a) { try { currentClip.pause(); } catch {} }
     currentClip=a;
+    a._priming=false; a.muted=false;
     try { a.pause(); a.currentTime=0; } catch {}
     let fired=false;
     // A missing or undecodable file must never strand the student mid-word, so the
@@ -2477,6 +2509,7 @@
     // goHome()'s currentClip.pause() can reach the music.
     if (currentClip && currentClip!==a) { try { currentClip.pause(); } catch {} }
     currentClip=a;
+    a._priming=false; a.muted=false;   // see unlockClips()
     try { a.pause(); a.currentTime=0; } catch {}
 
     // The walk lasts exactly as long as the music. duration is NaN until

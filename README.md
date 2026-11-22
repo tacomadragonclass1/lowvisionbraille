@@ -449,6 +449,21 @@ file `carl.png`). It plays through plain `<audio>` rather than
 `decodeAudioData`, so the app still works opened straight off a USB stick —
 `fetch()` is blocked on `file://`, `<audio>` is not.
 
+> ⛔ **Every real tap unlocks the cached clips (`unlockClips()`).** A strict
+> autoplay browser — Safari on iPad/iPhone — refuses a clip that starts with
+> no tap behind it, and round 2's ask (as the card arrives) and its
+> "The word is… / Good job reading with me!" (five seconds after the last
+> dot) both start that way. A refusal runs the continuation at once, so the
+> round went by in silence: reported as "the prompts aren't always
+> triggering". Such browsers unlock an element for good once it has played
+> inside a gesture, so each tap plays every not-yet-unlocked cached clip
+> muted and stops it. `setupItem()` warms the card's clips into the cache, so
+> they are unlocked by the card's first tap. Reproduced and verified in
+> headless Chromium with `--autoplay-policy=user-gesture-required` and real
+> (CDP) taps: before, the reveal and send-off were refused on every round-2
+> card; after, every prompt played to its end with zero refusals over 32
+> cards. On Chrome it changes nothing.
+
 - `audio/phonemes/` — the 26 letter sounds. **Human recordings**, the same files
   Phonics Farm uses, from the Pronunciation Studio IPA chart. Used here under the
   non-profit educational permission granted for that project; see
