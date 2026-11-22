@@ -1501,7 +1501,10 @@
                        // Third tranche, given alphabetically.
                        'all','am','an','are','at','away','be','because',
                        'black','blue','brown','but','by','can','came','come',
-                       'could','day','do','eat','eight','first'];
+                       'could','day','do','eat','eight','first',
+                       // Fourth tranche, 2026-11-21.
+                       'this','that','go','from','out','look','how','does',
+                       'little','what','who','for','find','your'];
 
   // The teacher picks the convention for the whole session. `grapheme` spells
   // every word out, one cell per print letter, and is the default because it
@@ -1587,7 +1590,31 @@
     // `gh` groupsign (1-2-6) covers the g and the h.
     eight:[{ name:'e' }, { name:'i' }, { dots:[1,2,6] }, { name:'t' }],
     // Shortform `fst`: f, then the `st` groupsign (3-4).
-    first:[{ name:'f' }, { dots:[3,4] }]
+    first:[{ name:'f' }, { dots:[3,4] }],
+
+    /* Fourth tranche, 2026-11-21. liblouis was not installed on the box this
+       time, so these were written from the UEB rules and NOT round-tripped
+       through en-ueb-g2 the way the third tranche was. Re-check them through
+       liblouis when it is next to hand. Same silent-cell rule as above. */
+    this: [{ dots:[1,4,5,6] }],                    // strong wordsign `th`
+    that: [{ dots:[2,3,4,5] }],                    // alphabetic wordsign (t)
+    go:   [{ dots:[1,2,4,5] }],                    // alphabetic wordsign (g)
+    from: [{ dots:[1,2,4] }],                      // alphabetic wordsign (f)
+    out:  [{ dots:[1,2,5,6] }],                    // strong wordsign `ou`
+    look: [{ name:'l' }, { name:'o' }, { name:'o' }, { name:'k' }],  // no contraction
+    // `ow` groupsign (2-4-6) covers the o and the w, as in `brown`.
+    how:  [{ name:'h' }, { dots:[2,4,6] }],
+    // No contraction: `do` is a wordsign only when it stands alone.
+    does: [{ name:'d' }, { name:'o' }, { name:'e' }, { name:'s' }],
+    little:[{ name:'l' }, { name:'l' }],           // shortform l-l
+    // `wh` groupsign (1-5-6) covers the w and the h. Standing alone it would
+    // be "which", so these are not wordsigns, just the groupsign plus letters.
+    what: [{ dots:[1,5,6] }, { name:'a' }, { name:'t' }],
+    who:  [{ dots:[1,5,6] }, { name:'o' }],
+    for:  [{ dots:[1,2,3,4,5,6] }],                // strong wordsign
+    // `in` groupsign (3-5) covers the i and the n.
+    find: [{ name:'f' }, { dots:[3,5] }, { name:'d' }],
+    your: [{ name:'y' }, { name:'r' }]             // shortform y-r
   };
 
   // The write playground's ink. Lives here with the other palettes rather than

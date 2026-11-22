@@ -140,10 +140,11 @@ opens the picker.
 
 ### High Frequency Words
 
-Thirty-five high-frequency words — **the, is, it, said, and, as, a, I, you,
+Forty-nine high-frequency words — **the, is, it, said, and, as, a, I, you,
 has, was, to, one**, then **all, am, an, are, at, away, be, because, black,
-blue, brown, but, by, can, came, come, could, day, do, eat, eight, first** — in
-two rounds. Round 1 shows the word in print above the dots; **round 2 shows the
+blue, brown, but, by, can, came, come, could, day, do, eat, eight, first**,
+then (2026-11-21) **this, that, go, from, out, look, how, does, little, what,
+who, for, find, your** — in two rounds. Round 1 shows the word in print above the dots; **round 2 shows the
 dots alone** and asks for the word.
 
 #### The two rounds are shuffled together into one deck
@@ -237,6 +238,13 @@ been corrected:
 > This is the one place where what a shipped word looks like in braille
 > changed, so it is worth knowing if something looks different in the UEB
 > convention.
+>
+> ⚠️ **The fourth tranche (2026-11-21) was NOT run through liblouis** — it was
+> not installed on the box — so its forms are written from the UEB rules:
+> `this` `that` `go` `from` `out` `for` are single-cell wordsigns, `little` is
+> the shortform `ll` and `your` is `yr`, `how` carries `ow`, `what` and `who`
+> carry `wh`, `find` carries `in`, and `look` and `does` are spelled. Round-trip
+> them through `en-ueb-g2` when liblouis is next to hand.
 
 Worth knowing about the forms themselves, because they are not all spellings:
 `but`, `can`, `do` and `be` are **single cells** (alphabetic or lower
@@ -465,7 +473,7 @@ file `carl.png`). It plays through plain `<audio>` rather than
 - `audio/letters/` — the spoken letter **names**, for the sight-word section.
   **Rejected and unused** — see the warning above. Kept so a human recording
   drops straight in.
-- `audio/sight/` — the thirty-five high-frequency words, plus the three round-2
+- `audio/sight/` — the forty-nine high-frequency words, plus the three round-2
   prompts: the ask ("Let's read this word together…"), the reveal ("The word
   is") and the send-off ("Good job reading with me!"). **Filenames are the
   lowercased word**, so `I` ships as `i.wav`.

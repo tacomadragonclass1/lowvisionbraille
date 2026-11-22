@@ -1,7 +1,7 @@
 // The high frequency word bank: its UEB spellings, and the contract between
 // the word list and the stylesheet.
 //
-// The bank went 13 -> 35 words on 2026-10-30, and the longest of them is
+// The bank went 13 -> 35 words on 2026-10-30 (49 on 2026-11-21), and the longest of them is
 // seven cells in the letter-by-letter convention where nothing before it went
 // past four. That is a silent failure mode: the cells-N rules are CSS, the
 // word list is JavaScript, and nothing connected the two. A word needing a
@@ -42,7 +42,7 @@ loadApp(HTML, `
 const S = globalThis.__S;
 
 console.log('\n  -- the bank --');
-ok(S.SIGHT_WORDS.length === 35, `thirty-five words (got ${S.SIGHT_WORDS.length})`);
+ok(S.SIGHT_WORDS.length === 49, `forty-nine words (got ${S.SIGHT_WORDS.length})`);
 ok(new Set(S.SIGHT_WORDS).size === S.SIGHT_WORDS.length, 'no duplicates');
 const noUeb = S.SIGHT_WORDS.filter(w => !S.SIGHT_UEB[w]);
 ok(noUeb.length === 0, 'every word has a UEB spelling' + (noUeb.length ? ` (missing: ${noUeb})` : ''));
@@ -53,7 +53,7 @@ console.log('\n  -- every clip the bank needs is on disk --');
 const missingWav = S.SIGHT_WORDS.filter(w =>
   !fs.existsSync(path.join(REPO, 'audio', 'sight', w.toLowerCase() + '.wav')));
 ok(missingWav.length === 0,
-   'audio/sight/<word>.wav exists for all 35' + (missingWav.length ? ` (missing: ${missingWav})` : ''));
+   'audio/sight/<word>.wav exists for all 49' + (missingWav.length ? ` (missing: ${missingWav})` : ''));
 
 console.log('\n  -- UEB cells are well formed --');
 let badDots = [], badName = [];
