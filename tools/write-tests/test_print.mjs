@@ -40,6 +40,7 @@ const { listeners, missingIds } = loadApp(HTML, `
     panelShown: () => !printPanel.hidden, modesShown: () => !chooserModesRow.hidden,
     bodyMode: () => document.body.classList.contains('mode-print'),
     mgOn: () => minigameActive(), endMinigame: () => endMinigame(),
+    pianoOn: () => pianoActive(), endPiano: () => endPiano(),
     mgTune: () => mgTune, TUNES,
   };
   // Every clip the app tries to play or warm while in this section. There
@@ -124,9 +125,8 @@ console.log('\n  -- finishing a round --');
 traceLetter(2);
 ok(P.advancing(), 'tracing the third letter finishes the round');
 await wait(700);
-ok(P.mgOn(), 'and the minigame comes up');
-ok(Object.values(P.TUNES).includes(P.mgTune()), 'playing one of the rotating tunes');
-P.endMinigame();
+ok(P.pianoOn() && !P.mgOn(), 'and the PIANO break comes up, not the shape reward round');
+P.endPiano();
 ok(P.active() && !P.advancing(), 'after it, the section carries on');
 ok(P.letters().join('') === 'til', 'with the SAME three letters');
 ok(P.segments() === 0 && [0, 1, 2].every(i => !P.letterDone(i)), 'on a clean page');
@@ -158,7 +158,7 @@ for (let i = 0; i < 3; i++) traceLetter(i);
 ok(P.advancing(), 'round finished');
 pill.pointerup({ preventDefault() {} }); pill.pointerup({ preventDefault() {} });
 await wait(700);
-ok(!P.mgOn(), 'opening the picker in the pause cancels the pending minigame');
+ok(!P.pianoOn() && !P.mgOn(), 'opening the picker in the pause cancels the pending piano break');
 listeners['printBack'].click();
 ok(!P.advancing() && P.segments() === 0, 'and Back carries on with a fresh round');
 

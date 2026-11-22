@@ -460,6 +460,38 @@
     align-content:stretch;
   }
   #rhythm.on { display:grid; }
+
+  /* The piano break. Black ground, high-contrast keys, and as few keys as the
+     song needs so each one is as FAT as the screen allows: the range is the
+     song's own span, rounded out to white keys (Gymnopedie 1 is A4..A5, eight
+     white keys). z-index 50, the same as the other breaks: above the
+     activity, below the home and close buttons (60).
+
+     `ghost` is the demonstration: keys dimmed and inert while the computer
+     plays, with each key lighting as it sounds. Dropping `ghost` IS the cue
+     that it is the student's turn. `next` is the quiet guide on the key the
+     melody wants next - a dot, not a fill, so the keyboard stays a keyboard. */
+  #piano { display:none; position:absolute; inset:0; z-index:50; background:#000;
+           touch-action:none; place-items:center; }
+  #piano.on { display:grid; }
+  #pianoKeys { position:relative; display:flex; gap:clamp(3px,.5vw,7px);
+               width:min(96vw, calc(var(--whites,8) * 200px)); height:min(74vh,600px); }
+  .pkey { position:relative; box-sizing:border-box; transition:background-color .12s; }
+  .pkey.white { flex:1 1 0; background:#fff;
+                border-radius:0 0 clamp(8px,1.3vw,18px) clamp(8px,1.3vw,18px); }
+  .pkey.black { position:absolute; top:0; height:60%; z-index:2; background:#000;
+                width:calc(64% / var(--whites,8));
+                border:clamp(3px,.4vw,5px) solid #000; border-top:0;
+                border-radius:0 0 clamp(6px,.9vw,12px) clamp(6px,.9vw,12px); }
+  #piano.ghost .pkey.white { background:#3a3a3a; }
+  #piano.ghost .pkey.black { background:#141414; border-color:#000; }
+  /* #piano.on, not #piano: it must outrank the ghost rules above, or the demo
+     would light nothing - the one time the lighting matters most. */
+  #piano.on .pkey.lit { background:#ffd60a; }
+  .pkey.next::after { content:''; position:absolute; left:50%; bottom:11%;
+                      width:38%; aspect-ratio:1; transform:translateX(-50%);
+                      border-radius:50%; background:#0a84ff; }
+  .pkey.black.next::after { width:50%; bottom:9%; }
   /* The beat band. A visual pulse that runs for the WHOLE break - through the
      demo, the student's turn, the rests and the talking - so the underlying
      pulse is visible as well as audible even at the moments when nothing else
@@ -1028,6 +1060,9 @@
               aria-label="Clap. The square, on the right.">CLAP</button>
     </div>
   </div>
+  <!-- The piano brain break. Keys are built from the song's range by
+       buildPiano(); nothing here is fixed in the markup. -->
+  <div id="piano" aria-hidden="true"><div id="pianoKeys"></div></div>
   <!-- The assessment section. Not an activity: nothing is taught here, nothing
        advances by itself, and the student cannot move through it - every step
        is the assessor's. The contrast is FLIPPED (white ground, dark dots)
@@ -2203,9 +2238,11 @@
   // How close the finger has to be for a point of the guide to count, and how
   // much of each stroke has to be covered. Tightened 2026-11-16 on the owner's
   // call: tracing used to pass at 70% of each stroke inside a halo of more than a
-  // guide width, which let a rough swipe near the letter advance. Now the WHOLE
-  // stroke has to be traced, end to end, with the finger on or just beside the
-  // ink. These are the two dials.
+  // guide width, which let a rough swipe near the letter advance. That made the
+  // WHOLE stroke count, end to end - which in use was too strict, so on
+  // 2026-11-22 coverage came back to 85%: the last bit of a stroke, usually an
+  // end that is hard to land exactly, may be missed. The halo is unchanged, so a
+  // swipe beside the letter still does not count. These are the two dials.
   //
   // The halo (0.75 guide widths from the centerline) is deliberately WIDER than
   // half the marker the student lays down (0.38): if the guide LOOKS painted
@@ -2213,7 +2250,7 @@
   // finished - the forgiveness only ever runs the other way.
   const TRACE_HALO = .75;        // x guide width, measured from the centerline
   const TRACE_HALO_MIN = 24;     // px floor, for a very small screen
-  const TRACE_COVERAGE = 1;      // fraction of every stroke that must be covered
+  const TRACE_COVERAGE = .85;    // fraction of every stroke that must be covered
   function traceHalo(guideWidth) { return Math.max(TRACE_HALO_MIN,guideWidth*TRACE_HALO); }
   function coverageRadius() { return traceHalo(currentTransform().guideWidth); }
   // THE rule for "this stroke is traced", shared by the braille Letters and
@@ -3274,6 +3311,192 @@
     if (done) done();
   }
 
+  // ========================================================== piano break ===
+  // The computer plays a melody on ghosted keys, each key lighting as it
+  // sounds; then the keys come up and the student plays it back. Wrong notes
+  // are fine. What advances is the COUNT: as many taps as the melody has
+  // notes. A dot on one key marks the note the melody wants next, and it moves
+  // on with every tap, right or wrong, so the guide never stalls on a miss.
+  //
+  // Ends every round of Print Letter Tracing (printCheck). Not in the braille
+  // sections' break rotation - ?piano=1 previews it, ?break=piano pins
+  // it for a session.
+  //
+  // Notes are [name, beats]. The range is the song's span rounded out to
+  // white keys, so the keyboard is only as wide as this song needs.
+  const PIANO_SONGS = [{
+    // Satie, Gymnopedie No. 1 (1888, public domain): the opening phrase of
+    // the melody, bars 5-8, without the bar-5 rest. "Lent et douloureux".
+    name:'gymnopedie1', bpm:72,
+    notes:[['F#5',1],['A5',1],['G5',1],['F#5',1],['C#5',1],
+           ['B4',1],['C#5',1],['D5',1],['A4',3]]
+  }];
+  const PIANO_LEAD_MS    = 900;   // keys up and ghosted, then the demo starts
+  const PIANO_HANDOVER_MS = 300;  // after the demo's last note has its full length
+  const PIANO_DONE_MS    = 2600;  // the last note rings, then the break ends
+  const PIANO_LEVEL      = .9;
+
+  const NOTE_PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  function noteMidi(n) {
+    const m=/^([A-G])([#b]?)(\d)$/.exec(n);
+    return 12*(Number(m[3])+1)+NOTE_PC[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0);
+  }
+  const midiFreq=m=>440*Math.pow(2,(m-69)/12);
+  const midiIsBlack=m=>[1,3,6,8,10].includes(m%12);
+  // The keyboard for a song: its lowest to highest note, widened to the
+  // nearest white key at each end (a keyboard never starts on a black key).
+  function pianoRange(song) {
+    const ms=song.notes.map(([n])=>noteMidi(n));
+    let lo=Math.min(...ms), hi=Math.max(...ms);
+    if (midiIsBlack(lo)) lo--;
+    if (midiIsBlack(hi)) hi++;
+    return [lo,hi];
+  }
+
+  const pianoEl=document.getElementById('piano');
+  const pianoKeysEl=document.getElementById('pianoKeys');
+  let pnOn=false, pnOnFinish=null, pnSong=null, pnTurn=false, pnCount=0;
+  let pnTimers=[], pnKeys=new Map(), pnBus=null, pnNodes=[];
+  function pianoActive() { return pnOn; }
+  function pnAt(ms,fn) { pnTimers.push(setTimeout(()=>{ if (pnOn) fn(); },ms)); }
+
+  function buildPiano(song) {
+    const [lo,hi]=pianoRange(song);
+    pianoKeysEl.textContent='';
+    pnKeys=new Map();
+    const whites=[];
+    for (let m=lo;m<=hi;m++) if (!midiIsBlack(m)) whites.push(m);
+    pianoKeysEl.style.setProperty('--whites',String(whites.length));
+    whites.forEach(m=>{
+      const k=document.createElement('div');
+      k.className='pkey white'; k.dataset.midi=String(m);
+      pianoKeysEl.appendChild(k); pnKeys.set(m,k);
+    });
+    for (let m=lo+1;m<hi;m++) {
+      if (!midiIsBlack(m)) continue;
+      // On the boundary between the white key below it and the one above.
+      const right=whites.indexOf(m+1);
+      const k=document.createElement('div');
+      k.className='pkey black'; k.dataset.midi=String(m);
+      k.style.left=`calc(${right} * 100% / ${whites.length} - 32% / ${whites.length})`;
+      pianoKeysEl.appendChild(k); pnKeys.set(m,k);
+    }
+  }
+
+  function pianoBusNode() {
+    const ac=audio(); if (!ac) return null;
+    if (!pnBus) { pnBus=ac.createGain(); pnBus.connect(masterGain); }
+    return pnBus;
+  }
+  // A struck-string voice: a few sine partials, very slightly stretched the
+  // way real strings are, through a lowpass that closes as the note decays -
+  // bright on the strike, mellow in the ring. Lower notes ring longer.
+  function pianoNote(midi,vol=.26) {
+    const ac=audio(), bus=pianoBusNode(); if (!ac||!bus) return;
+    const f=midiFreq(midi), t0=ac.currentTime;
+    const dur=Math.max(1.8,4.4-(midi-57)*.09);
+    const out=ac.createGain();
+    out.gain.setValueAtTime(0,t0);
+    out.gain.linearRampToValueAtTime(vol,t0+.006);
+    out.gain.exponentialRampToValueAtTime(vol*.32,t0+.4);
+    out.gain.exponentialRampToValueAtTime(.0004,t0+dur);
+    const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=.5;
+    lp.frequency.setValueAtTime(Math.min(14000,f*10),t0);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(f*2.2,700),t0+dur*.7);
+    lp.connect(out); out.connect(bus);
+    for (const [k,a] of [[1,1],[2,.45],[3,.24],[4,.12],[5,.07],[6,.035]]) {
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=f*k*(1+.00035*k*k); g.gain.value=a;
+      o.connect(g).connect(lp); o.start(t0); o.stop(t0+dur+.05);
+      pnNodes.push(o);
+      o.onended=()=>{ const i=pnNodes.indexOf(o); if (i>=0) pnNodes.splice(i,1); };
+    }
+  }
+
+  function pianoLight(midi,ms) {
+    const k=pnKeys.get(midi); if (!k) return;
+    k.classList.add('lit');
+    clearTimeout(k._unlit);
+    k._unlit=setTimeout(()=>k.classList.remove('lit'),ms);
+  }
+  function pianoMark() {
+    for (const k of pnKeys.values()) k.classList.remove('next');
+    if (!pnTurn || pnCount>=pnSong.notes.length) return;
+    const k=pnKeys.get(noteMidi(pnSong.notes[pnCount][0]));
+    if (k) k.classList.add('next');
+  }
+
+  function startPianoBreak(onFinish) {
+    const ac=audio();
+    if (!ac) { startBrainBreak(onFinish); return; }
+    brushOff();
+    pnOnFinish=onFinish; pnOn=true; pnTurn=false; pnCount=0;
+    pnSong=PIANO_SONGS[0];
+    buildPiano(pnSong);
+    pianoEl.classList.add('on','ghost');
+    pianoEl.setAttribute('aria-hidden','false');
+    const bus=pianoBusNode();
+    bus.gain.cancelScheduledValues(ac.currentTime);
+    bus.gain.setValueAtTime(PIANO_LEVEL,ac.currentTime);
+    // The demonstration. Each note is struck and lit on its own timer, so a
+    // walk-out cancels whatever has not sounded yet.
+    const beat=60000/pnSong.bpm;
+    let t=PIANO_LEAD_MS;
+    for (const [n,beats] of pnSong.notes) {
+      const m=noteMidi(n);
+      pnAt(t,()=>{ pianoNote(m); pianoLight(m,Math.min(beat*beats*.9,1100)); });
+      t+=beat*beats;
+    }
+    pnAt(t+PIANO_HANDOVER_MS,()=>{
+      pianoEl.classList.remove('ghost');
+      pnTurn=true;
+      pianoMark();
+    });
+  }
+
+  // One tap from the student. Any key counts; the count is what advances.
+  function pianoPress(midi) {
+    if (!pnOn || !pnTurn || !pnKeys.has(midi)) return;
+    pianoNote(midi);
+    pianoLight(midi,260);
+    pnCount++;
+    if (pnCount>=pnSong.notes.length) {
+      pnTurn=false;
+      pianoMark();
+      // Ghost again as the last note rings: the keys visibly stop taking
+      // input before the break hands back.
+      pnAt(500,()=>pianoEl.classList.add('ghost'));
+      pnAt(PIANO_DONE_MS,endPiano);
+      return;
+    }
+    pianoMark();
+  }
+  pianoKeysEl.addEventListener('pointerdown',ev=>{
+    const k=ev.target.closest('.pkey');
+    if (!k) return;
+    ev.preventDefault();
+    pianoPress(Number(k.dataset.midi));
+  });
+
+  function endPiano() {
+    if (!pnOn) return;
+    pnOn=false; pnTurn=false;
+    for (const id of pnTimers) clearTimeout(id);
+    pnTimers=[];
+    const ac=audioCtx;
+    if (pnBus && ac) {
+      try { pnBus.gain.cancelScheduledValues(ac.currentTime);
+            pnBus.gain.setTargetAtTime(0,ac.currentTime,.06); } catch {}
+    }
+    const nodes=pnNodes; pnNodes=[];
+    setTimeout(()=>{ for (const n of nodes) { try { n.stop(); } catch {} } },400);
+    pianoEl.classList.remove('on','ghost');
+    pianoEl.setAttribute('aria-hidden','true');
+    pianoKeysEl.textContent=''; pnKeys=new Map();
+    const done=pnOnFinish; pnOnFinish=null;
+    if (done) done();
+  }
+
   // A test seam, not a feature. Nothing in the app reads it.
   window.__rhythm = {
     patterns:RHYTHM_PATTERNS, judge:rhythmJudge,
@@ -3324,7 +3547,9 @@
   let breakTurn=0;
   function pickBreak(then) {
     const kind=breakRotation[breakTurn++ % breakRotation.length];
-    if (kind==='rhythm') startRhythmBreak(then); else startBrainBreak(then);
+    if (kind==='rhythm') startRhythmBreak(then);
+    else if (kind==='piano') startPianoBreak(then);
+    else startBrainBreak(then);
   }
 
 
@@ -3730,6 +3955,7 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    if (pianoActive()) { pnOnFinish=null; endPiano(); }
     if (assessActive()) endAssessment();
     if (writeActive()) endWrite();
     if (printActive()) endPrint();
@@ -4037,6 +4263,7 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    if (pianoActive()) { pnOnFinish=null; endPiano(); }
     wOn=true;
     writeEl.classList.add('on');
     writeEl.setAttribute('aria-hidden','false');
@@ -4220,7 +4447,9 @@
     const myRun=runId;
     setTimeout(()=>{
       if (myRun!==runId || !pOn) return;
-      startMinigame(()=>{ if (myRun!==runId || !pOn) return; printNewRound(); });
+      // The piano break, since 2026-11-22 - it used to be the shape reward
+      // round. Same continuation: the same letters on a clean page, new ink.
+      startPianoBreak(()=>{ if (myRun!==runId || !pOn) return; printNewRound(); });
     },PRINT_DONE_BEAT);
   }
 
@@ -4293,6 +4522,7 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    if (pianoActive()) { pnOnFinish=null; endPiano(); }
     pLetters=(letters||[]).filter(ch=>PRINT_KEYS.includes(ch)).slice(0,3);
     if (pLetters.length!==3) pLetters=['a','b','c'];
     pOn=true;
@@ -4692,6 +4922,7 @@
     if (minigameActive()) { mgOnFinish=null; endMinigame(); }
     if (brainBreakActive()) { bbOnFinish=null; endBrainBreak(); }
     if (rhythmActive()) { rOnFinish=null; endRhythm(); }
+    if (pianoActive()) { pnOnFinish=null; endPiano(); }
     if (writeActive()) endWrite();
     chooser.classList.remove('on');
     vowelPanel.hidden=true;
@@ -4792,7 +5023,7 @@
   // Which break activity the session uses. Default is both, alternating, with
   // Carl first; ?break=carl or ?break=rhythm pins it to one.
   const wantedBreak=(params.get('break')||'').toLowerCase();
-  if (wantedBreak==='carl'||wantedBreak==='rhythm') breakRotation=[wantedBreak];
+  if (wantedBreak==='carl'||wantedBreak==='rhythm'||wantedBreak==='piano') breakRotation=[wantedBreak];
   // Start the rhythm section partway down the pattern list, for hearing a
   // harder one without playing up to it. 1-based, as the banner counts.
   const wantedTask=parseInt(params.get('rtask'),10);
@@ -4801,6 +5032,8 @@
   // ?rhythm=1 previews the BRAIN-BREAK shape - one set, then it hands back to
   // the menu by itself. The activity shape is ?mode=rhythm, or the Rhythm card.
   const rhythmPreview=params.get('rhythm')==='1';
+  // ?piano=1 previews the piano break the same way, then hands back to the menu.
+  const pianoPreview=params.get('piano')==='1';
 
   // Something must be rendered behind the splash, so letters is set up now and
   // simply replaced if the teacher picks differently.
@@ -4818,6 +5051,7 @@
     // there is nothing to preload. audio/rhythm/ is kept on disk but unused;
     // see the note in README.
     if (rhythmPreview) { startRhythmBreak(openChooser); return; }
+    if (pianoPreview) { startPianoBreak(openChooser); return; }
     // ?mode=print&letters=bdp - three letters, or the picker if they are not.
     if (presetMode==='print') {
       const ls=[...(params.get('letters')||'').toLowerCase()].filter(c=>PRINT_KEYS.includes(c));

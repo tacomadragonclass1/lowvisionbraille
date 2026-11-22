@@ -146,6 +146,7 @@ export function loadApp(htmlPath, expose='') {
     addEventListener(t, f) { if (t === 'loadedmetadata' || t === 'canplaythrough') setTimeout(f, 0); }
     removeEventListener() {} };
   g.AudioContext = FakeAudioCtx; g.webkitAudioContext = FakeAudioCtx;
+  g.window.AudioContext = FakeAudioCtx;   // the app looks it up on window
   g.OfflineAudioContext = class extends FakeAudioCtx {
     startRendering() { return Promise.resolve({ getChannelData: () => new Float32Array(128) }); } };
   g.performance = { now: () => Date.now() };

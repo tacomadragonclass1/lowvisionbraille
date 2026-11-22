@@ -53,7 +53,7 @@ Words** asks which braille convention to use.
 
 Unchanged from the original app. A large letter guide is traced with a finger
 while the braille cell lights the dots that letter needs. **Both** are required
-to advance, and the tracing has to be complete — every stroke, end to end (see
+to advance, and the tracing has to cover 85% of every stroke (see
 *Tracing*). New: finishing the cell now plays that letter's sound — `/b/`, not
 "bee".
 
@@ -113,17 +113,17 @@ for short letters on a phone held upright. The space at the top for the ⌂ and
 at the bottom for the pill is kept clear.
 
 - **Same tracing rule** as Letters and Numbers — the code is shared
-  (`strokeTraced()`, `traceHalo()`), so the two can never drift. Every stroke of
-  every letter, end to end; the i/j dot is a touch on the dot. The letters can
+  (`strokeTraced()`, `traceHalo()`), so the two can never drift. 85% of every
+  stroke of every letter; the i/j dot is a touch on the dot. The letters can
   be traced in any order. See *Tracing*.
 - **No letter sounds at all.** No phoneme, no name, no clip of any kind — only
   the brush, which plays while the finger is on the guide.
-- When all three are traced there is a short beat, then the **shape minigame**
-  (after EVERY round, not every sixth item - its tune comes from the same
-  rotation as every other mode), then **the same three letters come back** on a
-  clean page. No brain break.
+- When all three are traced there is a short beat, then the **piano break**
+  (after EVERY round; see *The piano break*), then **the same three letters
+  come back** on a clean page. Changed 2026-11-22: it used to be the shape
+  minigame.
 - **One ink colour per round.** Every stroke in a round is the same colour, and
-  the colour changes when a new round starts — after the minigame, or after new
+  the colour changes when a new round starts — after the piano break, or after new
   letters are picked. That is the opposite of Write, where every stroke is a
   new colour: here the colour marks the attempt, not the stroke. Inks come from
   `WRITE_INK`, all of which clear WCAG AA on white. The guide is a mid grey,
@@ -132,7 +132,7 @@ at the bottom for the pill is kept clear.
   screen, clear of the Full screen button), guarded by the same
   double tap as the ⌂ — the first tap only arms it. It brings the picker back
   with empty slots; **Back** returns to the letters already on screen. A round
-  that had just finished when the picker opened skips its minigame and starts
+  that had just finished when the picker opened skips its piano break and starts
   fresh.
 
 `?mode=print&letters=bdp` bookmarks straight in; without three valid letters it
@@ -657,7 +657,8 @@ decisions apart is what made the promotion a one-line change.
 
 ### Carl's dance
 
-**The only break there is today.** Carl dances across the screen to his own music
+**The only break in the braille sections today** (Print Letter Tracing ends its rounds
+with the piano). Carl dances across the screen to his own music
 (`audio/brainbreak/carlwin.wav`, 10.23s) and then the activity resumes by itself.
 
 A *task* is any finished piece of work — a letter, a word, a number — **and a
@@ -714,6 +715,32 @@ How often it fires is `MINIGAME_EVERY` in `index.html`: every 4th letter, every
 4th number, every **2nd** word — a CVC word is three cells of work, so it earns
 a reward twice as often as a single letter. The brain break has its own
 `BRAIN_BREAK_EVERY` (6), counted in tasks rather than items.
+
+### The piano break
+
+Added 2026-11-22. **It ends every round of Print Letter Tracing.** It is not
+in the brain-break rotation for the braille sections. **`?piano=1`** previews it (one go, then the menu);
+**`?break=piano`** makes it the break for a session. Putting `'piano'` into
+`breakRotation` is the whole of enabling it.
+
+1. **The demonstration.** The keys come up **ghosted** (grey, inert) and the
+   computer plays the melody, each key lighting yellow as it sounds.
+2. **The student's turn.** The keys come up full black-and-white. A small blue
+   **dot** marks the key the melody wants next — a guide, not a fill.
+3. **Wrong notes are fine.** What advances is the **count**: as many taps as
+   the melody has notes. The dot moves on with every tap, right or wrong, so
+   it never stalls on a miss.
+4. After the last tap the keys ghost again, the note rings, and the break
+   hands back.
+
+The first song is the opening phrase of Satie's **Gymnopédie No. 1** (1888,
+public domain): F♯ A G F♯ C♯ B C♯ D A, nine notes, at 72 bpm. Songs live
+in `PIANO_SONGS` as `[note, beats]` pairs, and the keyboard is built from
+the song's own span rounded out to white keys — here **A4–A5, eight white
+keys**, the fewest that fit, so every key is as fat as the screen allows. The
+voice is synthesized (a few slightly stretched sine partials through a
+closing lowpass); there is no sample to ship. Tested in
+`tools/write-tests/test_piano.mjs` on a fake clock.
 
 ## The rhythm section
 
@@ -1285,11 +1312,16 @@ and simply too quiet in the room.
 
 ## Tracing
 
-Every stroke of the letter or digit has to be traced **completely, end to
-end**, before the item can advance — the braille cell being done is not enough
-on its own. Two dials at the top of the coverage code set this:
+**85% of every stroke** of the letter or digit has to be traced before the
+item can advance — the braille cell being done is not enough on its own. Two
+dials at the top of the coverage code set this:
 
-- `TRACE_COVERAGE = 1` — the fraction of each stroke that must be covered.
+- `TRACE_COVERAGE = .85` — the fraction of each stroke that must be covered.
+  Was 1 (end to end) from 2026-11-16, which proved too strict in use; 0.7
+  before that, which let rough swipes through. Because the halo also reaches a
+  little past where the finger stops, in practice a few percent more than 15%
+  of a stroke can go untouched — 10% off each end of a straight stroke passes,
+  15% off each end does not.
 - `TRACE_HALO = .75` — how far the finger may be from the centerline, in guide
   widths (floor `TRACE_HALO_MIN`, 24px). The guide is one guide width thick, so
   this is "on the ink, or a quarter of a guide width beside it".
@@ -1413,6 +1445,6 @@ eye or ear:
 | How close a trace must be, and how much of it | `TRACE_HALO` / `TRACE_HALO_MIN`, `TRACE_COVERAGE` |
 | Print Letter Tracing's guide colour | `PRINT_GUIDE` |
 | Space between its three letters | `PRINT_GAP` (glyph units) |
-| Beat between its last stroke and the minigame | `PRINT_DONE_BEAT` |
+| Beat between its last stroke and the piano break | `PRINT_DONE_BEAT` |
 
 The Rhythm section has its own table of dials — see *The rhythm section · Tuning dials*.

@@ -1,9 +1,10 @@
 // Letter and digit tracing: what counts as DONE. Real pointer events through
 // the real trace-canvas handlers.
 //
-// Tracing was tightened on 2026-11-16: every stroke must now be covered end to
-// end, with the finger on or just beside the ink. It used to pass at 70% of
-// each stroke inside a halo of more than a guide width. These tests pin the new rule
+// Tracing was tightened on 2026-11-16 to every stroke covered end to end, with
+// the finger on or just beside the ink (it used to pass at 70% of each stroke
+// inside a halo of more than a guide width). That proved too strict, and on
+// 2026-11-22 coverage came back to 85%; the halo stayed tight. These tests pin the new rule
 // down from both sides - what must NOT pass any more, and what must still pass
 // - plus the one promise the rule makes to the student: a guide that LOOKS
 // painted over has counted.
@@ -62,7 +63,7 @@ ok(!!C && !!C.pointerdown && !!C.pointermove && !!C.pointerup,
    'the trace canvas has down/move/up handlers bound');
 
 console.log('\n  -- the dials --');
-ok(R.TRACE_COVERAGE === 1, 'every stroke must be traced completely (coverage 1)');
+ok(R.TRACE_COVERAGE === .85, '85% of every stroke must be traced (coverage .85)');
 R.deal('l');
 const gw = R.guideWidth();
 ok(R.radius() < gw, `the halo is under a guide width (${(R.radius() / gw).toFixed(2)})`);
@@ -72,15 +73,19 @@ ok(R.radius() > gw * .76 / 2,
 console.log('\n  -- what no longer passes --');
 let stem = R.geometry()[0];
 R.deal('l'); drag(stem.slice(0, Math.floor(stem.length * .8)));
-ok(!R.done(), 'tracing 80% of the stroke is NOT done (it used to be)');
-R.deal('l'); drag(stem.slice(Math.ceil(stem.length * .1), Math.floor(stem.length * .9)));
-ok(!R.done(), 'skipping both ends of the stroke is NOT done');
+ok(!R.done(), 'tracing 80% of the stroke is NOT done');
+R.deal('l'); drag(stem.slice(Math.ceil(stem.length * .15), Math.floor(stem.length * .85)));
+ok(!R.done(), 'skipping 15% at both ends of the stroke is NOT done');
 R.deal('l'); drag(shifted(stem, gw * 1.0));
 ok(!R.done(), 'a full-length swipe one guide width off the line is NOT done');
 R.deal('l'); drag(shifted(stem, gw * 0.9));
 ok(!R.done(), 'nor at 0.9 guide widths off');
 
 console.log('\n  -- what still passes --');
+R.deal('l'); drag(stem.slice(0, Math.ceil(stem.length * .9)));
+ok(R.done(), 'tracing 90% of the stroke is done - the last bit may be missed (since 2026-11-22)');
+R.deal('l'); drag(stem.slice(Math.floor(stem.length * .05), Math.ceil(stem.length * .95)));
+ok(R.done(), 'and so may a little of each end');
 R.deal('l'); drag(stem);
 ok(R.done(), 'tracing the whole stroke on the line is done');
 R.deal('l'); drag(shifted(stem, gw * .4));
