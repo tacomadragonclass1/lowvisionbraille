@@ -26,6 +26,8 @@ loadApp(HTML, `
                      cellsFor: (w, conv) => { sightConvention = conv; return sightCells(w); },
                      build: (specs) => { buildCells(specs); return brailleEl.className; },
                      deck: () => { mode = 'sight'; buildOrder(); return order; },
+                     freshSession: () => { sightBag = []; },
+                     BLOCK: SIGHT_BLOCK,
                      // Deal one specific card through the REAL setupItem, so the
                      // {word, round} item shape is exercised end to end.
                      deal: (w, round) => {
@@ -116,42 +118,50 @@ ok(noRule.length === 0,
    `every cell count the bank can produce (${sorted.join(', ')}) is sized in both rounds` +
    (noRule.length ? ` -- MISSING: ${noRule.join('; ')}` : ''));
 
-console.log('\n  -- the interleaved deck --');
-// Both rounds of every word live in one shuffled deck. The rule is that a
-// round-2 card can only come up once its round-1 counterpart has played, and
-// the deck gets that from HOW it is built rather than by checking. These run
-// over many decks because the property has to hold for every shuffle, not for
-// a lucky one.
-let sizeBad = 0, precedenceBad = 0, pairBad = 0, firstNotRound1 = 0, shapeBad = 0;
-let adjacent = 0, decks = 300;
-for (let d = 0; d < decks; d++) {
-  const deck = S.deck();
-  if (deck.length !== S.SIGHT_WORDS.length * 2) sizeBad++;
-  if (deck.some(c => typeof c !== 'object' || !c.word || (c.round !== 1 && c.round !== 2))) shapeBad++;
-  if (deck[0].round !== 1) firstNotRound1++;
-  const seenAt = new Map(), count = new Map();
-  deck.forEach((c, i) => {
-    count.set(c.word + '|' + c.round, (count.get(c.word + '|' + c.round) || 0) + 1);
-    if (c.round === 1) seenAt.set(c.word, i);
-    else if (!seenAt.has(c.word)) precedenceBad++;          // round 2 with no round 1 before it
-    else if (i - seenAt.get(c.word) === 1) adjacent++;      // round 2 immediately after its round 1
-  });
-  // exactly one round-1 and one round-2 card per word
-  for (const w of S.SIGHT_WORDS)
-    if (count.get(w + '|1') !== 1 || count.get(w + '|2') !== 1) pairBad++;
+console.log('\n  -- blocks: four in round 1, then the same four in round 2 --');
+// Since 2026-11-22 the section deals blocks: SIGHT_BLOCK words with print,
+// then the same words again from dots alone, in a new order. These run over
+// many blocks because the properties must hold for every shuffle.
+ok(S.BLOCK === 4, 'a block is four words');
+let shapeBad = 0, splitBad = 0, sameBad = 0, echo = 0, firstNotRound1 = 0;
+const N = 2000;
+S.freshSession();
+for (let d = 0; d < N; d++) {
+  const blk = S.deck();
+  if (blk.length !== 8 || blk.some(c => typeof c !== 'object' || !c.word)) { shapeBad++; continue; }
+  const r1 = blk.slice(0, 4), r2 = blk.slice(4);
+  if (r1.some(c => c.round !== 1) || r2.some(c => c.round !== 2)) splitBad++;
+  if (blk[0].round !== 1) firstNotRound1++;
+  const w1 = r1.map(c => c.word), w2 = r2.map(c => c.word);
+  if (new Set(w1).size !== 4 || [...w1].sort().join() !== [...w2].sort().join()) sameBad++;
+  if (w2[0] === w1[3]) echo++;
 }
-ok(sizeBad === 0, `a deck is both rounds of every word (${S.SIGHT_WORDS.length * 2} cards)`);
-ok(shapeBad === 0, 'every card is a {word, round} pair');
-ok(pairBad === 0, 'exactly one round-1 and one round-2 card per word');
-ok(precedenceBad === 0,
-   `a round-2 card never precedes its own round-1 card (${decks} decks)`);
-ok(firstNotRound1 === 0,
-   `the first card of a deck is always round 1, so round 2 never autoplays without a gesture (${decks} decks)`);
-// Not a failure condition - just held to a sane rate so a regression that
-// started pairing cards up would be visible. ~1 per deck is expected.
-const perDeck = adjacent / decks;
-ok(perDeck < 4,
-   `a word's two cards land back-to-back rarely (${perDeck.toFixed(2)} per deck of ${S.SIGHT_WORDS.length * 2})`);
+ok(shapeBad === 0, `every block is eight {word, round} cards (${N} blocks)`);
+ok(splitBad === 0, 'cards 1-4 are round 1 and cards 5-8 are round 2');
+ok(firstNotRound1 === 0, 'a block always opens on round 1, so round 2 never autoplays without a gesture');
+ok(sameBad === 0, 'round 2 is the same four distinct words round 1 just showed');
+ok(echo === 0, 'round 2 never opens on the word round 1 closed with');
+
+// Every word comes up once before any word repeats: from a fresh session,
+// the first 49 round-1 words are the whole bank.
+S.freshSession();
+const firstPass = [];
+while (firstPass.length < S.SIGHT_WORDS.length)
+  firstPass.push(...S.deck().slice(0, 4).map(c => c.word));
+ok(new Set(firstPass.slice(0, S.SIGHT_WORDS.length)).size === S.SIGHT_WORDS.length,
+   `the whole bank is dealt before any word repeats (${S.SIGHT_WORDS.length} words)`);
+
+// And the order is different every time a session starts.
+const openings = new Set();
+for (let d = 0; d < 300; d++) { S.freshSession(); openings.add(S.deck().map(c => c.word).join()); }
+ok(openings.size >= 295, `a fresh session deals a different opening block (${openings.size}/300 distinct)`);
+// Round 2's order really is reshuffled, never round 1 replayed.
+let replayed = 0;
+for (let d = 0; d < 300; d++) {
+  const blk = S.deck();
+  if (blk.slice(0, 4).map(c => c.word).join() === blk.slice(4).map(c => c.word).join()) replayed++;
+}
+ok(replayed === 0, `round 2 is never round 1's order replayed (${replayed}/300)`);
 
 console.log('\n  -- a card is dealt through the real setupItem --');
 // The item shape changed from a bare string to a {word, round} pair, so the

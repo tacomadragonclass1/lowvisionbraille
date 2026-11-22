@@ -147,37 +147,36 @@ then (2026-11-21) **this, that, go, from, out, look, how, does, little, what,
 who, for, find, your** — in two rounds. Round 1 shows the word in print above the dots; **round 2 shows the
 dots alone** and asks for the word.
 
-#### The two rounds are shuffled together into one deck
+#### Four in round 1, then the same four in round 2
 
-**Changed 2026-10-30.** The section used to run all of round 1 and then all of
-round 2. At thirteen words that was a 26-card cycle; at thirty-five it would
-have been **seventy cards before a word came round again**, so the rounds are
-now interleaved and a card may be either kind.
+**Changed 2026-11-22.** The section deals **blocks**: four words in round 1
+(print over the dots), then **the same four words** in round 2 (dots and the
+spoken prompt only), then the next four, for as long as the section runs.
+`SIGHT_BLOCK` in `index.html` is the four.
 
-The rule is that **a word's round-2 card only appears once its round-1 card has
-played** — it is never tested from dots before it has been seen in print. That
-is not checked after the fact, it comes from how the deck is built: each word
-goes in **twice**, the whole list is shuffled, and walking it a word's *first*
-appearance is its round-1 card and its *second* is its round-2 card. A second
-occurrence is by definition after a first, so the rule holds by construction,
-and the result is a uniformly random interleaving rather than the biased one a
-place-then-retry loop would give.
+History, because it went round twice: at thirteen words the section ran all
+of round 1 and then all of round 2. At thirty-five that would have been
+seventy cards before a word came back, so on 2026-10-30 the two rounds were
+shuffled together into one deck and a card could be either kind at random.
+At forty-nine the owner asked for distinct rounds again, in small blocks.
 
-Two consequences are guaranteed rather than likely, and both are load-bearing:
+The words come off a shuffled **bag** of the whole bank, so every word is
+dealt once before any repeats, and the order is different every session (the
+bag is emptied on every `start()`). 49 is not a multiple of four, so the block
+that straddles a refill skips any word already in it.
 
-- **The first card of a deck is always round 1**, because the first token of a
-  shuffled list is necessarily a first occurrence. Round 2 autoplays its
-  question as the card arrives, which browsers only allow after a user
-  gesture — this is what keeps that legal on the opening card of a session.
-  ⛔ Do not replace the deck with a scheme that can deal round 2 first.
-- **Every word is still read in print before it is tested from dots alone**,
-  which was the entire point of the old two-pass order.
+Guaranteed by construction, and load-bearing:
 
-One side effect worth knowing: nothing stops a word's two cards landing
-**back-to-back**, which makes that one card an echo rather than a recall. The
-rate is low — measured over 300 decks, **1.0 of the 35 words per 70-card deck**
-— so it is left alone rather than fixed with a minimum-gap rule. If it ever
-needs to go, that is where to add it.
+- **A block always opens on round 1.** Round 2 autoplays its question as the
+  card arrives, which browsers only allow after a gesture. ⛔ Do not deal a
+  round-2 card first.
+- **Every word is read in print before it is tested from dots alone**, a few
+  cards earlier in the same block.
+- **Round 2 is in a new order**: never round 1's order exactly, and never
+  opening on the word round 1 closed with (that would be an echo, not a
+  recall).
+
+`tools/write-tests/test_sightwords.mjs` checks all of this over 2000 blocks.
 
 The print word is deliberately **not** in the CVC letter boxes. A box costs a
 border and a gap on every letter, and the point of this section is lettering as

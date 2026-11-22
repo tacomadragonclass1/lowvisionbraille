@@ -1775,6 +1775,24 @@
     return list;
   }
 
+  // Sight words per block: this many in round 1, then the same ones in round 2.
+  const SIGHT_BLOCK = 4;
+  let sightBag=[];
+  // The next n distinct words off the bag, refilling it with a fresh shuffle
+  // of the whole bank when it runs dry. A refill can hold a word already in
+  // this block (49 is not a multiple of 4), so those are skipped over and
+  // stay in the bag for the next block.
+  function drawSightWords(n) {
+    const group=[];
+    while (group.length<Math.min(n,SIGHT_WORDS.length)) {
+      if (!sightBag.length) sightBag=shuffle([...SIGHT_WORDS]);
+      const i=sightBag.findIndex(w=>!group.includes(w));
+      if (i<0) { sightBag=sightBag.concat(shuffle([...SIGHT_WORDS])); continue; }
+      group.push(sightBag.splice(i,1)[0]);
+    }
+    return group;
+  }
+
   function buildOrder() {
     orderIndex=0;
     if (mode==='cvc') {
@@ -1784,39 +1802,41 @@
     }
     if (mode==='numbers') { order=shuffle('0123456789'.split('')); return; }
     if (mode==='sight') {
-      /* ONE deck, both rounds interleaved at random.
+      /* Blocks of SIGHT_BLOCK words: those words in round 1 (print over the
+         dots), then the SAME words again in round 2 (dots and the spoken
+         prompt only), then the next words. One block is one `order`; when it
+         runs out, advance() calls this again and the next block is dealt.
 
-         Each word goes in TWICE and the whole list is shuffled; walking it, a
-         word's FIRST appearance is its round-1 card and its SECOND is its
-         round-2 card. That construction is the whole mechanism, and it is
-         worth seeing why it needs no constraint checking, no retries and no
-         reshuffling: a second occurrence is BY DEFINITION after a first, so
-         "a round-2 card only appears once its round-1 counterpart has played"
-         is guaranteed by how the list is built rather than enforced after the
-         fact. It is also a uniformly random interleaving, which a
-         place-then-check loop would not be.
+         What it was, and why it changed (2026-11-22): at 13 words the section
+         ran all of round 1, then all of round 2. At 35 that became one deck
+         with the two rounds shuffled together (2026-10-30), so a card could be
+         either kind at random. At 49 words the owner asked for distinct
+         rounds again, in small blocks: four round-1 cards, then four round-2.
 
-         Two consequences, both guaranteed and both load-bearing:
+         The words come off a shuffled BAG of the whole bank, so every word is
+         dealt once before any repeats, and the order differs every time. The
+         bag lives across blocks and is emptied on every start() so a new
+         session starts on a fresh shuffle.
 
-           - The FIRST card of a deck is always round 1, because the first
-             token in a shuffled list is necessarily a first occurrence. Round
-             2 autoplays its question when the card arrives, which is only
-             legal after a user gesture, and this is what keeps it legal on the
-             opening card of a session. ⛔ Do not replace this with a scheme
-             that can deal a round-2 card first.
-           - Every word is still read in PRINT before it is ever tested from
-             dots alone, which was the entire point of the old two-pass order.
-             Interleaving kept that and dropped only the long wait.
+         Guaranteed by construction, and both load-bearing:
+           - The FIRST card of a block is always round 1. Round 2 autoplays
+             its question as the card arrives, which is only legal after a
+             gesture. ⛔ Do not deal a round-2 card first.
+           - Every word is read in PRINT before it is tested from dots alone,
+             a few cards earlier, in the same block.
 
-         What changed on 2026-10-30: the section used to run all of round 1,
-         then all of round 2. At 13 words that was a 26-card cycle; at 35 it
-         would have been 70 cards before a word came round again. */
-      const seen=new Set();
-      order=shuffle([...SIGHT_WORDS,...SIGHT_WORDS]).map(w=>{
-        const round=seen.has(w) ? 2 : 1;
-        seen.add(w);
-        return { word:w, round };
-      });
+         Round 2 replays the block's words in a NEW order: never round 1's
+         order exactly, and never opening on the word round 1 just closed
+         with, which would be an echo rather than a recall. */
+      const words=drawSightWords(SIGHT_BLOCK);
+      let again=shuffle([...words]);
+      // Reshuffle until round 2 neither opens on that echo nor simply replays
+      // round 1's order. 17 of the 24 orders of four pass, so this settles in
+      // a few tries.
+      while (words.length>1 && (again[0]===words[words.length-1] ||
+                                again.join()===words.join())) again=shuffle(again);
+      order=[...words.map(w=>({ word:w, round:1 })),
+             ...again.map(w=>({ word:w, round:2 }))];
       return;
     }
     const forced=(new URLSearchParams(location.search).get('letter')||'').toLowerCase();
@@ -2096,7 +2116,7 @@
       clip(wordSrc(item));
     } else if (mode==='sight') {
       // A sight item is a {word, round} PAIR, not a bare word: the two rounds
-      // are interleaved in one deck, so which round this card is comes from
+      // are dealt in blocks of four (see buildOrder), so which round this card is comes from
       // the card and not from a mode-wide counter.
       word=item.word;
       sightRound=item.round;
@@ -3395,9 +3415,8 @@
       if (myRun!==runId) return;
       orderIndex++;
       if (orderIndex>=order.length) {
-        // A fresh deck. Sight mode no longer flips a round here: its deck
-        // already holds both rounds of every word, so running out of cards
-        // just means reshuffling the lot.
+        // A fresh deck. In sight mode a "deck" is one block - four words in
+        // round 1, then the same four in round 2 - so this deals the next block.
         buildOrder();
       }
       itemsDone++;
@@ -3663,6 +3682,7 @@
       startPrint(letters);
       return;
     }
+    sightBag=[];   // every session starts on a fresh shuffle
     buildOrder();
     setupItem();
     resizeCanvas();
