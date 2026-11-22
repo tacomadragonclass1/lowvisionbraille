@@ -112,10 +112,17 @@ whichever gives the bigger letters wins — a row on a landscape tablet, a colum
 for short letters on a phone held upright. The space at the top for the ⌂ and
 at the bottom for the pill is kept clear.
 
-- **Same tracing rule** as Letters and Numbers — the code is shared
-  (`strokeTraced()`, `traceHalo()`), so the two can never drift. 85% of every
-  stroke of every letter; the i/j dot is a touch on the dot. The letters can
-  be traced in any order. See *Tracing*.
+- **Looser coverage than Letters and Numbers, same halo.** The code is shared
+  (`strokeTraced()`, `traceHalo()`), but since 2026-11-22 this section passes
+  its own **`PRINT_TRACE_COVERAGE = .75`** — 75% of every stroke, against 85%
+  for the braille canvas — because .85 was still too tight here. The halo is
+  the same, so a swipe beside a letter still does not count. The i/j dot is a
+  touch on the dot. The letters can be traced in any order. See *Tracing*.
+- **The round ends only when the finger LIFTS.** Reaching the coverage
+  mid-stroke used to end the round under the student's finger while they were
+  still finishing the letter. Now the check runs on the tracing finger's
+  `pointerup` (or `pointercancel`) and nowhere else: done means covered enough
+  *and* let go. A second finger lifting does not count.
 - **No letter sounds at all.** No phoneme, no name, no clip of any kind — only
   the brush, which plays while the finger is on the guide.
 - When all three are traced there is a short beat, then the **piano break**
@@ -1314,9 +1321,17 @@ and simply too quiet in the room.
 
 **85% of every stroke** of the letter or digit has to be traced before the
 item can advance — the braille cell being done is not enough on its own. Two
-dials at the top of the coverage code set this:
+dials at the top of the coverage code set this, and **the trace is judged only
+when the tracing finger lifts** (`traceLift()` here, `printLift()` in Print
+Letter Tracing; both since 2026-11-22). Judging on every point used to end
+the item the instant the coverage was reached, under a finger that was still
+finishing the letter. Coverage still accumulates across lifts, and a second
+finger lifting does not count. The braille cell still has to be done too, in
+either order.
 
-- `TRACE_COVERAGE = .85` — the fraction of each stroke that must be covered.
+- `TRACE_COVERAGE = .85` — the fraction of each stroke that must be covered
+  (braille Letters and Numbers; Print Letter Tracing uses its own
+  `PRINT_TRACE_COVERAGE = .75`).
   Was 1 (end to end) from 2026-11-16, which proved too strict in use; 0.7
   before that, which let rough swipes through. Because the halo also reaches a
   little past where the finger stops, in practice a few percent more than 15%

@@ -97,6 +97,22 @@ ok(R.done(), 'lifting off and finishing in a second go is done - coverage accumu
 R.deal('l'); drag([...stem].reverse());
 ok(R.done(), 'direction does not matter (bottom-up counts)');
 
+console.log('\n  -- judged when the finger LIFTS, never mid-stroke (2026-11-22) --');
+R.deal('l');
+R.brailleDone();                      // the braille cell is already done
+C.pointerdown(ev(...stem[0]));
+for (const p of stem.slice(1)) C.pointermove(ev(...p));
+ok(!R.done() && !R.advancing(), 'the whole stroke covered, finger still down: NOT done, no advance');
+C.pointerup({ ...ev(...stem[stem.length - 1]), pointerId: 2 });
+ok(!R.done() && !R.advancing(), 'a different finger lifting does not count');
+C.pointerup(ev(...stem[stem.length - 1]));
+ok(R.done() && R.advancing(), 'the tracing finger lifts: done, and with the cell done it advances');
+R.deal('l');
+drag(stem);
+ok(R.done() && !R.advancing(), 'traced and lifted first, cell not done: waits for the braille');
+R.brailleDone();
+ok(R.advancing(), 'then finishing the cell advances');
+
 console.log('\n  -- i/j: the dot is touched, the stem is traced --');
 R.deal('i');
 let [dot, iStem] = R.geometry();

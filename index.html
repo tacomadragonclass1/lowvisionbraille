@@ -2257,9 +2257,12 @@
   // Numbers canvas and by Print Letter Tracing, so the two can never drift.
   // For i/j, the first disconnected stroke is the dot: touching it counts (it
   // has nothing to trace), but the touch has to land on it - same halo.
-  function strokeTraced(ch,strokeIndex,bits) {
+  //
+  // The halo and the i/j rule are shared; COVERAGE is not, since 2026-11-22:
+  // Print Letter Tracing passes its own, looser PRINT_TRACE_COVERAGE.
+  function strokeTraced(ch,strokeIndex,bits,need=TRACE_COVERAGE) {
     if ((ch==='i'||ch==='j') && strokeIndex===0) return bits.some(Boolean);
-    return bits.filter(Boolean).length/bits.length >= TRACE_COVERAGE;
+    return bits.filter(Boolean).length/bits.length >= need;
   }
 
   // Is the finger on the guide right now? Drives the brush, and is intentionally
@@ -2285,9 +2288,9 @@
         if (dx*dx+dy*dy<=r2) coverage[s][i]=true;
       }
     }
-    // Every separately defined stroke has to be traced completely.
-    traceDone=coverage.every((bits,strokeIndex)=>strokeTraced(glyph,strokeIndex,bits));
-    checkCompletion();
+    // Coverage only ACCUMULATES here. Whether the letter is traced is decided
+    // when the finger lifts (traceLift), not mid-stroke: deciding it here
+    // used to end the item under a finger that was still finishing the letter.
   }
 
   function addInterpolatedPoints(segment,from,to) {
@@ -2336,8 +2339,18 @@
     drawing=false; currentPointer=null; lastPointerScreen=null;
     brushOff();
   }
-  canvas.addEventListener('pointerup',stopDrawing);
-  canvas.addEventListener('pointercancel',stopDrawing);
+  // The only place the trace is judged: the tracing finger letting go. Done
+  // means covered enough AND lifted, the same rule Print Letter Tracing uses.
+  // stopDrawing() alone (menu trips, item setup) judges nothing.
+  function traceLift(ev) {
+    if (!drawing || (ev && currentPointer!==null && ev.pointerId!==currentPointer)) return;
+    stopDrawing(ev);
+    if (!glyph || !coverage.length) return;
+    traceDone=coverage.every((bits,strokeIndex)=>strokeTraced(glyph,strokeIndex,bits));
+    checkCompletion();
+  }
+  canvas.addEventListener('pointerup',traceLift);
+  canvas.addEventListener('pointercancel',traceLift);
 
   // Delegated: the dots are rebuilt for every item, so the listener lives on
   // the container and never has to be re-attached.
@@ -4435,11 +4448,21 @@
       if (dx*dx+dy*dy<=r2) pCoverage[i][s][k]=true;
     })));
   }
+  // Print's own coverage dial. The braille Letters and Numbers canvas keeps
+  // TRACE_COVERAGE (.85); print letters are bigger, there are three of them,
+  // and the owner found .85 still too tight here, so this section alone asks
+  // for 75% of each stroke. Same halo, so a swipe beside the letter still
+  // does not count.
+  const PRINT_TRACE_COVERAGE = .75;
   function printLetterDone(i) {
-    return pCoverage[i].every((bits,s)=>strokeTraced(pLetters[i],s,bits));
+    return pCoverage[i].every((bits,s)=>strokeTraced(pLetters[i],s,bits,PRINT_TRACE_COVERAGE));
   }
   function printAllDone() { return pLetters.every((_,i)=>printLetterDone(i)); }
 
+  // Called ONLY when the tracing finger lifts (printLift), never mid-stroke:
+  // reaching the coverage while the finger is still moving used to end the
+  // round under it, while the student was still finishing the letter. Done
+  // means "covered enough AND let go".
   function printCheck() {
     if (pAdvancing || !printAllDone()) return;
     pAdvancing=true;
@@ -4484,7 +4507,6 @@
     pSegments.push([pFromScreen(p)]);
     printCover(p[0],p[1],geo); printDraw();
     if (printOnGuide(p[0],p[1],geo)) { brushOn(); brushSpeed(.5); } else brushOff();
-    printCheck();
   });
   printCanvas.addEventListener('pointermove',ev=>{
     if (!pOn || !pDrawing || ev.pointerId!==pPointer) return;
@@ -4505,10 +4527,15 @@
     pLastScreen=p;
     printDraw();
     if (printOnGuide(p[0],p[1],geo)) { brushOn(); brushSpeed(speed); } else brushOff();
-    printCheck();
   });
-  printCanvas.addEventListener('pointerup',printStop);
-  printCanvas.addEventListener('pointercancel',printStop);
+  // A lift is the only moment a round can finish - see printCheck.
+  function printLift(ev) {
+    if (!pDrawing || (ev && pPointer!==null && ev.pointerId!==pPointer)) return;
+    printStop(ev);
+    printCheck();
+  }
+  printCanvas.addEventListener('pointerup',printLift);
+  printCanvas.addEventListener('pointercancel',printLift);
 
   // ---- enter / leave --------------------------------------------------------
   function startPrint(letters) {

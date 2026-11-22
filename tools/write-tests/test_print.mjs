@@ -35,6 +35,8 @@ const { listeners, missingIds } = loadApp(HTML, `
     geometry: () => pGeometry(), advancing: () => pAdvancing,
     ink: () => printInk(), segments: () => pSegments.length,
     letterDone: (i) => printLetterDone(i),
+    stemDone: (i, st) => strokeTraced(pLetters[i], st, pCoverage[i][st], PRINT_TRACE_COVERAGE),
+    PRINT_TRACE_COVERAGE, TRACE_COVERAGE,
     slots: () => [...pickSlots], goDisabled: () => printGo.disabled,
     chooserOn: () => chooser.classList.contains('on'),
     panelShown: () => !printPanel.hidden, modesShown: () => !chooserModesRow.hidden,
@@ -102,11 +104,13 @@ ok(Math.min(...ys) - L.gw / 2 >= 64 - 1 && Math.max(...ys) + L.gw / 2 <= 600 - 6
 ok(Math.abs((Math.max(...ys) - Math.min(...ys)) + L.gw - (600 - 64 - 60)) < 1,
    'and fills the whole free height - the letters are as large as the page allows');
 
-console.log('\n  -- the same rule as braille Letters --');
+console.log('\n  -- print\'s own, looser coverage --');
 const inkAtStart = P.ink();
 const stem = geo[0][0];
-drag(stem.slice(0, Math.floor(stem.length * .8)));
-ok(!P.letterDone(0), '80% of a stroke is not a traced letter');
+drag(stem.slice(0, Math.floor(stem.length * .6)));
+ok(!P.letterDone(0), '60% of a stroke is not a traced letter');
+drag(stem.slice(0, Math.ceil(stem.length * .8)));
+ok(P.stemDone(0, 0), '80% of a stroke IS traced here (print asks for 75%; braille Letters still asks for 85%)');
 drag(stem);
 ok(!P.letterDone(0), 'the stem of a t without its crossbar is not traced');
 drag(geo[0][1]);
@@ -121,9 +125,19 @@ ok(!P.letterDone(2), 'a swipe a guide width beside the l does not count');
 ok(P.ink() === inkAtStart, 'the ink has not changed across five strokes - one colour per round');
 ok(!P.advancing(), 'two of three: still no reward');
 
-console.log('\n  -- finishing a round --');
-traceLetter(2);
-ok(P.advancing(), 'tracing the third letter finishes the round');
+console.log('\n  -- finishing a round: only when the finger lifts --');
+ok(P.PRINT_TRACE_COVERAGE === .75 && P.TRACE_COVERAGE === .85, 'print asks for 75%, braille Letters keeps 85%');
+{
+  const st = P.geometry()[2][0];
+  C.pointerdown(ev(...st[0]));
+  for (const p of st.slice(1)) C.pointermove(ev(...p));
+  ok(P.letterDone(2) && !P.advancing(),
+     'all three covered with the finger still down: the round does NOT end');
+  C.pointerup(ev(...st[st.length - 1], 2));
+  ok(!P.advancing(), 'a different finger lifting does not end it either');
+  C.pointerup(ev(...st[st.length - 1]));
+}
+ok(P.advancing(), 'lifting the tracing finger finishes the round');
 await wait(700);
 ok(P.pianoOn() && !P.mgOn(), 'and the PIANO break comes up, not the shape reward round');
 P.endPiano();
