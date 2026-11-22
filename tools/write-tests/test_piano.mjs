@@ -45,11 +45,16 @@ const demoMs = P.consts.PIANO_LEAD_MS + song.notes.reduce((t, [, b]) => t + b * 
 
 console.log('\n  -- notes and range --');
 ok(P.noteMidi('A4') === 69 && P.noteMidi('C#5') === 73 && P.noteMidi('Bb4') === 70, 'note names map to MIDI');
-ok(song.notes.map(([n]) => n).join(' ') === 'F#5 A5 G5 F#5 C#5 B4 C#5 D5 A4',
-   'the Gymnopedie phrase is F# A G F# C# B C# D A');
+ok(song.notes.map(([n]) => n).join(' ') === 'F#5 A5 G5 F#5 C#5 B4 C#5 D5 A4 F#4',
+   'the Gymnopedie phrase is the score\'s bars 5-9: F# A G F# C# B C# D A, ending on F#4');
 const [lo, hi] = P.pianoRange(song);
-ok(lo === 69 && hi === 81, 'the keyboard is A4..A5, the melody\'s own span');
+ok(lo === 65 && hi === 83, `the keyboard is F4..B5: the span F#4..A5 widened to whole black-key groups (${lo}..${hi})`);
 ok(!P.midiIsBlack(lo) && !P.midiIsBlack(hi), 'and starts and ends on white keys');
+for (const notes of [['A4','A5'], ['C#5','D5'], ['E4','F4'], ['B4','C6']]) {
+  const [a, b] = P.pianoRange({ notes: notes.map(n => [n, 1]) });
+  ok([0, 5].includes(a % 12) && [4, 11].includes(b % 12) && a <= P.noteMidi(notes[0]) && b >= P.noteMidi(notes[1]),
+     `${notes.join('..')} rounds out to a C/F start and an E/B end, never splitting a black group`);
+}
 
 console.log('\n  -- the demonstration --');
 let finished = 0;
@@ -57,9 +62,9 @@ P.startPianoBreak(() => finished++);
 const keys = P.keys;
 const whites = [...keys.values()].filter(k => k.className.includes('white')).length;
 const blacks = [...keys.values()].filter(k => k.className.includes('black')).length;
-ok(whites === 8 && blacks === 5, `eight white keys and five black (${whites}/${blacks})`);
+ok(whites === 11 && blacks === 8, `eleven white keys and eight black, grouped 3-2-3 (${whites}/${blacks})`);
+ok([66,68,70,73,75,78,80,82].every(m => keys.get(m)?.className.includes('black')), 'the black keys are exactly F# G# A# C# D# F# G# A#');
 ok(song.notes.every(([n]) => keys.has(P.noteMidi(n))), 'every melody note has a key');
-ok(keys.get(73).style.left.startsWith('calc(3 * 100% / 8'), 'C# sits on the C|D boundary');
 ok(P.el.classList.contains('on') && P.el.classList.contains('ghost'), 'it opens ghosted');
 P.pianoPress(78);
 ok(P.count === 0, 'a tap during the demonstration does nothing');

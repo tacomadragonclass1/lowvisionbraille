@@ -469,6 +469,12 @@ file `carl.png`). It plays through plain `<audio>` rather than
 > (CDP) taps: before, the reveal and send-off were refused on every round-2
 > card; after, every prompt played to its end with zero refusals over 32
 > cards. On Chrome it changes nothing.
+>
+> ⛔ **A primed clip stays muted until `playClip()` / `startBrainBreak()`
+> unmutes it.** Unmuting right after the priming `pause()` let the audio
+> pipeline's buffered first few milliseconds out. On a fresh start the first
+> tap after the splash primes `carlwin.wav`, so tapping the Letters tile
+> played a blip of Carl's music.
 
 - `audio/phonemes/` — the 26 letter sounds. **Human recordings**, the same files
   Phonics Farm uses, from the Pronunciation Studio IPA chart. Used here under the
@@ -741,12 +747,26 @@ in the brain-break rotation for the braille sections. **`?piano=1`** previews it
    hands back.
 
 The first song is the opening phrase of Satie's **Gymnopédie No. 1** (1888,
-public domain): F♯ A G F♯ C♯ B C♯ D A, nine notes, at 72 bpm. Songs live
+public domain), bars 5–9 as checked against the published score (D major,
+3/4): F♯5 A5 G5 F♯5 C♯5 B4 C♯5 D5 A4 **F♯4**, ten notes, at 72 bpm. The
+phrase ends on the held F♯4; stopping on the A4 left it hanging. Songs live
 in `PIANO_SONGS` as `[note, beats]` pairs, and the keyboard is built from
-the song's own span rounded out to white keys — here **A4–A5, eight white
-keys**, the fewest that fit, so every key is as fat as the screen allows. The
-voice is synthesized (a few slightly stretched sine partials through a
-closing lowpass); there is no sample to ship. Tested in
+the song's span widened to **whole black-key groups** (down to a C or F, up
+to an E or B). Here that's **F4–B5: eleven white keys, black keys grouped
+3-2-3.**
+
+> ⛔ **Never round the range to just the nearest white key.** That gave A4–A5,
+> which splits the F♯-G♯-A♯ group, leaving a lone black key at one edge and a
+> pair at the other. It read as "not the correct keys", because the 2-and-3
+> pattern is how anyone recognizes a keyboard. Each black key is also a child
+> of the white key above it, centred on the gap between them; placing it as a
+> fraction of the whole keyboard ignored the gaps.
+
+Every key carries its note name (C, C♯, …) **engraved near the top**: a
+shade darker than the key, with a light edge below the stroke and a dark one
+above it, so it reads as pressed in rather than printed. The voice is
+synthesized (a few slightly stretched sine partials through a closing
+lowpass); there is no sample to ship. Tested in
 `tools/write-tests/test_piano.mjs` on a fake clock.
 
 ## The rhythm section

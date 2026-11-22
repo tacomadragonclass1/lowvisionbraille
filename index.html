@@ -479,8 +479,11 @@
   .pkey { position:relative; box-sizing:border-box; transition:background-color .12s; }
   .pkey.white { flex:1 1 0; background:#fff;
                 border-radius:0 0 clamp(8px,1.3vw,18px) clamp(8px,1.3vw,18px); }
+  /* Inside the white key to its right: left edge minus half the gap is the
+     exact centre line between the two whites. */
   .pkey.black { position:absolute; top:0; height:60%; z-index:2; background:#000;
-                width:calc(64% / var(--whites,8));
+                width:62%; left:calc(clamp(3px,.5vw,7px) / -2);
+                transform:translateX(-50%);
                 border:clamp(3px,.4vw,5px) solid #000; border-top:0;
                 border-radius:0 0 clamp(6px,.9vw,12px) clamp(6px,.9vw,12px); }
   #piano.ghost .pkey.white { background:#3a3a3a; }
@@ -488,6 +491,21 @@
   /* #piano.on, not #piano: it must outrank the ghost rules above, or the demo
      would light nothing - the one time the lighting matters most. */
   #piano.on .pkey.lit { background:#ffd60a; }
+  /* The note's letter, pressed INTO the key near its top: a shade darker
+     than the key, lit from above (a light edge under each stroke, a dark
+     one over it), so it reads as engraved rather than printed. Faint on
+     purpose - the key is the target, the letter a quiet label. */
+  .pname { position:absolute; left:0; right:0; top:4%; text-align:center;
+           font:700 clamp(18px,3.4vmin,40px)/1 system-ui,sans-serif;
+           pointer-events:none; user-select:none; -webkit-user-select:none;
+           color:rgba(0,0,0,.13);
+           text-shadow:0 1px 0 rgba(255,255,255,.95), 0 -1px 0 rgba(0,0,0,.18); }
+  .pkey.black > .pname { font-size:clamp(13px,2.4vmin,28px);
+           color:rgba(255,255,255,.13);
+           text-shadow:0 -1px 0 rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.12); }
+  /* Ghosted, the white key is a dark grey and its light under-edge would glow. */
+  #piano.ghost .pkey.white > .pname { color:rgba(0,0,0,.28);
+           text-shadow:0 1px 0 rgba(255,255,255,.1), 0 -1px 0 rgba(0,0,0,.3); }
   .pkey.next::after { content:''; position:absolute; left:50%; bottom:11%;
                       width:38%; aspect-ratio:1; transform:translateX(-50%);
                       border-radius:50%; background:#0a84ff; }
@@ -1356,6 +1374,13 @@
   // _priming is a token, not a flag on the element's state: if playClip()
   // claims the clip before the muted play settles (slow wifi), the settle
   // must not pause the real playback.
+  //
+  // ⛔ The clip STAYS MUTED after the priming pause. Unmuting in the same
+  // breath as pause() let the audio pipeline's already-buffered first few ms
+  // out: on a fresh start the first tap after the splash (the Letters tile)
+  // primed carlwin.wav and a blip of Carl's music was heard. playClip() and
+  // startBrainBreak() - the only players of cached clips - unmute right
+  // before they play, so nothing else needs muted=false.
   const unlockedClips=new WeakSet();
   function unlockClips() {
     for (const a of clipCache.values()) {
@@ -1364,7 +1389,7 @@
       a._priming=true; a.muted=true;
       let p; try { p=a.play(); } catch { p=null; }
       const settle=()=>{ if (!a._priming) return; a._priming=false;
-                         try { a.pause(); a.currentTime=0; } catch {} a.muted=false; };
+                         try { a.pause(); a.currentTime=0; } catch {} };
       const refused=()=>{ unlockedClips.delete(a); settle(); };
       if (p && p.then) p.then(settle,refused); else settle();
     }
@@ -3339,10 +3364,15 @@
   // white keys, so the keyboard is only as wide as this song needs.
   const PIANO_SONGS = [{
     // Satie, Gymnopedie No. 1 (1888, public domain): the opening phrase of
-    // the melody, bars 5-8, without the bar-5 rest. "Lent et douloureux".
+    // the melody, bars 5-9, checked against the published score (D major,
+    // 3/4, "Lent et douloureux"), not transcribed by ear. Bar 5 is a quarter
+    // rest then F#5 A5; bar 6 G5 F#5 C#5; bar 7 B4 C#5 D5; bar 8 A4 dotted
+    // half; bar 9 F#4, which the score ties on through bar 12. That last
+    // F#4 IS the end of the phrase - stopping on the A4 left it hanging.
+    // The demo holds it one bar; the break's ring-out carries the rest.
     name:'gymnopedie1', bpm:72,
     notes:[['F#5',1],['A5',1],['G5',1],['F#5',1],['C#5',1],
-           ['B4',1],['C#5',1],['D5',1],['A4',3]]
+           ['B4',1],['C#5',1],['D5',1],['A4',3],['F#4',3]]
   }];
   const PIANO_LEAD_MS    = 900;   // keys up and ghosted, then the demo starts
   const PIANO_HANDOVER_MS = 300;  // after the demo's last note has its full length
@@ -3356,15 +3386,20 @@
   }
   const midiFreq=m=>440*Math.pow(2,(m-69)/12);
   const midiIsBlack=m=>[1,3,6,8,10].includes(m%12);
-  // The keyboard for a song: its lowest to highest note, widened to the
-  // nearest white key at each end (a keyboard never starts on a black key).
+  // The keyboard for a song: its lowest to highest note, widened out to
+  // WHOLE black-key groups - down to the nearest C or F, up to the nearest
+  // E or B. ⛔ Rounding only to the nearest white key gave A4..A5, which cuts
+  // the F#-G#-A# group in half: a lone black key at the left edge and a
+  // pair at the right. It read as the wrong keys, because the 2-and-3
+  // pattern is how anyone recognises a keyboard at all.
   function pianoRange(song) {
     const ms=song.notes.map(([n])=>noteMidi(n));
     let lo=Math.min(...ms), hi=Math.max(...ms);
-    if (midiIsBlack(lo)) lo--;
-    if (midiIsBlack(hi)) hi++;
+    while (lo%12!==0 && lo%12!==5) lo--;   // C or F
+    while (hi%12!==4 && hi%12!==11) hi++;  // E or B
     return [lo,hi];
   }
+  const NOTE_NAMES=['C','C\u266f','D','D\u266f','E','F','F\u266f','G','G\u266f','A','A\u266f','B'];
 
   const pianoEl=document.getElementById('piano');
   const pianoKeysEl=document.getElementById('pianoKeys');
@@ -3380,20 +3415,27 @@
     const whites=[];
     for (let m=lo;m<=hi;m++) if (!midiIsBlack(m)) whites.push(m);
     pianoKeysEl.style.setProperty('--whites',String(whites.length));
+    const label=(k,m)=>{
+      const b=document.createElement('b');
+      b.className='pname'; b.textContent=NOTE_NAMES[m%12];
+      k.appendChild(b);
+    };
     whites.forEach(m=>{
       const k=document.createElement('div');
       k.className='pkey white'; k.dataset.midi=String(m);
+      label(k,m);
       pianoKeysEl.appendChild(k); pnKeys.set(m,k);
+      // A black key is a CHILD of the white key above it, pinned to that
+      // key's left edge and centred on the gap. The old version placed it
+      // as a percentage of the whole keyboard, which ignored the gaps
+      // between white keys and drifted further off the further right it was.
+      if (m-1>=lo && midiIsBlack(m-1)) {
+        const bk=document.createElement('div');
+        bk.className='pkey black'; bk.dataset.midi=String(m-1);
+        label(bk,m-1);
+        k.appendChild(bk); pnKeys.set(m-1,bk);
+      }
     });
-    for (let m=lo+1;m<hi;m++) {
-      if (!midiIsBlack(m)) continue;
-      // On the boundary between the white key below it and the one above.
-      const right=whites.indexOf(m+1);
-      const k=document.createElement('div');
-      k.className='pkey black'; k.dataset.midi=String(m);
-      k.style.left=`calc(${right} * 100% / ${whites.length} - 32% / ${whites.length})`;
-      pianoKeysEl.appendChild(k); pnKeys.set(m,k);
-    }
   }
 
   function pianoBusNode() {
